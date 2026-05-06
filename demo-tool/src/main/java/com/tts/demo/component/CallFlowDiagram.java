@@ -24,14 +24,17 @@ import java.util.List;
  */
 public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
     
-    // Layout constants
+    // Layout constants for UML sequence diagram
     private static final double MARGIN = 40;
-    private static final double LANE_WIDTH = 150;
-    private static final double LANE_SPACING = 300;
-    private static final double MESSAGE_HEIGHT = 40;
-    private static final double HEADER_HEIGHT = 60;
+    private static final double ACTOR_WIDTH = 80;      // Width of actor boxes
+    private static final double ACTOR_HEIGHT = 40;     // Height of actor boxes
+    private static final double LIFELINE_SPACING = 200; // Horizontal space between lifelines
+    private static final double MESSAGE_HEIGHT = 50;    // Vertical space per message
+    private static final double TOP_MARGIN = 80;        // Space for actors at top
     private static final double LEGEND_HEIGHT = 80;
     private static final double ARROW_HEAD_SIZE = 8;
+    private static final double LIFELINE_DASH = 5;      // Dash pattern for lifelines
+    private static final double DIAGRAM_WIDTH = 400;    // Fixed width for UML diagram
     
     // Throttling for real-time updates (Phase 2.2)
     private static final long THROTTLE_MS = 200; // Max 1 refresh per 200ms
@@ -61,11 +64,11 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
         this.callFlow = callFlow;
         this.messages = callFlow.getMessages();
         
-        // Calculate required canvas size
-        double requiredWidth = MARGIN * 2 + LANE_SPACING + LANE_WIDTH;
-        double requiredHeight = MARGIN * 2 + HEADER_HEIGHT + (messages.size() * MESSAGE_HEIGHT) + LEGEND_HEIGHT;
+        // Calculate required canvas size based on UML layout
+        double requiredWidth = DIAGRAM_WIDTH;
+        double requiredHeight = MARGIN * 2 + TOP_MARGIN + (messages.size() * MESSAGE_HEIGHT) + LEGEND_HEIGHT;
         
-        setWidth(Math.max(800, requiredWidth));
+        setWidth(requiredWidth);
         setHeight(Math.max(600, requiredHeight));
         
         // Setup tooltip for hover interactions
@@ -93,10 +96,10 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
      * Allows diagram to grow dynamically as messages are added in real-time.
      */
     private void updateCanvasSize() {
-        double requiredWidth = MARGIN * 2 + LANE_SPACING + LANE_WIDTH;
-        double requiredHeight = MARGIN * 2 + HEADER_HEIGHT + (messages.size() * MESSAGE_HEIGHT) + LEGEND_HEIGHT;
+        double requiredWidth = DIAGRAM_WIDTH;
+        double requiredHeight = MARGIN * 2 + TOP_MARGIN + (messages.size() * MESSAGE_HEIGHT) + LEGEND_HEIGHT;
         
-        setWidth(Math.max(800, requiredWidth));
+        setWidth(requiredWidth);
         setHeight(Math.max(600, requiredHeight));
     }
     
@@ -140,7 +143,7 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
     }
     
     /**
-     * Render the complete call flow diagram.
+     * Render the complete call flow diagram in UML sequence diagram style.
      * Changed to public for incremental rendering support (Phase 2.1).
      */
     public void render() {
@@ -150,66 +153,81 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
         gc.setFill(COLOR_BACKGROUND);
         gc.fillRect(0, 0, getWidth(), getHeight());
         
-        // Draw components in order
-        drawLanes(gc);
+        // Draw UML components in order
+        drawActors(gc);
+        drawLifelines(gc);
         drawMessages(gc);
         drawLegend(gc);
     }
     
     /**
-     * Draw the client and server lanes
+     * Draw the actor boxes at the top (Client and Server)
      */
-    private void drawLanes(GraphicsContext gc) {
+    private void drawActors(GraphicsContext gc) {
         double clientX = MARGIN;
-        double serverX = MARGIN + LANE_SPACING;
-        double laneY = MARGIN;
-        double laneHeight = messages.size() * MESSAGE_HEIGHT + HEADER_HEIGHT;
+        double serverX = MARGIN + LIFELINE_SPACING;
+        double actorY = MARGIN;
         
-        // Draw lane backgrounds
-        gc.setFill(COLOR_LANE);
-        gc.fillRect(clientX, laneY, LANE_WIDTH, laneHeight);
-        gc.fillRect(serverX, laneY, LANE_WIDTH, laneHeight);
+        // Draw actor boxes
+        gc.setFill(Color.rgb(52, 73, 94)); // Dark blue-gray header
+        gc.fillRect(clientX, actorY, ACTOR_WIDTH, ACTOR_HEIGHT);
+        gc.fillRect(serverX, actorY, ACTOR_WIDTH, ACTOR_HEIGHT);
         
-        // Draw lane borders
+        // Draw actor borders
         gc.setStroke(COLOR_BORDER);
-        gc.setLineWidth(1);
-        gc.strokeRect(clientX, laneY, LANE_WIDTH, laneHeight);
-        gc.strokeRect(serverX, laneY, LANE_WIDTH, laneHeight);
+        gc.setLineWidth(2);
+        gc.strokeRect(clientX, actorY, ACTOR_WIDTH, ACTOR_HEIGHT);
+        gc.strokeRect(serverX, actorY, ACTOR_WIDTH, ACTOR_HEIGHT);
         
-        // Draw lane headers
-        gc.setFill(Color.rgb(52, 73, 94)); // Dark blue-gray
-        gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
+        // Draw actor labels
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
         gc.setTextAlign(TextAlignment.CENTER);
         gc.setTextBaseline(VPos.CENTER);
         
-        gc.fillText("Client", clientX + LANE_WIDTH / 2, laneY + HEADER_HEIGHT / 2);
-        gc.fillText("Server", serverX + LANE_WIDTH / 2, laneY + HEADER_HEIGHT / 2);
-        
-        // Draw vertical timeline through center
-        double centerX = clientX + LANE_WIDTH + (serverX - clientX - LANE_WIDTH) / 2;
-        gc.setStroke(COLOR_BORDER);
-        gc.setLineWidth(2);
-        gc.strokeLine(centerX, laneY + HEADER_HEIGHT, centerX, laneY + laneHeight);
+        gc.fillText("Client", clientX + ACTOR_WIDTH / 2, actorY + ACTOR_HEIGHT / 2);
+        gc.fillText("Server", serverX + ACTOR_WIDTH / 2, actorY + ACTOR_HEIGHT / 2);
     }
     
     /**
-     * Draw all SIP messages as arrows between lanes
+     * Draw the vertical lifelines extending down from actors
+     */
+    private void drawLifelines(GraphicsContext gc) {
+        double clientX = MARGIN + ACTOR_WIDTH / 2;
+        double serverX = MARGIN + LIFELINE_SPACING + ACTOR_WIDTH / 2;
+        double startY = MARGIN + ACTOR_HEIGHT;
+        double endY = MARGIN + TOP_MARGIN + (messages.size() * MESSAGE_HEIGHT);
+        
+        // Draw dashed lifelines
+        gc.setStroke(COLOR_BORDER);
+        gc.setLineWidth(1);
+        gc.setLineDashes(LIFELINE_DASH, LIFELINE_DASH);
+        
+        gc.strokeLine(clientX, startY, clientX, endY);
+        gc.strokeLine(serverX, startY, serverX, endY);
+        
+        // Reset line dashes for other drawing
+        gc.setLineDashes(0);
+    }
+    
+    /**
+     * Draw all SIP messages as horizontal arrows between lifelines
      */
     private void drawMessages(GraphicsContext gc) {
-        double clientX = MARGIN + LANE_WIDTH;
-        double serverX = MARGIN + LANE_SPACING;
-        double startY = MARGIN + HEADER_HEIGHT;
+        double clientX = MARGIN + ACTOR_WIDTH / 2;
+        double serverX = MARGIN + LIFELINE_SPACING + ACTOR_WIDTH / 2;
+        double startY = MARGIN + TOP_MARGIN;
         
         for (int i = 0; i < messages.size(); i++) {
             SipMessage message = messages.get(i);
-            double y = startY + (i * MESSAGE_HEIGHT) + MESSAGE_HEIGHT / 2;
+            double y = startY + (i * MESSAGE_HEIGHT);
             
             drawMessage(gc, message, clientX, serverX, y);
         }
     }
     
     /**
-     * Draw a single message arrow
+     * Draw a single message arrow in UML style
      */
     private void drawMessage(GraphicsContext gc, SipMessage message, double clientX, double serverX, double y) {
         // Determine arrow direction and color
@@ -227,27 +245,29 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
         // Draw arrowhead
         drawArrowHead(gc, endX, y, isClientToServer, arrowColor);
         
-        // Draw message label
+        // Draw message label above arrow
         String label = message.getMessageType().getDisplayName();
         gc.setFill(COLOR_TEXT);
-        gc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
-        gc.setTextAlign(TextAlignment.CENTER);
+        gc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 11));
+        gc.setTextAlign(isClientToServer ? TextAlignment.LEFT : TextAlignment.RIGHT);
         gc.setTextBaseline(VPos.BOTTOM);
         
-        double labelX = (startX + endX) / 2;
+        double labelX = isClientToServer ? startX + 5 : startX - 5;
         gc.fillText(label, labelX, y - 5);
         
         // Draw elapsed time below arrow
         gc.setFill(COLOR_INFO);
-        gc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 10));
+        gc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 9));
         gc.setTextBaseline(VPos.TOP);
-        gc.fillText(message.getElapsed() + "ms", labelX, y + 5);
+        gc.fillText(message.getElapsed() + "ms", labelX, y + 3);
         
-        // Draw status indicator
+        // Draw status indicator at end of arrow
         String statusIcon = message.isSuccess() ? "✓" : "✗";
         gc.setFill(arrowColor);
-        gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        gc.fillText(statusIcon, endX + 15, y);
+        gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        gc.setTextAlign(TextAlignment.CENTER);
+        double statusX = isClientToServer ? endX + 12 : endX - 12;
+        gc.fillText(statusIcon, statusX, y + 5);
     }
     
     /**
@@ -490,14 +510,14 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
     }
     
     /**
-     * Handle mouse movement for tooltips
+     * Handle mouse movement for tooltips in UML layout
      */
     private void handleMouseMoved(MouseEvent event) {
         double mouseX = event.getX();
         double mouseY = event.getY();
         
         // Find which message the mouse is over
-        double startY = MARGIN + HEADER_HEIGHT;
+        double startY = MARGIN + TOP_MARGIN;
         int messageIndex = (int) ((mouseY - startY) / MESSAGE_HEIGHT);
         
         if (messageIndex >= 0 && messageIndex < messages.size()) {
