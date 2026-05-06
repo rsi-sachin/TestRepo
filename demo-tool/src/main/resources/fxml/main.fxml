@@ -178,32 +178,31 @@
                                           styleClass="status-info"/>
                                 </HBox>
                                 
-                                <!-- Main Visualization Area -->
+                                <!-- Main Visualization Area (Phase 3: Horizontal Split) -->
                                 <SplitPane fx:id="visualizationSplitPane" 
-                                          orientation="VERTICAL" 
-                                          dividerPositions="1.0"
+                                          orientation="HORIZONTAL" 
+                                          dividerPositions="0.6"
                                           VBox.vgrow="ALWAYS">
                                     
-                                    <!-- Call Flow Diagram (Top) -->
+                                    <!-- Call Flow Diagram (Left - 60%) -->
                                     <ScrollPane fitToWidth="true" fitToHeight="true">
                                         <StackPane fx:id="diagramContainer" 
                                                   style="-fx-background-color: white; -fx-border-color: #bdc3c7; -fx-border-width: 1;"
-                                                  minHeight="400">
+                                                  prefWidth="600">
                                             <Label text="Call flow diagram will appear here after running a SIP/IMS demo"
                                                   style="-fx-text-fill: #95a5a6; -fx-font-size: 14px;"/>
                                         </StackPane>
                                     </ScrollPane>
                                     
-                                    <!-- Terminal Output (Bottom, Collapsible) -->
+                                    <!-- Terminal Output (Right - 40%, Initially visible) -->
                                     <TitledPane fx:id="terminalPane" 
                                                text="Terminal Output (Advanced)" 
-                                               expanded="false"
+                                               expanded="true"
                                                collapsible="true"
                                                animated="true">
                                         <TextArea fx:id="outputTextArea" 
                                                 editable="false" 
                                                 wrapText="false"
-                                                prefHeight="200"
                                                 styleClass="text-area"/>
                                     </TitledPane>
                                     

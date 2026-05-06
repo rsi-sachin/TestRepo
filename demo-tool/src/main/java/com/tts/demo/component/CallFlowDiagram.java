@@ -1,7 +1,9 @@
 package com.tts.demo.component;
 
 import com.tts.demo.model.CallFlow;
+import com.tts.demo.model.CallFlowUpdateListener;
 import com.tts.demo.model.SipMessage;
+import javafx.application.Platform;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
@@ -18,8 +20,9 @@ import java.util.List;
 /**
  * Custom JavaFX Canvas control for rendering SIP call flow sequence diagrams.
  * Displays client-server message exchanges with timing and status information.
+ * Supports real-time updates via CallFlowUpdateListener (Phase 2.2).
  */
-public class CallFlowDiagram extends Canvas {
+public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
     
     // Layout constants
     private static final double MARGIN = 40;
@@ -29,6 +32,11 @@ public class CallFlowDiagram extends Canvas {
     private static final double HEADER_HEIGHT = 60;
     private static final double LEGEND_HEIGHT = 80;
     private static final double ARROW_HEAD_SIZE = 8;
+    
+    // Throttling for real-time updates (Phase 2.2)
+    private static final long THROTTLE_MS = 200; // Max 1 refresh per 200ms
+    private volatile long lastRefreshTime = 0;
+    private volatile boolean refreshPending = false;
     
     // Color constants
     private static final Color COLOR_SUCCESS = Color.rgb(39, 174, 96);      // Green
@@ -71,9 +79,71 @@ public class CallFlowDiagram extends Canvas {
     }
     
     /**
-     * Render the complete call flow diagram
+     * Refresh the diagram with current data.
+     * Updates canvas size dynamically and re-renders all elements.
+     * Used for incremental updates during real-time visualization (Phase 2.1).
      */
-    private void render() {
+    public void refresh() {
+        updateCanvasSize();
+        render();
+    }
+    
+    /**
+     * Update canvas size based on current number of messages.
+     * Allows diagram to grow dynamically as messages are added in real-time.
+     */
+    private void updateCanvasSize() {
+        double requiredWidth = MARGIN * 2 + LANE_SPACING + LANE_WIDTH;
+        double requiredHeight = MARGIN * 2 + HEADER_HEIGHT + (messages.size() * MESSAGE_HEIGHT) + LEGEND_HEIGHT;
+        
+        setWidth(Math.max(800, requiredWidth));
+        setHeight(Math.max(600, requiredHeight));
+    }
+    
+    /**
+     * Callback when a message is added to the call flow (Phase 2.2).
+     * Implements CallFlowUpdateListener interface for real-time updates.
+     * Uses throttling to prevent excessive redraws (max 1 per 200ms).
+     * 
+     * @param message The message that was added
+     * @param callFlow The call flow that was updated
+     */
+    @Override
+    public void onMessageAdded(SipMessage message, CallFlow callFlow) {
+        long now = System.currentTimeMillis();
+        
+        // Check if throttle period has passed
+        if (now - lastRefreshTime >= THROTTLE_MS) {
+            // Immediate refresh
+            lastRefreshTime = now;
+            refreshPending = false;
+            Platform.runLater(this::refresh);
+        } else {
+            // Schedule a delayed refresh if not already pending
+            if (!refreshPending) {
+                refreshPending = true;
+                long delay = THROTTLE_MS - (now - lastRefreshTime);
+                
+                // Schedule refresh after throttle period
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(delay);
+                        lastRefreshTime = System.currentTimeMillis();
+                        refreshPending = false;
+                        Platform.runLater(this::refresh);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }).start();
+            }
+        }
+    }
+    
+    /**
+     * Render the complete call flow diagram.
+     * Changed to public for incremental rendering support (Phase 2.1).
+     */
+    public void render() {
         GraphicsContext gc = getGraphicsContext2D();
         
         // Clear canvas

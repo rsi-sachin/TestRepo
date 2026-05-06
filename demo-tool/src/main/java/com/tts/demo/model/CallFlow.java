@@ -2,11 +2,13 @@ package com.tts.demo.model;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 /**
  * Represents a complete VoLTE call flow with all SIP messages.
  * Provides analysis methods to determine call completion and success.
+ * Supports listeners for real-time visualization updates (Phase 2.2).
  */
 public class CallFlow {
     
@@ -15,6 +17,9 @@ public class CallFlow {
     private int successfulMessages;
     private boolean callCompleted;
     private long totalDuration;
+    
+    // Observer pattern support for real-time updates (Phase 2.2)
+    private final List<CallFlowUpdateListener> listeners = new CopyOnWriteArrayList<>();
 
     public CallFlow() {
         this.messages = new ArrayList<>();
@@ -108,8 +113,47 @@ public class CallFlow {
     public void addMessage(SipMessage message) {
         this.messages.add(message);
         analyze();
+        
+        // Notify listeners about the new message (Phase 2.2)
+        notifyListeners(message);
     }
-
+    
+    /**
+     * Add a listener for call flow updates (Phase 2.2).
+     * 
+     * @param listener The listener to add
+     */
+    public void addListener(CallFlowUpdateListener listener) {
+        if (listener != null && !listeners.contains(listener)) {
+            listeners.add(listener);
+        }
+    }
+    
+    /**
+     * Remove a listener from call flow updates (Phase 2.2).
+     * 
+     * @param listener The listener to remove
+     */
+    public void removeListener(CallFlowUpdateListener listener) {
+        listeners.remove(listener);
+    }
+    
+    /**
+     * Notify all listeners that a message was added (Phase 2.2).
+     * 
+     * @param message The message that was added
+     */
+    private void notifyListeners(SipMessage message) {
+        for (CallFlowUpdateListener listener : listeners) {
+            try {
+                listener.onMessageAdded(message, this);
+            } catch (Exception e) {
+                // Log but don't fail if a listener throws an exception
+                System.err.println("Error notifying listener: " + e.getMessage());
+            }
+        }
+    }
+    
     /**
      * Get success rate as percentage (0-100)
      */

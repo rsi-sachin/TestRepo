@@ -5,6 +5,7 @@ import com.tts.demo.model.CallFlow;
 import com.tts.demo.model.Demo;
 import com.tts.demo.model.DemoConfig;
 import com.tts.demo.model.RunResult;
+import com.tts.demo.model.SipMessage;
 import com.tts.demo.service.ConfigManager;
 import com.tts.demo.service.DemoCatalog;
 import com.tts.demo.service.DemoRunner;
@@ -88,6 +89,10 @@ public class MainController {
     private DemoConfig currentConfig;
     private Map<String, TextField> parameterFields;
     private CallFlowDiagram currentDiagram;
+    
+    // Real-time call flow visualization fields (Phase 1.3)
+    private final List<SipMessage> liveMessages = Collections.synchronizedList(new ArrayList<>());
+    private volatile CallFlow liveCallFlow = null;
 
     @FXML
     public void initialize() {
@@ -352,15 +357,38 @@ public class MainController {
         statusLabel.getStyleClass().add("status-running");
         outputTextArea.clear();
         
+        // Initialize live call flow for real-time visualization (Phase 1.3)
+        liveMessages.clear();
+        liveCallFlow = new CallFlow();
+        logger.debug("Initialized live call flow for real-time visualization");
+        
+        // Create live diagram for SIP/IMS protocols (Phase 2.3)
+        if (selectedDemo.getProtocol() == Demo.Protocol.SIP_IMS) {
+            currentDiagram = new CallFlowDiagram(liveCallFlow);
+            liveCallFlow.addListener(currentDiagram); // Register diagram as listener
+            
+            // Add diagram to UI immediately (will update in real-time)
+            diagramContainer.getChildren().clear();
+            diagramContainer.getChildren().add(currentDiagram);
+            
+            // Enable export button
+            if (exportDiagramButton != null) {
+                exportDiagramButton.setDisable(false);
+            }
+            
+            callFlowStatusLabel.setText("Call Flow: Initializing...");
+            logger.info("Created live call flow diagram, registered as listener");
+        }
+        
         // Switch to Execution tab and disable Configuration tab
         switchToExecutionTab();
         setConfigTabDisabled(true);
         
         logger.info("Starting demo run: {}", selectedDemo.getTitle());
         
-        // Run demo in background thread
+        // Run demo in background thread with real-time message capture
         new Thread(() -> {
-            RunResult result = demoRunner.runDemo(selectedDemo, currentConfig, this::appendOutput);
+            RunResult result = demoRunner.runDemo(selectedDemo, currentConfig, this::appendOutput, this::handleLiveSipMessage);
             
             Platform.runLater(() -> {
                 runButton.setDisable(false);
@@ -456,6 +484,39 @@ public class MainController {
     private void appendOutput(String line) {
         Platform.runLater(() -> {
             outputTextArea.appendText(line + "\n");
+        });
+    }
+    
+    /**
+     * Handle real-time SIP message capture for live call flow visualization (Phase 1.3).
+     * This callback is invoked from the background thread streaming JMeter output.
+     * Messages are added to the live call flow for real-time diagram updates.
+     * 
+     * @param message Parsed SIP message from JMeter output
+     */
+    private void handleLiveSipMessage(SipMessage message) {
+        if (message == null || liveCallFlow == null) {
+            return;
+        }
+        
+        // Thread-safe: add message to synchronized list
+        liveMessages.add(message);
+        
+        // Thread-safe: add message to live call flow (calls analyze() internally)
+        synchronized (liveCallFlow) {
+            liveCallFlow.addMessage(message);
+        }
+        
+        logger.debug("Live SIP message captured: {} {} (total: {})", 
+                message.getDirection().getDisplayName(), 
+                message.getMessageType().getDisplayName(),
+                liveMessages.size());
+        
+        // Update call flow status label (Phase 2.3)
+        Platform.runLater(() -> {
+            if (callFlowStatusLabel != null) {
+                callFlowStatusLabel.setText(String.format("Call Flow: %d messages", liveMessages.size()));
+            }
         });
     }
     
