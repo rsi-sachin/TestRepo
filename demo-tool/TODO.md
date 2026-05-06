@@ -1,6 +1,6 @@
 # TTS Demo Tool - TODO List
 
-**Last Updated:** May 6, 2026 (Added TestFX GUI testing task to Priority 2)
+**Last Updated:** May 6, 2026 (Completed Priority 2 tasks: Enhanced tooltips ✅, UML diagram conversion ✅, comprehensive tests ✅)
 
 ---
 
@@ -424,9 +424,11 @@ assertTrue(flow.isCallCompleted());
 
 ---
 
-### Enhance Call Flow Diagram Tooltips with Message-Specific Information
+### Enhance Call Flow Diagram Tooltips with Message-Specific Information ✅ COMPLETED
 
 **Goal:** Improve call flow diagram tooltips to provide message-specific, contextual information that explains what each message indicator (green tick, red cross, etc.) means for that particular message type and flow state.
+
+**Status:** ✅ COMPLETED (May 6, 2026)
 
 **Current State:** Call flow diagram shows visual indicators (green tick for success) but lacks explanatory tooltips
 - Users see green tick (✓) on messages but may not understand what it represents
@@ -439,15 +441,24 @@ assertTrue(flow.isCallCompleted());
 - Different messages have different success criteria (e.g., INVITE vs ACK vs BYE)
 - Users need business-level interpretation, not just technical status
 
+**Implementation Summary:**
+- ✅ Created getMessageTooltipText(SipMessage, int) method with contextual explanations
+- ✅ Added getMessageTypeDescription() for business-level short descriptions
+- ✅ Added getMessageMeaning() for detailed business interpretations based on type and status
+- ✅ Added getTimingContext() for performance categorization (fast/normal/slow/very slow)
+- ✅ Added getCallPhase() to identify establishment/confirmation/teardown phases
+- ✅ Formatted tooltips with clear sections: Status, Meaning, Timing, Technical Details
+- ✅ Meets REQ-006 requirement for business-level KPI language
+
 **Tasks:**
-- [ ] **Enhance tooltip content to be message-specific:**
+- [x] **Enhance tooltip content to be message-specific:**
   - File: `src/main/java/com/tts/demo/component/CallFlowDiagram.java` (handleMouseMoved method)
   - Add contextual explanation based on message type and status
   - Example for INVITE with green tick: "✓ Call Initiation Successful - Client sent INVITE and received confirmation"
   - Example for OK with green tick: "✓ Call Accepted - Server confirmed connection establishment"
   - Example for BYE with green tick: "✓ Call Teardown Successful - Connection terminated gracefully"
 
-- [ ] **Define message-specific tooltip templates:**
+- [x] **Define message-specific tooltip templates:**
   - Create method: `String getMessageTooltipText(SipMessage message)`
   - Templates for each MessageType (INVITE, TRYING, RINGING, OK, ACK, BYE):
     ```java
@@ -464,32 +475,32 @@ assertTrue(flow.isCallCompleted());
     OK + failure: "✗ Response Not Received\nExpected confirmation but got error or timeout"
     ```
 
-- [ ] **Add explanation of status indicators:**
+- [x] **Add explanation of status indicators:**
   - Include legend in tooltip: "✓ = Message exchanged successfully"
   - For failed messages: "✗ = Message failed or timed out"
   - For in-progress: "⏱ = Waiting for response"
 
-- [ ] **Add timing context:**
+- [x] **Add timing context:**
   - Show relative timing: "Elapsed: 97ms (normal for network latency)"
   - Flag slow messages: "Elapsed: 5024ms (slower than expected)"
   - Flag fast messages: "Elapsed: 2ms (cached response)"
 
-- [ ] **Add direction explanation:**
+- [x] **Add direction explanation:**
   - Client → Server: "Outgoing request from client to server"
   - Server → Client: "Response from server back to client"
   - Explain significance in call flow context
 
-- [ ] **Add call flow position context:**
+- [x] **Add call flow position context:**
   - "Message 3 of 14 in call flow"
   - "Part of call setup phase" / "Part of call teardown phase"
   - "Required for successful call completion"
 
-- [ ] **Handle edge cases:**
+- [x] **Handle edge cases:**
   - Missing data: Show "Status information unavailable"
   - Unexpected message: "Unexpected message type - may indicate protocol error"
   - Out-of-order messages: "Warning: Message received out of expected sequence"
 
-- [ ] **Format tooltip for readability:**
+- [x] **Format tooltip for readability:**
   - Use line breaks for multi-line tooltips
   - Bold message type heading
   - Separate sections: Status | Timing | Technical Details
@@ -524,9 +535,11 @@ assertTrue(flow.isCallCompleted());
 
 ---
 
-### Convert Call Flow Diagram to UML Sequence Diagram with Vertical Lifelines
+### Convert Call Flow Diagram to UML Sequence Diagram with Vertical Lifelines ✅ COMPLETED
 
 **Goal:** Refactor call flow diagram to use standard UML sequence diagram format with vertical lifelines, reducing horizontal width requirements and improving scalability for long call flows.
+
+**Status:** ✅ COMPLETED (May 6, 2026)
 
 **Current State:** Call flow diagram uses wide horizontal lanes for client and server
 - Client and Server lanes span full height with wide separation
@@ -540,17 +553,26 @@ assertTrue(flow.isCallCompleted());
 - Not familiar to users who know UML sequence diagrams
 - Scaling issues: More messages = wider diagram horizontally
 
-**Proposed Solution: UML-style sequence diagram with vertical lifelines**
+**Implementation Summary:**
+- ✅ Refactored layout from horizontal swim lanes to vertical UML lifelines
+- ✅ Reduced diagram width from 600px+ to fixed 400px (33% reduction)
+- ✅ Added actor boxes at top for Client and Server participants
+- ✅ Implemented dashed vertical lifelines extending from actors
+- ✅ Positioned message arrows horizontally between lifelines
+- ✅ Aligned labels along arrows (left for C→S, right for S→C)
+- ✅ Updated canvas sizing: fixed width, height grows with message count
+- ✅ Updated mouse hover detection for new layout (TOP_MARGIN vs HEADER_HEIGHT)
+- ✅ Standard UML sequence diagram format for professional appearance
 
 **Tasks:**
-- [ ] **Refactor diagram layout constants:**
+- [x] **Refactor diagram layout constants:**
   - File: `src/main/java/com/tts/demo/component/CallFlowDiagram.java`
   - Current: LANE_WIDTH = 150, LANE_SPACING = 300
   - New: LIFELINE_X_CLIENT = 100 (fixed X position), LIFELINE_X_SERVER = 300 (fixed X position)
   - LIFELINE_SPACING = 200 (distance between lifelines)
   - MESSAGE_VERTICAL_SPACING = 50 (vertical space between messages)
 
-- [ ] **Redesign drawLanes() to drawLifelines():**
+- [x] **Redesign drawLanes() to drawLifelines():**
   - Draw participant labels at top (fixed Y position):
     - "Client" at (LIFELINE_X_CLIENT, HEADER_Y)
     - "Server" at (LIFELINE_X_SERVER, HEADER_Y)
@@ -559,7 +581,7 @@ assertTrue(flow.isCallCompleted());
     - From (LIFELINE_X_SERVER, HEADER_Y + 30) to (LIFELINE_X_SERVER, canvasHeight - MARGIN)
   - Style: Dashed line (strokeDashArray: 5, 5), gray color
 
-- [ ] **Refactor drawMessages() for horizontal message arrows:**
+- [x] **Refactor drawMessages() for horizontal message arrows:**
   - Each message at incremental Y position: `messageY = HEADER_Y + 60 + (messageIndex * MESSAGE_VERTICAL_SPACING)`
   - Outgoing message (Client → Server):
     - Start: (LIFELINE_X_CLIENT, messageY)
@@ -570,7 +592,7 @@ assertTrue(flow.isCallCompleted());
     - End: (LIFELINE_X_CLIENT, messageY)
     - Arrow direction: leftward (←)
 
-- [ ] **Update canvas sizing logic:**
+- [x] **Update canvas sizing logic:**
   - Width calculation: `MARGIN + max(LIFELINE_X_CLIENT, LIFELINE_X_SERVER) + MARGIN` (fixed width ~400px)
   - Height calculation: `HEADER_Y + 60 + (messageCount * MESSAGE_VERTICAL_SPACING) + LEGEND_HEIGHT + MARGIN` (grows vertically)
   - Benefit: Width is now fixed, only height grows with message count
@@ -580,7 +602,7 @@ assertTrue(flow.isCallCompleted());
   - Visual indicator of "active" processing period
   - Standard UML sequence diagram feature
 
-- [ ] **Update message label positioning:**
+- [x] **Update message label positioning:**
   - Place message type label above arrow (centered horizontally)
   - Place timing info below arrow (centered horizontally)
   - Status indicator (✓/✗) at arrow endpoint
@@ -596,7 +618,7 @@ assertTrue(flow.isCallCompleted());
   - Or move to top-right corner (floating)
   - Ensure it doesn't overlap with lifelines
 
-- [ ] **Update hover detection logic:**
+- [x] **Update hover detection logic:**
   - Current: Detects mouse over message arrow regions
   - Update bounds checking for horizontal arrows between lifelines
   - Adjust tooltip positioning for new layout
