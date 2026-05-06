@@ -1,6 +1,6 @@
 # TTS Demo Tool - TODO List
 
-**Last Updated:** May 6, 2026
+**Last Updated:** May 6, 2026 (Added Priority 2: Repository Organization task)
 
 ---
 
@@ -323,7 +323,62 @@ assertTrue(flow.isCallCompleted());
 
 ---
 
-## 🟢 PRIORITY 2: Additional Features (Future)
+## 🟢 PRIORITY 2: Repository Organization & Infrastructure
+
+**Status:** Backlog
+
+### Organize Local Test Data for Discoverability
+
+**Goal:** Ensure locally-generated test artifacts are in well-structured folders that Copilot and developers can easily discover and reference.
+
+**Current State:** Test results and logs are scattered and not easily discoverable
+- 21 JTL test result files in `logs/` (kept locally, git-ignored)
+- 3 application log files in `logs/` (kept locally, git-ignored)  
+- Run history JSON files in `runs/` (kept locally, git-ignored)
+
+**Tasks:**4
+- [ ] **Verify folder structure is intuitive:**
+  - `logs/` should contain ONLY JTL test results and application logs
+  - `runs/` should contain ONLY run history JSON files
+  - Consider: `logs/jtl/` vs `logs/app/` separation?
+
+- [ ] **Add README.md to logs/ folder:**
+  - Explain what JTL files are (JMeter test results)
+  - Explain application log rotation policy
+  - Document baseline file: `phase1_success_baseline.jtl` (must keep)
+  - Link to JTL format documentation
+
+- [ ] **Add README.md to runs/ folder:**
+  - Explain run history JSON schema
+  - Show example JSON structure
+  - Document retention policy (keep last N runs?)
+  - Add index file or catalog for easy discovery
+
+- [ ] **Update .gitignore comments:**
+  - Add inline comments explaining why logs/ and runs/ are ignored
+  - Document exceptions (baseline files, etc.)
+
+- [ ] **Add sample/reference files for Copilot:**
+  - Keep 1-2 representative JTL files as examples (not just baseline)
+  - Keep 1-2 sample run history JSON files
+  - Add `.gitkeep` or README to empty folders
+
+- [ ] **Document in PROJECT_STATUS.md:**
+  - Add "Test Artifacts" section
+  - Explain folder structure
+  - Show commands to inspect recent results
+
+**Verification:**
+- Copilot can answer: "Show me recent test results"
+- Copilot can answer: "What's the format of JTL files?"
+- Copilot can find baseline test data easily
+- New developers understand where test outputs go
+
+**Estimated Effort:** 1-2 hours
+
+---
+
+## 🟢 PRIORITY 3: Additional Features (Future)
 
 **Status:** Backlog
 
@@ -336,7 +391,7 @@ assertTrue(flow.isCallCompleted());
 
 ---
 
-## 🟡 PRIORITY 3: Phase 2 Architecture (Spring Boot Migration)
+## 🟡 PRIORITY 4: Phase 2 Architecture (Spring Boot Migration)
 
 **Status:** Planning Phase
 
