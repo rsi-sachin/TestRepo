@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.tts.demo.controller.RunHistoryController"
+            stylesheets="@../css/styles.css"
+            prefWidth="900" prefHeight="600">
+    
+    <top>
+        <VBox spacing="10" styleClass="main-container">
+            <Label text="Run History" styleClass="title-label"/>
+            
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Button text="Refresh" onAction="#handleRefresh"/>
+                <Button text="Clear All History" 
+                       onAction="#handleClearAll"
+                       styleClass="button-danger"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="statsLabel" text="Total: 0 | Success: 0 | Failed: 0"/>
+            </HBox>
+        </VBox>
+    </top>
+    
+    <center>
+        <VBox spacing="10" styleClass="main-container" VBox.vgrow="ALWAYS">
+            <TableView fx:id="historyTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="demoTitleColumn" text="Demo Title" prefWidth="250"/>
+                    <TableColumn fx:id="startTimeColumn" text="Start Time" prefWidth="150"/>
+                    <TableColumn fx:id="durationColumn" text="Duration" prefWidth="100"/>
+                    <TableColumn fx:id="statusColumn" text="Status" prefWidth="100"/>
+                    <TableColumn fx:id="exitCodeColumn" text="Exit Code" prefWidth="100"/>
+                </columns>
+            </TableView>
+            
+            <Separator/>
+            
+            <VBox spacing="10" fx:id="detailsPane" managed="false" visible="false">
+                <Label text="Run Details:" styleClass="subtitle-label"/>
+                
+                <GridPane hgap="15" vgap="8">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="100" halignment="RIGHT"/>
+                        <ColumnConstraints hgrow="ALWAYS"/>
+                    </columnConstraints>
+                    
+                    <Label text="Run ID:" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-weight: bold;"/>
+                    <Label fx:id="runIdLabel" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                    
+                    <Label text="Demo ID:" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-weight: bold;"/>
+                    <Label fx:id="demoIdLabel" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                    
+                    <Label text="Log File:" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
+                    <Label fx:id="logFileLabel" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                </GridPane>
+                
+                <VBox spacing="5">
+                    <Label text="Output Snapshot:" styleClass="subtitle-label"/>
+                    <TextArea fx:id="outputSnapshotArea" 
+                             editable="false" 
+                             wrapText="true"
+                             prefHeight="150"
+                             styleClass="text-area"/>
+                </VBox>
+                
+                <HBox spacing="10">
+                    <Button text="Delete This Run" 
+                           onAction="#handleDeleteRun"
+                           styleClass="button-danger"/>
+                </HBox>
+            </VBox>
+        </VBox>
+    </center>
+    
+    <bottom>
+        <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-background-color: #ecf0f1;">
+            <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+            <Button text="Close" onAction="#handleClose"/>
+        </HBox>
+    </bottom>
+    
+</BorderPane>
