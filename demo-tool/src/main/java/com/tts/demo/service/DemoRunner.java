@@ -219,14 +219,13 @@ public class DemoRunner {
     private void streamOutput(Process process, Consumer<String> outputConsumer, Demo demo) {
         boolean testStarted = false;
         boolean summaryShown = false;
+        int sipMessageCount = 0;
+        int successfulSipMessages = 0;
         
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                // Enhance key log patterns for better visibility
-                String enhancedLine = line;
-                
                 // Detect test start
                 if (line.contains("Starting standalone test")) {
                     if (outputConsumer != null) {
@@ -246,15 +245,31 @@ public class DemoRunner {
                     }
                 }
                 
+                // Detect and format SIP messages for SIP/IMS protocol
+                if (demo.getProtocol() == Demo.Protocol.SIP_IMS) {
+                    String sipMessage = detectAndFormatSipMessage(line);
+                    if (sipMessage != null) {
+                        sipMessageCount++;
+                        if (line.contains("successfully") || line.contains("OK")) {
+                            successfulSipMessages++;
+                        }
+                        if (outputConsumer != null) {
+                            outputConsumer.accept(sipMessage);
+                        }
+                        logger.debug("SIP Message detected: {}", sipMessage);
+                        continue; // Skip normal processing for SIP messages
+                    }
+                }
+                
                 // Enhance summary output
                 if (line.contains("summary =") && !summaryShown) {
                     if (outputConsumer != null) {
                         outputConsumer.accept("[PROGRESS] Execution in progress...");
-                        outputConsumer.accept(enhancedLine);
+                        outputConsumer.accept("[INFO] " + line.trim());
                     }
                     summaryShown = true;
                     logger.info("JMeter summary: {}", line.trim());
-                    continue; // Skip normal processing for summary line
+                    continue;
                 }
                 
                 // Detect test completion
@@ -267,12 +282,29 @@ public class DemoRunner {
                 if (line.contains("end of run")) {
                     if (outputConsumer != null) {
                         outputConsumer.accept("[PROGRESS] JMeter execution finished");
+                        
+                        // Add call flow summary for SIP/IMS tests
+                        if (demo.getProtocol() == Demo.Protocol.SIP_IMS && sipMessageCount > 0) {
+                            outputConsumer.accept("");
+                            outputConsumer.accept("════════════════════════════════════════════");
+                            outputConsumer.accept("            Call Flow Summary               ");
+                            outputConsumer.accept("════════════════════════════════════════════");
+                            outputConsumer.accept(String.format("Total SIP Messages: %d", sipMessageCount));
+                            outputConsumer.accept(String.format("Successful: %d (%.1f%%)", 
+                                    successfulSipMessages, 
+                                    (successfulSipMessages * 100.0) / sipMessageCount));
+                            outputConsumer.accept(String.format("Failed: %d", sipMessageCount - successfulSipMessages));
+                            outputConsumer.accept("════════════════════════════════════════════");
+                            outputConsumer.accept("");
+                        }
                     }
                 }
                 
-                // Send line to consumer (unless already sent above)
-                if (outputConsumer != null && !line.contains("summary =")) {
-                    outputConsumer.accept(enhancedLine);
+                // Filter out noise - only show important lines
+                if (shouldShowLine(line)) {
+                    if (outputConsumer != null) {
+                        outputConsumer.accept(line);
+                    }
                 }
                 
                 // Log all output at debug level
@@ -281,6 +313,138 @@ public class DemoRunner {
         } catch (IOException e) {
             logger.error("Error reading process output", e);
         }
+    }
+    
+    /**
+     * Detect and format SIP messages from JMeter output
+     * 
+     * @param line JMeter output line
+     * @return Formatted SIP message or null if not a SIP message
+     */
+    private String detectAndFormatSipMessage(String line) {
+        if (line == null || line.isEmpty()) {
+            return null;
+        }
+        
+        // Skip timer and utility messages
+        if (line.contains("Wait for") || line.contains("Generate") || line.contains("Timer")) {
+            return null;
+        }
+        
+        // Detect Send/Listen patterns
+        String direction = null;
+        String messageType = null;
+        String threadType = null;
+        String elapsedTime = null;
+        
+        // Extract thread type (Client or Server)
+        if (line.contains("Client")) {
+            threadType = "Client";
+        } else if (line.contains("Server")) {
+            threadType = "Server";
+        } else {
+            return null; // Not a client/server message
+        }
+        
+        // Detect Send messages (outgoing)
+        if (line.contains("Send ")) {
+            if (threadType.equals("Client")) {
+                direction = "Client → Server";
+            } else {
+                direction = "Server → Client";
+            }
+            
+            // Extract message type
+            if (line.contains("INVITE")) messageType = "INVITE";
+            else if (line.contains("TRYING")) messageType = "TRYING";
+            else if (line.contains("RINGING")) messageType = "RINGING";
+            else if (line.contains("OK")) messageType = "OK";
+            else if (line.contains("ACK")) messageType = "ACK";
+            else if (line.contains("BYE")) messageType = "BYE";
+        }
+        
+        // Detect Listen messages (incoming - reverse direction)
+        else if (line.contains("Listen for ")) {
+            if (threadType.equals("Client")) {
+                direction = "Server → Client"; // Client listening receives from server
+            } else {
+                direction = "Client → Server"; // Server listening receives from client
+            }
+            
+            // Extract message type
+            if (line.contains("INVITE")) messageType = "INVITE";
+            else if (line.contains("TRYING")) messageType = "TRYING";
+            else if (line.contains("RINGING")) messageType = "RINGING";
+            else if (line.contains("OK")) messageType = "OK";
+            else if (line.contains("ACK")) messageType = "ACK";
+            else if (line.contains("BYE")) messageType = "BYE";
+        }
+        
+        // If we found a SIP message, format it
+        if (direction != null && messageType != null) {
+            // Try to extract elapsed time if available (format: "elapsed: 97ms")
+            if (line.contains("elapsed:")) {
+                int elapsedIdx = line.indexOf("elapsed:");
+                if (elapsedIdx != -1) {
+                    String remaining = line.substring(elapsedIdx + 8).trim();
+                    int spaceIdx = remaining.indexOf(' ');
+                    if (spaceIdx != -1) {
+                        elapsedTime = remaining.substring(0, spaceIdx);
+                    }
+                }
+            }
+            
+            // Format the message
+            String status = line.contains("successfully") ? "[OK]" : 
+                           line.contains("failed") ? "[FAIL]" : "";
+            
+            if (elapsedTime != null) {
+                return String.format("[SIP] %s %s (elapsed: %s) %s", 
+                        direction, messageType, elapsedTime, status);
+            } else {
+                return String.format("[SIP] %s %s %s", direction, messageType, status);
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Determine if a line should be shown in the output (filter noise)
+     * 
+     * @param line JMeter output line
+     * @return true if line should be shown
+     */
+    private boolean shouldShowLine(String line) {
+        if (line == null || line.isEmpty()) {
+            return false;
+        }
+        
+        // Always show lines with these markers
+        if (line.contains("[PROGRESS]") || 
+            line.contains("[INFO]") || 
+            line.contains("[SIP]") ||
+            line.contains("[ERROR]") ||
+            line.contains("summary =")) {
+            return true;
+        }
+        
+        // Filter out common noise patterns
+        if (line.contains("Waiting for possible Shutdown") ||
+            line.contains("Notifying test listeners") ||
+            line.contains("StandardJMeterEngine") ||
+            line.contains("Listener") ||
+            line.contains("DEBUG") ||
+            line.trim().isEmpty()) {
+            return false;
+        }
+        
+        // Show errors and warnings
+        if (line.contains("ERROR") || line.contains("WARN")) {
+            return true;
+        }
+        
+        return false; // Filter everything else
     }
 
     /**
