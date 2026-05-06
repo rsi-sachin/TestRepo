@@ -323,16 +323,25 @@ public class MainController {
                             String jtlPath = result.getLogFilePath();
                             if (jtlPath != null && new File(jtlPath).exists()) {
                                 CallFlow callFlow = jtlParser.parseJtlFile(jtlPath);
-                                createCallFlowDiagram(callFlow);
-                                updateCallFlowStatus(callFlow);
-                                exportDiagramButton.setDisable(false);
-                                logger.info("Call flow diagram created: {} messages", callFlow.getTotalMessages());
+                                
+                                // Check if call flow has messages
+                                if (callFlow.getTotalMessages() == 0) {
+                                    showEmptyCallFlowMessage();
+                                    logger.warn("No SIP messages found in JTL file: {}", jtlPath);
+                                } else {
+                                    createCallFlowDiagram(callFlow);
+                                    updateCallFlowStatus(callFlow);
+                                    exportDiagramButton.setDisable(false);
+                                    logger.info("Call flow diagram created: {} messages", callFlow.getTotalMessages());
+                                }
                             } else {
                                 logger.warn("JTL file not found: {}", jtlPath);
+                                showJtlNotFoundMessage();
                             }
                         } catch (IOException e) {
                             logger.error("Failed to parse JTL file", e);
                             callFlowStatusLabel.setText("Call Flow: Parse error");
+                            showParseErrorMessage(e.getMessage());
                         }
                     } else {
                         // For non-SIP protocols, show message
@@ -345,6 +354,12 @@ public class MainController {
                     statusLabel.setText("Failed");
                     statusLabel.getStyleClass().clear();
                     statusLabel.getStyleClass().add("status-failed");
+                    
+                    // Show error message in diagram area for SIP demos
+                    if (selectedDemo.getProtocol() == Demo.Protocol.SIP_IMS) {
+                        showFailedTestMessage();
+                    }
+                    
                     showAlert("Demo Failed", "Demo execution failed. Check output for details.", 
                              Alert.AlertType.ERROR);
                 }
@@ -417,6 +432,80 @@ public class MainController {
         message.setMaxWidth(600);
         diagramContainer.getChildren().add(message);
         callFlowStatusLabel.setText("Call Flow: Not available for this protocol");
+        exportDiagramButton.setDisable(true);
+    }
+    
+    /**
+     * Show message when no SIP messages found
+     */
+    private void showEmptyCallFlowMessage() {
+        diagramContainer.getChildren().clear();
+        Label message = new Label("No SIP messages were exchanged during this test.\n" +
+                                 "This may indicate a configuration issue or test failure.\n" +
+                                 "Check the terminal output for details.");
+        message.setStyle("-fx-text-fill: #e67e22; -fx-font-size: 14px; -fx-text-alignment: center;");
+        message.setWrapText(true);
+        message.setMaxWidth(600);
+        diagramContainer.getChildren().add(message);
+        callFlowStatusLabel.setText("Call Flow: No messages");
+        callFlowStatusLabel.getStyleClass().clear();
+        callFlowStatusLabel.getStyleClass().add("status-warning");
+        exportDiagramButton.setDisable(true);
+    }
+    
+    /**
+     * Show message when JTL file not found
+     */
+    private void showJtlNotFoundMessage() {
+        diagramContainer.getChildren().clear();
+        Label message = new Label("Test results file (JTL) not found.\n" +
+                                 "The call flow cannot be visualized.");
+        message.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 14px; -fx-text-alignment: center;");
+        message.setWrapText(true);
+        message.setMaxWidth(600);
+        diagramContainer.getChildren().add(message);
+        callFlowStatusLabel.setText("Call Flow: Results not found");
+        callFlowStatusLabel.getStyleClass().clear();
+        callFlowStatusLabel.getStyleClass().add("status-failed");
+        exportDiagramButton.setDisable(true);
+    }
+    
+    /**
+     * Show message when JTL parse fails
+     */
+    private void showParseErrorMessage(String errorDetail) {
+        diagramContainer.getChildren().clear();
+        VBox errorBox = new VBox(10);
+        errorBox.setAlignment(Pos.CENTER);
+        errorBox.setMaxWidth(600);
+        
+        Label title = new Label("Failed to parse test results");
+        title.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 16px; -fx-font-weight: bold;");
+        
+        Label detail = new Label(errorDetail);
+        detail.setStyle("-fx-text-fill: #95a5a6; -fx-font-size: 12px;");
+        detail.setWrapText(true);
+        
+        errorBox.getChildren().addAll(title, detail);
+        diagramContainer.getChildren().add(errorBox);
+        exportDiagramButton.setDisable(true);
+    }
+    
+    /**
+     * Show message when test fails
+     */
+    private void showFailedTestMessage() {
+        diagramContainer.getChildren().clear();
+        Label message = new Label("Test execution failed.\n" +
+                                 "No call flow diagram available.\n" +
+                                 "Check the terminal output for error details.");
+        message.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 14px; -fx-text-alignment: center;");
+        message.setWrapText(true);
+        message.setMaxWidth(600);
+        diagramContainer.getChildren().add(message);
+        callFlowStatusLabel.setText("Call Flow: Test failed");
+        callFlowStatusLabel.getStyleClass().clear();
+        callFlowStatusLabel.getStyleClass().add("status-failed");
         exportDiagramButton.setDisable(true);
     }
     
