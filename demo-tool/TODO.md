@@ -1,6 +1,6 @@
 # TTS Demo Tool - TODO List
 
-**Last Updated:** May 6, 2026 (Added Priority 2: Repository Organization task)
+**Last Updated:** May 6, 2026 (Added TestFX GUI testing task to Priority 2)
 
 ---
 
@@ -375,6 +375,52 @@ assertTrue(flow.isCallCompleted());
 - New developers understand where test outputs go
 
 **Estimated Effort:** 1-2 hours
+
+---
+
+### Add GUI Testing Framework (TestFX)
+
+**Goal:** Enable automated JavaFX GUI testing to validate UI components, interactions, and call flow visualization rendering.
+
+**Current State:** No automated GUI testing capability
+- Manual testing required for all UI features
+- No way to verify call flow diagram rendering programmatically
+- Cannot test user interactions (clicks, input, navigation) automatically
+
+**Tasks:**
+- [ ] **Create sample GUI test for call flow visualization:**
+  - Test: Select sip-001 demo → Click Run → Verify diagram appears
+  - Test: Verify diagram container has CallFlowDiagram child node
+  - Test: Verify status label updates with message count
+  - Test: Click "Show Terminal" checkbox → Verify terminal expands
+  - **Status:** NOT COMPLETE - Planned only, no test code written yet
+
+- [ ] **Add test for error scenarios:**
+  - Test: Non-SIP demo shows informative message (no diagram)
+  - Test: Failed test shows error message in diagram area
+
+- [ ] **Create test for export functionality:**
+  - Test: Run demo → Click "Export Diagram" button → Verify PNG file created
+  - Test: Verify exports/ folder exists and contains timestamped file
+  - **Context:** "Export Diagram" button is in UI (Phase 5 implementation), located next to "Show Terminal" checkbox in Diagram Controls section. Button is disabled initially, enables after successful SIP test. Saves diagram as PNG to `exports/sip-001_callflow_YYYYMMDD_HHMMSS.png`
+
+- [ ] **Add TestFX dependencies and configure Maven:**
+  - Add TestFX Core (org.testfx:testfx-core:4.0.18)
+  - Add TestFX JUnit5 (org.testfx:testfx-junit5:4.0.18)
+  - Add Monocle for headless testing (org.testfx:openjfx-monocle:jdk-12.0.1+2)
+  - Scope: test
+  - Configure Maven Surefire plugin for GUI tests
+  - Add headless mode configuration
+  - Set up proper test execution order
+  - Configure TestFX properties
+
+**Benefits:**
+- Catch UI regressions early
+- Verify diagram rendering without manual testing
+- Test user interactions programmatically
+- Enable CI/CD pipeline GUI validation
+
+**Estimated Effort:** 3-4 hours
 
 ---
 

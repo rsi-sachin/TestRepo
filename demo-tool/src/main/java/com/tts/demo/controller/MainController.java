@@ -62,6 +62,12 @@ public class MainController {
     @FXML private Label statusLabel;
     @FXML private TextArea outputTextArea;
     
+    // Tabbed Interface components
+    @FXML private TabPane demoTabPane;
+    @FXML private Tab configTab;
+    @FXML private Tab executionTab;
+    @FXML private Button executionTabStopButton;
+    
     // Call Flow Visualization components (Phase 4+5)
     @FXML private CheckBox showTerminalCheckBox;
     @FXML private Button exportDiagramButton;
@@ -107,7 +113,45 @@ public class MainController {
         // Update history count
         updateHistoryCount();
         
+        // Initialize tab state
+        if (demoTabPane != null && configTab != null) {
+            demoTabPane.getSelectionModel().select(configTab);
+            logger.debug("Initialized tab selection to Configuration tab");
+        }
+        
         logger.info("MainController initialized with {} demos", catalog.getDemoCount());
+    }
+    
+    /**
+     * Switch to the Execution tab
+     */
+    private void switchToExecutionTab() {
+        if (demoTabPane != null && executionTab != null) {
+            demoTabPane.getSelectionModel().select(executionTab);
+            logger.debug("Switched to Execution tab");
+        }
+    }
+    
+    /**
+     * Switch to the Configuration tab
+     */
+    private void switchToConfigTab() {
+        if (demoTabPane != null && configTab != null) {
+            demoTabPane.getSelectionModel().select(configTab);
+            logger.debug("Switched to Configuration tab");
+        }
+    }
+    
+    /**
+     * Enable or disable the Configuration tab
+     * 
+     * @param disabled true to disable the tab, false to enable
+     */
+    private void setConfigTabDisabled(boolean disabled) {
+        if (configTab != null) {
+            configTab.setDisable(disabled);
+            logger.debug("Configuration tab disabled: {}", disabled);
+        }
     }
 
     private void initializeFilters() {
@@ -257,6 +301,10 @@ public class MainController {
         outputTextArea.clear();
         statusLabel.setText("");
         
+        // Switch to Configuration tab and enable it
+        switchToConfigTab();
+        setConfigTabDisabled(false);
+        
         logger.info("Selected demo: {}", demo.getTitle());
     }
 
@@ -295,11 +343,18 @@ public class MainController {
         // Update UI state
         runButton.setDisable(true);
         stopButton.setDisable(false);
+        if (executionTabStopButton != null) {
+            executionTabStopButton.setDisable(false);
+        }
         progressIndicator.setVisible(true);
         statusLabel.setText("Running...");
         statusLabel.getStyleClass().clear();
         statusLabel.getStyleClass().add("status-running");
         outputTextArea.clear();
+        
+        // Switch to Execution tab and disable Configuration tab
+        switchToExecutionTab();
+        setConfigTabDisabled(true);
         
         logger.info("Starting demo run: {}", selectedDemo.getTitle());
         
@@ -310,6 +365,9 @@ public class MainController {
             Platform.runLater(() -> {
                 runButton.setDisable(false);
                 stopButton.setDisable(true);
+                if (executionTabStopButton != null) {
+                    executionTabStopButton.setDisable(true);
+                }
                 progressIndicator.setVisible(false);
                 
                 if (result.getStatus() == RunResult.RunStatus.SUCCESS) {
@@ -350,6 +408,9 @@ public class MainController {
                     
                     showAlert("Demo Completed", "Demo executed successfully in " + 
                              result.getDurationSeconds() + " seconds.", Alert.AlertType.INFORMATION);
+                    
+                    // Re-enable Configuration tab
+                    setConfigTabDisabled(false);
                 } else {
                     statusLabel.setText("Failed");
                     statusLabel.getStyleClass().clear();
@@ -362,6 +423,9 @@ public class MainController {
                     
                     showAlert("Demo Failed", "Demo execution failed. Check output for details.", 
                              Alert.AlertType.ERROR);
+                    
+                    // Re-enable Configuration tab
+                    setConfigTabDisabled(false);
                 }
                 
                 updateHistoryCount();
@@ -378,7 +442,14 @@ public class MainController {
         statusLabel.getStyleClass().add("status-failed");
         runButton.setDisable(false);
         stopButton.setDisable(true);
+        if (executionTabStopButton != null) {
+            executionTabStopButton.setDisable(true);
+        }
         progressIndicator.setVisible(false);
+        
+        // Re-enable Configuration tab
+        setConfigTabDisabled(false);
+        
         logger.info("Demo execution stopped by user");
     }
 
