@@ -125,13 +125,56 @@
                     
                     <Separator/>
                     
-                    <!-- Live Output -->
-                    <Label text="Live Output:" styleClass="subtitle-label"/>
-                    <TextArea fx:id="outputTextArea" 
-                             editable="false" 
-                             wrapText="false"
-                             VBox.vgrow="ALWAYS"
-                             styleClass="text-area"/>
+                    <!-- Call Flow Visualization -->
+                    <Label text="Call Flow Visualization:" styleClass="subtitle-label"/>
+                    
+                    <!-- Diagram Controls -->
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <CheckBox fx:id="showTerminalCheckBox" 
+                                 text="Show Terminal" 
+                                 onAction="#handleToggleTerminal"
+                                 selected="false"/>
+                        <Button text="Export Diagram" 
+                               fx:id="exportDiagramButton"
+                               onAction="#handleExportDiagram"
+                               styleClass="button-secondary"
+                               disable="true"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="callFlowStatusLabel" 
+                              text="Call Flow: Not started"
+                              styleClass="status-info"/>
+                    </HBox>
+                    
+                    <!-- Main Visualization Area -->
+                    <SplitPane fx:id="visualizationSplitPane" 
+                              orientation="VERTICAL" 
+                              dividerPositions="1.0"
+                              VBox.vgrow="ALWAYS">
+                        
+                        <!-- Call Flow Diagram (Top) -->
+                        <ScrollPane fitToWidth="true" fitToHeight="true">
+                            <StackPane fx:id="diagramContainer" 
+                                      style="-fx-background-color: white; -fx-border-color: #bdc3c7; -fx-border-width: 1;"
+                                      minHeight="400">
+                                <Label text="Call flow diagram will appear here after running a SIP/IMS demo"
+                                      style="-fx-text-fill: #95a5a6; -fx-font-size: 14px;"/>
+                            </StackPane>
+                        </ScrollPane>
+                        
+                        <!-- Terminal Output (Bottom, Collapsible) -->
+                        <TitledPane fx:id="terminalPane" 
+                                   text="Terminal Output (Advanced)" 
+                                   expanded="false"
+                                   collapsible="true"
+                                   animated="true">
+                            <TextArea fx:id="outputTextArea" 
+                                    editable="false" 
+                                    wrapText="false"
+                                    prefHeight="200"
+                                    styleClass="text-area"/>
+                        </TitledPane>
+                        
+                    </SplitPane>
                 </VBox>
                 
                 <!-- Placeholder when no demo selected -->
