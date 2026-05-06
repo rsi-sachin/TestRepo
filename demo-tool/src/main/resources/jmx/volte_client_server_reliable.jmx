@@ -1,0 +1,613 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Test Plan" enabled="true">
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">false</boolProp>
+    </TestPlan>
+    <hashTree>
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>false</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>false</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <threadCounts>true</threadCounts>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+      <ResultCollector guiclass="com.computaris.jmeter_plugins.sip.listener.TtsSipListener" testclass="ResultCollector" testname="TTS Sip Listener" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>false</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>false</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <threadCounts>true</threadCounts>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Default Sip Values" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="from" elementType="Argument">
+            <stringProp name="Argument.name">from</stringProp>
+            <stringProp name="Argument.value">&lt;sip:test@localhost:5065&gt;</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="to" elementType="Argument">
+            <stringProp name="Argument.name">to</stringProp>
+            <stringProp name="Argument.value">&lt;sip:sipp@127.0.0.1:5060&gt;</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="listeningip" elementType="Argument">
+            <stringProp name="Argument.name">listeningip</stringProp>
+            <stringProp name="Argument.value">localhost</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="listeningport" elementType="Argument">
+            <stringProp name="Argument.name">listeningport</stringProp>
+            <stringProp name="Argument.value">5065</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="sendingip" elementType="Argument">
+            <stringProp name="Argument.name">sendingip</stringProp>
+            <stringProp name="Argument.value">localhost</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="sendingport" elementType="Argument">
+            <stringProp name="Argument.name">sendingport</stringProp>
+            <stringProp name="Argument.value">5060</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="via" elementType="Argument">
+            <stringProp name="Argument.name">via</stringProp>
+            <stringProp name="Argument.value">SIP/2.0/UDP 127.0.0.1:5065</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="contact" elementType="Argument">
+            <stringProp name="Argument.value">&lt;sip:sipp@127.0.0.1:5060&gt;</stringProp>
+            <stringProp name="Argument.name">contact</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </Arguments>
+      <hashTree/>
+      <ConfigTestElement guiclass="com.computaris.jmeter_plugins.sip.config.TtsSipConfigGui" testclass="ConfigTestElement" testname="TTS Sip Configuration" enabled="true">
+        <stringProp name="aaaSipConfigGui.LISTEN_ADDR">${listeningip}</stringProp>
+        <stringProp name="aaaSipConfigGui.LISTEN_PORT">${listeningport}</stringProp>
+        <stringProp name="aaaSipConfigGui.SEND_ADDR">${sendingip}</stringProp>
+        <stringProp name="aaaSipConfigGui.SEND_PORT">${sendingport}</stringProp>
+        <stringProp name="aaaSipConfigGui.PROTOCOL">udp</stringProp>
+        <stringProp name="aaaSipConfigGui.USERNAME">sipuser</stringProp>
+        <stringProp name="aaaSipConfigGui.SIP_URI"></stringProp>
+        <stringProp name="bbbSipConfigGui.LISTEN_ADDR">${sendingip}</stringProp>
+        <stringProp name="bbbSipConfigGui.LISTEN_PORT">${sendingport}</stringProp>
+        <stringProp name="bbbSipConfigGui.SEND_ADDR">${listeningip}</stringProp>
+        <stringProp name="bbbSipConfigGui.SEND_PORT">${listeningport}</stringProp>
+        <stringProp name="bbbSipConfigGui.PROTOCOL">udp</stringProp>
+        <stringProp name="bbbSipConfigGui.USERNAME"></stringProp>
+        <stringProp name="bbbSipConfigGui.SIP_URI"></stringProp>
+        <objProp>
+          <name>SipConfigGui.CONNECTION_IDS</name>
+          <value class="java.util.ArrayList">
+            <java.lang.String>aaa</java.lang.String>
+            <java.lang.String>bbb</java.lang.String>
+          </value>
+        </objProp>
+      </ConfigTestElement>
+      <hashTree/>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Server" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${__P(server_rampup,5)}</stringProp>
+        <longProp name="ThreadGroup.start_time">1347622980000</longProp>
+        <longProp name="ThreadGroup.end_time">1347622980000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.delayedStart">false</boolProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <GenericController guiclass="com.computaris.jmeter.functions.FunctionHelperHook" testclass="GenericController" testname="call id = 1, cseq = 1" enabled="true"/>
+        <hashTree>
+          <com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler guiclass="com.computaris.jmeter_plugins.sip.sampler.gui.TtsSipSamplerGui" testclass="com.computaris.jmeter_plugins.sip.sampler.TtsSipSampler" testname="Listen for INVITE" enabled="true">
+            <stringProp name="TtsSipSampler.CONNECTION_ID">bbb</stringProp>
+            <stringProp name="TtsSipSampler.SIP_LISTEN_TIMEOUT">${__P(listen_timeout,30000)}</stringProp>
+            <stringProp name="TtsSipSampler.samplerMode">LISTEN_ACTION_COMMAND</stringProp>
+            <stringProp name="TtsSipSampler.SEND_METHOD_TYPE">Request</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD">ACK</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_SENDING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING">INVITE</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_COUNT">7</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE0">To</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA0">sip:to@to.com</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE1">From</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA1">sip:from@from.com</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE2">CSeq</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA2">1</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE3">Call-ID</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA3">1</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE4">Max-Forwards</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA4">70</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE5">Via</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA5">SIP/2.0/UDP via.domain</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE6">Contact</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA6">sip:192.168.96.210:5075</stringProp>
+            <stringProp name="TtsSipSampler.SIP_CONTENT"></stringProp>
+          </com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler>
+          <hashTree/>
+          <GenericController guiclass="com.computaris.jmeter.functions.FunctionHelperHook" testclass="GenericController" testname="Obtain information" enabled="true"/>
+          <hashTree>
+            <com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler guiclass="com.computaris.jmeter.ext.sampler.dummy.preferred.gui.TtsDummySamplerGui" testclass="com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler" testname="Request Method: ${__sipGetRequestMethod()}" enabled="false"/>
+            <hashTree/>
+            <com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler guiclass="com.computaris.jmeter.ext.sampler.dummy.preferred.gui.TtsDummySamplerGui" testclass="com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler" testname="To: ${__sipGetHeaderValue(To,)}" enabled="false"/>
+            <hashTree/>
+            <com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler guiclass="com.computaris.jmeter.ext.sampler.dummy.preferred.gui.TtsDummySamplerGui" testclass="com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler" testname="Via: ${__sipGetViaHeaderValue()}" enabled="false"/>
+            <hashTree/>
+            <com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler guiclass="com.computaris.jmeter.ext.sampler.dummy.preferred.gui.TtsDummySamplerGui" testclass="com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler" testname="SDP: ${__sipGetRequestSDP()}" enabled="false"/>
+            <hashTree/>
+            <com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler guiclass="com.computaris.jmeter.ext.sampler.dummy.preferred.gui.TtsDummySamplerGui" testclass="com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler" testname="Media Port: ${__sipGetRequestMediaPort()}" enabled="false"/>
+            <hashTree/>
+            <com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler guiclass="com.computaris.jmeter.ext.sampler.dummy.preferred.gui.TtsDummySamplerGui" testclass="com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler" testname="Media Type: ${__sipGetRequestMediaType()}" enabled="false"/>
+            <hashTree/>
+            <com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler guiclass="com.computaris.jmeter.ext.sampler.dummy.preferred.gui.TtsDummySamplerGui" testclass="com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler" testname="Media Formats: ${__sipGetRequestMediaFormats()}" enabled="false"/>
+            <hashTree/>
+          </hashTree>
+          <com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler guiclass="com.computaris.jmeter_plugins.sip.sampler.gui.TtsSipSamplerGui" testclass="com.computaris.jmeter_plugins.sip.sampler.TtsSipSampler" testname="Send TRYING" enabled="true">
+            <stringProp name="TtsSipSampler.CONNECTION_ID">bbb</stringProp>
+            <stringProp name="TtsSipSampler.SIP_LISTEN_TIMEOUT">${__P(listen_timeout,30000)}</stringProp>
+            <stringProp name="TtsSipSampler.samplerMode">SEND_ACTION_COMMAND</stringProp>
+            <stringProp name="TtsSipSampler.SEND_METHOD_TYPE">Response</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD">1xx - Provisional</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_SENDING_DETAILED">100 - TRYING</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_COUNT">7</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE0">To</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA0">${to}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE1">From</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA1">${from};tag=${__sipGetHeaderSubpart(From,tag,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE2">CSeq</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA2">${__sipGetHeaderValue(CSeq,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE3">Call-ID</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA3">${__sipGetHeaderValue(Call-ID,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE4">Max-Forwards</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA4">70</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE5">Via</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA5">${__sipGetViaHeaderValue()}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE6">Contact</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA6">${contact}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_CONTENT"></stringProp>
+          </com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler>
+          <hashTree/>
+          <com.computaris.jmeter.ext.timer.SimpleTimer guiclass="com.computaris.jmeter.ext.timer.SimpleTimerGui" testclass="com.computaris.jmeter.ext.timer.SimpleTimer" testname="Wait for 1 second" enabled="true">
+            <stringProp name="SimpleTimer.TIMEOUT">1000</stringProp>
+          </com.computaris.jmeter.ext.timer.SimpleTimer>
+          <hashTree/>
+          <com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler guiclass="com.computaris.jmeter_plugins.sip.sampler.gui.TtsSipSamplerGui" testclass="com.computaris.jmeter_plugins.sip.sampler.TtsSipSampler" testname="Send RINGING" enabled="true">
+            <stringProp name="TtsSipSampler.CONNECTION_ID">bbb</stringProp>
+            <stringProp name="TtsSipSampler.SIP_LISTEN_TIMEOUT">${__P(listen_timeout,30000)}</stringProp>
+            <stringProp name="TtsSipSampler.samplerMode">SEND_ACTION_COMMAND</stringProp>
+            <stringProp name="TtsSipSampler.SEND_METHOD_TYPE">Response</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD">1xx - Provisional</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_SENDING_DETAILED">180 - RINGING</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_COUNT">7</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE0">To</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA0">${to};tag=2</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE1">From</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA1">${from};tag=${__sipGetHeaderSubpart(From,tag,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE2">CSeq</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA2">${__sipGetHeaderValue(CSeq,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE3">Call-ID</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA3">${__sipGetHeaderValue(Call-ID,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE4">Max-Forwards</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA4">70</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE5">Via</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA5">${__sipGetViaHeaderValue()}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE6">Contact</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA6">${contact}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_CONTENT"></stringProp>
+          </com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler>
+          <hashTree/>
+          <com.computaris.jmeter.ext.timer.SimpleTimer guiclass="com.computaris.jmeter.ext.timer.SimpleTimerGui" testclass="com.computaris.jmeter.ext.timer.SimpleTimer" testname="Wait for 1 second" enabled="true">
+            <stringProp name="SimpleTimer.TIMEOUT">1000</stringProp>
+          </com.computaris.jmeter.ext.timer.SimpleTimer>
+          <hashTree/>
+          <com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler guiclass="com.computaris.jmeter_plugins.sip.sampler.gui.TtsSipSamplerGui" testclass="com.computaris.jmeter_plugins.sip.sampler.TtsSipSampler" testname="Send OK" enabled="true">
+            <stringProp name="TtsSipSampler.CONNECTION_ID">bbb</stringProp>
+            <stringProp name="TtsSipSampler.SIP_LISTEN_TIMEOUT">${__P(listen_timeout,30000)}</stringProp>
+            <stringProp name="TtsSipSampler.samplerMode">SEND_ACTION_COMMAND</stringProp>
+            <stringProp name="TtsSipSampler.SEND_METHOD_TYPE">Response</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD">2xx - Successful</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_SENDING_DETAILED">200 - OK</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_COUNT">7</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE0">To</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA0">${to};tag=2</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE1">From</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA1">${from};tag=${__sipGetHeaderSubpart(From,tag,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE2">CSeq</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA2">${__sipGetHeaderValue(CSeq,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE3">Call-ID</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA3">${__sipGetHeaderValue(Call-ID,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE4">Max-Forwards</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA4">70</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE5">Via</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA5">${__sipGetViaHeaderValue()}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE6">Contact</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA6">${contact}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_CONTENT"></stringProp>
+          </com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler>
+          <hashTree/>
+          <com.computaris.jmeter.ext.timer.SimpleTimer guiclass="com.computaris.jmeter.ext.timer.SimpleTimerGui" testclass="com.computaris.jmeter.ext.timer.SimpleTimer" testname="Wait for 1 second" enabled="true">
+            <stringProp name="SimpleTimer.TIMEOUT">1000</stringProp>
+          </com.computaris.jmeter.ext.timer.SimpleTimer>
+          <hashTree/>
+          <com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler guiclass="com.computaris.jmeter_plugins.sip.sampler.gui.TtsSipSamplerGui" testclass="com.computaris.jmeter_plugins.sip.sampler.TtsSipSampler" testname="Listen for ACK" enabled="true">
+            <stringProp name="TtsSipSampler.CONNECTION_ID">bbb</stringProp>
+            <stringProp name="TtsSipSampler.SIP_LISTEN_TIMEOUT">${__P(listen_timeout,30000)}</stringProp>
+            <stringProp name="TtsSipSampler.samplerMode">LISTEN_ACTION_COMMAND</stringProp>
+            <stringProp name="TtsSipSampler.SEND_METHOD_TYPE">Request</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD">ACK</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_SENDING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING">ACK</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_COUNT">7</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE0">To</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA0">${to}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE1">From</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA1">${from}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE2">CSeq</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA2">${cseq}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE3">Call-ID</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA3">${callid}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE4">Max-Forwards</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA4">70</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE5">Via</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA5">SIP/2.0/UDP via.domain</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE6">Contact</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA6">sip:192.168.96.210:5075</stringProp>
+            <stringProp name="TtsSipSampler.SIP_CONTENT"></stringProp>
+          </com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler>
+          <hashTree/>
+          <com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler guiclass="com.computaris.jmeter_plugins.sip.sampler.gui.TtsSipSamplerGui" testclass="com.computaris.jmeter_plugins.sip.sampler.TtsSipSampler" testname="Listen for BYE" enabled="true">
+            <stringProp name="TtsSipSampler.CONNECTION_ID">bbb</stringProp>
+            <stringProp name="TtsSipSampler.SIP_LISTEN_TIMEOUT">${__P(listen_timeout,30000)}</stringProp>
+            <stringProp name="TtsSipSampler.samplerMode">LISTEN_ACTION_COMMAND</stringProp>
+            <stringProp name="TtsSipSampler.SEND_METHOD_TYPE">Request</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD">BYE</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_SENDING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING">BYE</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_COUNT">7</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE0">To</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA0">${to}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE1">From</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA1">${from}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE2">CSeq</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA2">2</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE3">Call-ID</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA3">${callid}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE4">Max-Forwards</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA4">70</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE5">Via</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA5">SIP/2.0/UDP via.domain</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE6">Contact</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA6">sip:192.168.96.210:5075</stringProp>
+            <stringProp name="TtsSipSampler.SIP_CONTENT"></stringProp>
+          </com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler>
+          <hashTree/>
+          <com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler guiclass="com.computaris.jmeter_plugins.sip.sampler.gui.TtsSipSamplerGui" testclass="com.computaris.jmeter_plugins.sip.sampler.TtsSipSampler" testname="Send OK" enabled="true">
+            <stringProp name="TtsSipSampler.CONNECTION_ID">bbb</stringProp>
+            <stringProp name="TtsSipSampler.SIP_LISTEN_TIMEOUT">${__P(listen_timeout,30000)}</stringProp>
+            <stringProp name="TtsSipSampler.samplerMode">SEND_ACTION_COMMAND</stringProp>
+            <stringProp name="TtsSipSampler.SEND_METHOD_TYPE">Response</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD">2xx - Successful</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_SENDING_DETAILED">200 - OK</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_COUNT">7</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE0">To</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA0">${__sipGetHeaderValue(To,)};tag=2</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE1">From</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA1">${from};tag=${__sipGetHeaderSubpart(From,tag,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE2">CSeq</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA2">${__sipGetHeaderValue(CSeq,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE3">Call-ID</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA3">${__sipGetHeaderValue(Call-ID,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE4">Max-Forwards</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA4">70</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE5">Via</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA5">${__sipGetViaHeaderValue()}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE6">Contact</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA6">sip:192.168.96.140:5075</stringProp>
+            <stringProp name="TtsSipSampler.SIP_CONTENT"></stringProp>
+          </com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Client" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${__P(client_rampup,5)}</stringProp>
+        <longProp name="ThreadGroup.start_time">1347622980000</longProp>
+        <longProp name="ThreadGroup.end_time">1347622980000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.delayedStart">false</boolProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <GenericController guiclass="com.computaris.jmeter.functions.FunctionHelperHook" testclass="GenericController" testname="call id = 1, cseq = 1" enabled="true"/>
+        <hashTree>
+          <TestAction guiclass="TestActionGui" testclass="TestAction" testname="Flow Control Action" enabled="true">
+            <intProp name="ActionProcessor.action">1</intProp>
+            <intProp name="ActionProcessor.target">0</intProp>
+            <stringProp name="ActionProcessor.duration">${__P(client_delay,10000)}</stringProp>
+          </TestAction>
+          <hashTree/>
+          <com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler guiclass="com.computaris.jmeter.ext.sampler.dummy.preferred.gui.TtsDummySamplerGui" testclass="com.computaris.jmeter.ext.sampler.dummy.preferred.TtsDummySampler" testname="Generate and print CallId - ${__sipGenerateCallId(callid)}" enabled="true"/>
+          <hashTree/>
+          <com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler guiclass="com.computaris.jmeter_plugins.sip.sampler.gui.TtsSipSamplerGui" testclass="com.computaris.jmeter_plugins.sip.sampler.TtsSipSampler" testname="Send INVITE" enabled="true">
+            <stringProp name="TtsSipSampler.CONNECTION_ID">aaa</stringProp>
+            <stringProp name="TtsSipSampler.SIP_LISTEN_TIMEOUT">${__P(listen_timeout,30000)}</stringProp>
+            <stringProp name="TtsSipSampler.samplerMode">SEND_ACTION_COMMAND</stringProp>
+            <stringProp name="TtsSipSampler.SEND_METHOD_TYPE">Request</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD">INVITE</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_SENDING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_COUNT">7</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE0">To</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA0">${to}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE1">From</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA1">${from};tag=1001</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE2">CSeq</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA2">1 INVITE</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE3">Call-ID</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA3">${callid}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE4">Max-Forwards</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA4">70</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE5">Via</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA5">${via};branch=z9hG4bK-6024-1-0 </stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE6">Contact</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA6">${from}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_CONTENT">v=0
+o=user1 53655765 2353687637 IN IP4 127.0.0.1
+s=-
+c=IN IP4 127.0.0.1
+t=0 0
+m=audio 7999 RTP/AVP 0 3 110 8 97 101
+a=rtpmap:0 PCMU/8000</stringProp>
+          </com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler>
+          <hashTree/>
+          <com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler guiclass="com.computaris.jmeter_plugins.sip.sampler.gui.TtsSipSamplerGui" testclass="com.computaris.jmeter_plugins.sip.sampler.TtsSipSampler" testname="Listen for TRYING" enabled="true">
+            <stringProp name="TtsSipSampler.CONNECTION_ID">aaa</stringProp>
+            <stringProp name="TtsSipSampler.SIP_LISTEN_TIMEOUT">${__P(listen_timeout,30000)}</stringProp>
+            <stringProp name="TtsSipSampler.samplerMode">LISTEN_ACTION_COMMAND</stringProp>
+            <stringProp name="TtsSipSampler.SEND_METHOD_TYPE">Request</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD">ACK</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_SENDING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING">1xx - Provisional</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING_DETAILED">100 - TRYING</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_COUNT">7</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE0">To</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA0">sip:to@to.com</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE1">From</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA1">sip:from@from.com</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE2">CSeq</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA2">1</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE3">Call-ID</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA3">1</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE4">Max-Forwards</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA4">70</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE5">Via</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA5">SIP/2.0/UDP via.domain</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE6">Allow-Events</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA6">aaa</stringProp>
+            <stringProp name="TtsSipSampler.SIP_CONTENT"></stringProp>
+          </com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler>
+          <hashTree/>
+          <com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler guiclass="com.computaris.jmeter_plugins.sip.sampler.gui.TtsSipSamplerGui" testclass="com.computaris.jmeter_plugins.sip.sampler.TtsSipSampler" testname="Listen for RINGING" enabled="true">
+            <stringProp name="TtsSipSampler.CONNECTION_ID">aaa</stringProp>
+            <stringProp name="TtsSipSampler.SIP_LISTEN_TIMEOUT">${__P(listen_timeout,30000)}</stringProp>
+            <stringProp name="TtsSipSampler.samplerMode">LISTEN_ACTION_COMMAND</stringProp>
+            <stringProp name="TtsSipSampler.SEND_METHOD_TYPE">Request</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD">ACK</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_SENDING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING">1xx - Provisional</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING_DETAILED">180 - RINGING</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_COUNT">7</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE0">To</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA0">sip:to@to.com</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE1">From</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA1">sip:from@from.com</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE2">CSeq</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA2">1</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE3">Call-ID</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA3">1</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE4">Max-Forwards</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA4">70</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE5">Via</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA5">SIP/2.0/UDP via.domain</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE6">Allow-Events</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA6">aaa</stringProp>
+            <stringProp name="TtsSipSampler.SIP_CONTENT"></stringProp>
+          </com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler>
+          <hashTree/>
+          <com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler guiclass="com.computaris.jmeter_plugins.sip.sampler.gui.TtsSipSamplerGui" testclass="com.computaris.jmeter_plugins.sip.sampler.TtsSipSampler" testname="Listen for OK" enabled="true">
+            <stringProp name="TtsSipSampler.CONNECTION_ID">aaa</stringProp>
+            <stringProp name="TtsSipSampler.SIP_LISTEN_TIMEOUT">${__P(listen_timeout,30000)}</stringProp>
+            <stringProp name="TtsSipSampler.samplerMode">LISTEN_ACTION_COMMAND</stringProp>
+            <stringProp name="TtsSipSampler.SEND_METHOD_TYPE">Request</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD">ACK</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_SENDING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING">2xx - Successful</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING_DETAILED">200 - OK</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_COUNT">7</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE0">To</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA0">sip:to@to.com</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE1">From</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA1">sip:from@from.com</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE2">CSeq</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA2">1</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE3">Call-ID</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA3">1</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE4">Max-Forwards</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA4">70</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE5">Via</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA5">SIP/2.0/UDP via.domain</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE6">Allow-Events</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA6">aaa</stringProp>
+            <stringProp name="TtsSipSampler.SIP_CONTENT"></stringProp>
+          </com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler>
+          <hashTree/>
+          <com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler guiclass="com.computaris.jmeter_plugins.sip.sampler.gui.TtsSipSamplerGui" testclass="com.computaris.jmeter_plugins.sip.sampler.TtsSipSampler" testname="Send ACK" enabled="true">
+            <stringProp name="TtsSipSampler.CONNECTION_ID">aaa</stringProp>
+            <stringProp name="TtsSipSampler.SIP_LISTEN_TIMEOUT">${__P(listen_timeout,30000)}</stringProp>
+            <stringProp name="TtsSipSampler.samplerMode">SEND_ACTION_COMMAND</stringProp>
+            <stringProp name="TtsSipSampler.SEND_METHOD_TYPE">Request</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD">ACK</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_SENDING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_COUNT">6</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE0">To</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA0">${to};tag=${__sipGetHeaderSubpart(To,tag,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE1">From</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA1">${from};tag=${__sipGetHeaderSubpart(From,tag,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE2">CSeq</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA2">1 ACK</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE3">Call-ID</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA3">${callid}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE4">Max-Forwards</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA4">70</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE5">Via</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA5">${via};branch=z9hG4bK-6024-1-1</stringProp>
+            <stringProp name="TtsSipSampler.SIP_CONTENT"></stringProp>
+          </com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler>
+          <hashTree/>
+          <com.computaris.jmeter.ext.timer.SimpleTimer guiclass="com.computaris.jmeter.ext.timer.SimpleTimerGui" testclass="com.computaris.jmeter.ext.timer.SimpleTimer" testname="Wait for 5 seconds. Simulate really short call" enabled="true">
+            <stringProp name="SimpleTimer.TIMEOUT">5000</stringProp>
+          </com.computaris.jmeter.ext.timer.SimpleTimer>
+          <hashTree/>
+          <com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler guiclass="com.computaris.jmeter_plugins.sip.sampler.gui.TtsSipSamplerGui" testclass="com.computaris.jmeter_plugins.sip.sampler.TtsSipSampler" testname="Send BYE" enabled="true">
+            <stringProp name="TtsSipSampler.CONNECTION_ID">aaa</stringProp>
+            <stringProp name="TtsSipSampler.SIP_LISTEN_TIMEOUT">${__P(listen_timeout,30000)}</stringProp>
+            <stringProp name="TtsSipSampler.samplerMode">SEND_ACTION_COMMAND</stringProp>
+            <stringProp name="TtsSipSampler.SEND_METHOD_TYPE">Request</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD">BYE</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_SENDING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_COUNT">6</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE0">To</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA0">${to};tag=${__sipGetHeaderSubpart(To,tag,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE1">From</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA1">${from};tag=${__sipGetHeaderSubpart(From,tag,)}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE2">CSeq</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA2">2 BYE</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE3">Call-ID</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA3">${callid}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE4">Max-Forwards</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA4">70</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE5">Via</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA5">${via};branch=z9hG4bK-6024-1-2</stringProp>
+            <stringProp name="TtsSipSampler.SIP_CONTENT"></stringProp>
+          </com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler>
+          <hashTree/>
+          <com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler guiclass="com.computaris.jmeter_plugins.sip.sampler.gui.TtsSipSamplerGui" testclass="com.computaris.jmeter_plugins.sip.sampler.TtsSipSampler" testname="Listen for OK" enabled="true">
+            <stringProp name="TtsSipSampler.CONNECTION_ID">aaa</stringProp>
+            <stringProp name="TtsSipSampler.SIP_LISTEN_TIMEOUT">${__P(listen_timeout,30000)}</stringProp>
+            <stringProp name="TtsSipSampler.samplerMode">LISTEN_ACTION_COMMAND</stringProp>
+            <stringProp name="TtsSipSampler.SEND_METHOD_TYPE">Response</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_SENDING_DETAILED">Any</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING">2xx - Successful</stringProp>
+            <stringProp name="TtsSipSampler.SIP_METHOD_LISTENING_DETAILED">200 - OK</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_COUNT">7</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE0">To</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA0">${to}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE1">From</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA1">${from}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE2">CSeq</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA2">2</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE3">Call-ID</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA3">${callid}</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE4">Max-Forwards</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA4">70</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE5">Via</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA5">SIP/2.0/UDP via.domain</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_TYPE6">Allow-Events</stringProp>
+            <stringProp name="TtsSipSampler.SIP_HEADER_DATA6">aaa</stringProp>
+            <stringProp name="TtsSipSampler.SIP_CONTENT"></stringProp>
+          </com.computaris.jmeter__plugins.sip.sampler.TtsSipSampler>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

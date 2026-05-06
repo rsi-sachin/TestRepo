@@ -1,0 +1,173 @@
+{
+  "demos": [
+    {
+      "id": "sip-001",
+      "title": "Self-Contained VoLTE Call Setup & Teardown",
+      "description": "Fully isolated client-server VoLTE test with automatic thread synchronization (15-second startup buffer). Simulates both SIP client and server within same test. Demonstrates complete call flow: INVITE → TRYING → RINGING → 200 OK → ACK → BYE. No external dependencies required.",
+      "expectedOutcome": "Successful call establishment with proper SIP signaling between internal client and server threads. Validates thread synchronization, complete VoLTE call flow, and graceful teardown in isolated environment. Both Server and Client threads execute successfully.",
+      "protocol": "SIP_IMS",
+      "complexity": "INTERMEDIATE",
+      "jmxPath": "C:\\TestRepo\\demo-tool\\src\\main\\resources\\jmx\\volte_client_server_reliable.jmx",
+      "defaultParams": {
+        "server_rampup": "5",
+        "client_rampup": "5",
+        "client_delay": "10000",
+        "listen_timeout": "30000",
+        "threads": "1",
+        "loops": "1"
+      }
+    },
+    {
+      "id": "sip-002",
+      "title": "Test IMS Error Handling Scenarios",
+      "description": "Validates IMS network error handling including call failures, timeouts, and retry mechanisms. Tests robustness of SIP signaling under error conditions with self-contained client-server setup.",
+      "expectedOutcome": "Proper error handling with correct SIP error codes (4xx, 5xx) and graceful failure recovery. Validates error detection and reporting KPIs.",
+      "protocol": "SIP_IMS",
+      "complexity": "INTERMEDIATE",
+      "jmxPath": "C:\\TTS\\docs\\sip\\reference_tests\\ReferenceTest3-IMS_Error_Scenario-client_server.jmx",
+      "defaultParams": {
+        "threads": "1",
+        "loops": "1"
+      }
+    },
+    {
+      "id": "sip-003",
+      "title": "Validate Complete IMS Call Flow",
+      "description": "Comprehensive IMS testing including registration, call setup, media exchange, and teardown. Tests full VoLTE workflow with multiple SIP transactions and state transitions in isolated environment.",
+      "expectedOutcome": "End-to-end IMS call success with all signaling stages validated. Confirms P-CSCF, S-CSCF interaction patterns and proper state management.",
+      "protocol": "SIP_IMS",
+      "complexity": "ADVANCED",
+      "jmxPath": "C:\\TTS\\docs\\sip\\reference_tests\\ReferenceTest4-IMS_Normal_Scenario-client_server.jmx",
+      "defaultParams": {
+        "threads": "1",
+        "loops": "1"
+      }
+    },
+    {
+      "id": "diameter-001",
+      "title": "Test Subscriber Authentication (Diameter Cx)",
+      "description": "Simulates HSS interaction for subscriber authentication using Diameter Cx interface. Sends User-Authorization-Request (UAR) and Multimedia-Auth-Request (MAR) to validate subscriber credentials and retrieve authentication vectors.",
+      "expectedOutcome": "Successful authentication with HSS returning valid authentication vectors (RAND, AUTN, XRES). Validates Cx interface and subscriber provisioning.",
+      "protocol": "DIAMETER",
+      "complexity": "INTERMEDIATE",
+      "jmxPath": "C:\\TTS\\bin\\templates\\tts\\tts_diameter_client1.jmx",
+      "defaultParams": {
+        "host": "hss.ims.example.com",
+        "port": "3868",
+        "threads": "1",
+        "loops": "1",
+        "realm": "ims.example.com",
+        "impu": "sip:user1@ims.example.com"
+      }
+    },
+    {
+      "id": "diameter-002",
+      "title": "Validate Charging Flow (Diameter Ro)",
+      "description": "Tests online charging using Diameter Ro interface with OCS. Simulates Credit-Control-Request (CCR-Initial/Update/Terminate) sequence for voice call charging, including quota management and balance updates.",
+      "expectedOutcome": "Successful charging session with proper quota allocation, consumption tracking, and final balance update. Validates Ro interface and OCS integration.",
+      "protocol": "DIAMETER",
+      "complexity": "ADVANCED",
+      "jmxPath": "C:\\TTS\\docs\\diameter\\reference_tests\\ReferenceTest1_client.jmx",
+      "defaultParams": {
+        "host": "ocs.example.com",
+        "port": "3868",
+        "threads": "1",
+        "loops": "1",
+        "realm": "example.com",
+        "msisdn": "1234567890",
+        "service_id": "voice_call"
+      }
+    },
+    {
+      "id": "diameter-003",
+      "title": "Simulate S6a Location Update",
+      "description": "Tests MME-HSS interaction using Diameter S6a interface. Simulates Update-Location-Request (ULR) when UE moves to new tracking area, including subscription data retrieval and MME registration at HSS.",
+      "expectedOutcome": "Successful location update with HSS returning subscriber profile and APN configuration. Validates S6a interface for LTE mobility.",
+      "protocol": "DIAMETER",
+      "complexity": "INTERMEDIATE",
+      "jmxPath": "C:\\TTS\\docs\\diameter\\reference_tests\\ReferenceTest2_client.jmx",
+      "defaultParams": {
+        "host": "hss.lte.example.com",
+        "port": "3868",
+        "threads": "1",
+        "loops": "1",
+        "realm": "lte.example.com",
+        "imsi": "001010123456789",
+        "mme_host": "mme1.lte.example.com"
+      }
+    },
+    {
+      "id": "radius-001",
+      "title": "Test Basic RADIUS Authentication (PAP)",
+      "description": "Validates basic RADIUS authentication using PAP (Password Authentication Protocol). Sends Access-Request with username/password and verifies Access-Accept/Reject response from RADIUS server.",
+      "expectedOutcome": "Successful authentication with Access-Accept for valid credentials and Access-Reject for invalid ones. Validates basic RADIUS server functionality.",
+      "protocol": "RADIUS",
+      "complexity": "BASIC",
+      "jmxPath": "C:\\TTS\\bin\\templates\\tts\\tts_basic_radius_client.jmx",
+      "defaultParams": {
+        "host": "radius.example.com",
+        "port": "1812",
+        "threads": "1",
+        "loops": "1",
+        "shared_secret": "testing123",
+        "username": "testuser",
+        "password": "testpass"
+      }
+    },
+    {
+      "id": "radius-002",
+      "title": "Test Subscriber Authentication with EAP-AKA",
+      "description": "Simulates mobile network authentication using RADIUS with EAP-AKA (Extensible Authentication Protocol - Authentication and Key Agreement). Tests USIM-based authentication for LTE/5G subscribers.",
+      "expectedOutcome": "Successful EAP-AKA authentication with challenge-response exchange and session key derivation. Validates EAP-AKA support and USIM integration.",
+      "protocol": "RADIUS",
+      "complexity": "ADVANCED",
+      "jmxPath": "C:\\TTS\\bin\\templates\\tts\\tts_advanced_radius_client_EAP_AKA.jmx",
+      "defaultParams": {
+        "host": "aaa.lte.example.com",
+        "port": "1812",
+        "threads": "1",
+        "loops": "1",
+        "shared_secret": "radius_secret",
+        "imsi": "001010123456789",
+        "k": "465B5CE8B199B49FAA5F0A2EE238A6BC",
+        "opc": "E8ED289DEBA952E4283B54E88E6183CA"
+      }
+    },
+    {
+      "id": "radius-003",
+      "title": "Test Accounting Flow (Start/Stop)",
+      "description": "Validates RADIUS accounting by sending Accounting-Request messages for session start and stop. Tests call detail record (CDR) generation and session tracking.",
+      "expectedOutcome": "Successful accounting with Accounting-Response for both start and stop records. Validates accounting server functionality and CDR logging.",
+      "protocol": "RADIUS",
+      "complexity": "INTERMEDIATE",
+      "jmxPath": "C:\\TTS\\docs\\radius_client\\reference_tests\\Reference Test 1 - Basic Radius Client.jmx",
+      "defaultParams": {
+        "host": "radius.example.com",
+        "port": "1813",
+        "threads": "1",
+        "loops": "1",
+        "shared_secret": "testing123",
+        "username": "testuser",
+        "session_id": "auto"
+      }
+    },
+    {
+      "id": "radius-004",
+      "title": "Simulate 500 Concurrent RADIUS Authentications",
+      "description": "Load test for RADIUS server capacity. Generates 500 concurrent authentication requests to measure throughput, success rate, and response times under high load.",
+      "expectedOutcome": "Server handles 500 concurrent authentications with ≥98% success rate and average response time <500ms. Validates RADIUS server scalability.",
+      "protocol": "RADIUS",
+      "complexity": "ADVANCED",
+      "jmxPath": "C:\\TTS\\bin\\templates\\tts\\tts_intermediate_radius_client.jmx",
+      "defaultParams": {
+        "host": "radius.example.com",
+        "port": "1812",
+        "threads": "500",
+        "loops": "1",
+        "rampup": "30",
+        "shared_secret": "testing123",
+        "username": "loadtest_user"
+      }
+    }
+  ]
+}

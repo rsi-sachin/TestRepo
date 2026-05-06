@@ -1,0 +1,230 @@
+================================================================================
+TTS DEMO TOOL - REQUIREMENTS DOCUMENT
+================================================================================
+Source    : C:\TTS\printable_docs\TTS Testing Use Cases.rtf
+Date      : 2026-04-28
+Phase     : Phase 1 (Internal Engineers)
+Technology: JavaFX Desktop Application
+Dev Repo  : C:\testrepo (https://github.com/rsi-sachin/TestRepo)
+TTS Path  : C:\TTS (read-only, do NOT modify)
+================================================================================
+
+
+--------------------------------------------------------------------------------
+REQ-001 : USE CASE CATEGORIES
+--------------------------------------------------------------------------------
+Description:
+  The TTS Demo Tool shall support demos across the following business categories:
+
+  REQ-001.1  Telco Systems / Core Telco Elements Testing
+  REQ-001.2  Traffic Generator (load/performance testing)
+  REQ-001.3  Backend / API Testing
+  REQ-001.4  Web Apps Testing
+  REQ-001.5  Mobile Apps Testing
+  REQ-001.6  IoT Apps Testing
+
+Priority  : High
+Phase     : Phase 1 (001.1, 001.2) | Phase 2 (001.3 - 001.6)
+
+
+--------------------------------------------------------------------------------
+REQ-002 : IMS TESTING DEMOS
+--------------------------------------------------------------------------------
+Description:
+  The tool shall provide demo scenarios covering IMS testing capabilities
+  as follows:
+
+  REQ-002.1  Simulate User Equipment (UE) without requiring a Radio Network
+  REQ-002.2  Simulate Network Elements (NEs) when actual NEs are unavailable
+  REQ-002.3  Support scalable testing deployable on VMs or Cloud infrastructure
+  REQ-002.4  Support CI/CD integration (e.g. Jenkins) for test execution and
+             result viewing
+  REQ-002.5  Traffic Generation: allow defining call flows including A-party,
+             B-party, call location parameters via the demo tool UI
+  REQ-002.6  Cover roaming and international call scenarios
+  REQ-002.7  Automatically provision subscribers before test and deprovision
+             after, enabling repeatable test execution
+  REQ-002.8  Collect pcap (packet capture) traces during test run
+  REQ-002.9  Automatically validate message flows between UEs and NEs by
+             analysing pcap traces
+  REQ-002.10 Generate HTML test reports
+
+Priority  : High
+Phase     : Phase 1
+
+
+--------------------------------------------------------------------------------
+REQ-003 : IMS & VoLTE TESTING DEMOS
+--------------------------------------------------------------------------------
+Description:
+  The tool shall demonstrate IMS and VoLTE testing capabilities:
+
+  REQ-003.1  Simulate both Diameter AND SIP signaling used in VoLTE session
+             management
+  REQ-003.2  Demonstrate SIP connectivity to VoLTE x-CSCF elements including:
+             - IMS Registration
+             - IMS Session Initiation
+             - Charging signaling
+             - Session Release
+
+Priority  : High
+Phase     : Phase 1
+
+
+--------------------------------------------------------------------------------
+REQ-004 : IMS ISOLATED ENVIRONMENT TESTING
+--------------------------------------------------------------------------------
+Description:
+  REQ-004.1  The tool shall demonstrate TTS capability to act as a simulator
+             for ALL Network Elements interacting with IMS, enabling fully
+             standalone IMS testing without any external systems
+
+Priority  : High
+Phase     : Phase 1
+
+
+--------------------------------------------------------------------------------
+REQ-005 : PROTOCOL COVERAGE
+--------------------------------------------------------------------------------
+Description:
+  Phase 1 of the demo tool shall cover the following protocols:
+
+  REQ-005.1  SIP / IMS
+             - JMX Source: C:\TTS\bin\templates\tts\tts_sip_client.jmx
+             - JMX Source: C:\TTS\bin\templates\tts\tts_sip_server.jmx
+             - Reference : C:\TTS\docs\sip\reference_tests\ (9 JMX files)
+
+  REQ-005.2  Diameter
+             - JMX Source: C:\TTS\bin\templates\tts\tts_diameter_client1.jmx
+             - JMX Source: C:\TTS\bin\templates\tts\tts_diameter_client2.jmx
+             - JMX Source: C:\TTS\bin\templates\tts\tts_diameter_server1.jmx
+             - JMX Source: C:\TTS\bin\templates\tts\tts_diameter_server2.jmx
+             - Reference : C:\TTS\docs\diameter\reference_tests\ (11 JMX files)
+
+  REQ-005.3  RADIUS
+             - JMX Source: C:\TTS\bin\templates\tts\tts_basic_radius_client.jmx
+             - JMX Source: C:\TTS\bin\templates\tts\tts_intermediate_radius_client.jmx
+             - JMX Source: C:\TTS\bin\templates\tts\tts_advanced_radius_client1/2/3.jmx
+             - JMX Source: C:\TTS\bin\templates\tts\tts_advanced_radius_client_EAP_AKA.jmx
+             - Reference : C:\TTS\docs\radius_client\reference_tests\ (32 JMX files)
+
+Priority  : High
+Phase     : Phase 1
+
+
+--------------------------------------------------------------------------------
+REQ-006 : BUSINESS-LEVEL KPI FRAMING
+--------------------------------------------------------------------------------
+Description:
+  REQ-006.1  The demo tool UI MUST present all test scenarios using
+             business-level KPI language, NOT raw protocol/technical terms.
+
+             Examples of CORRECT framing:
+               "Simulate VoLTE Call Setup & Teardown"
+               "Test Subscriber Authentication (EAP-AKA)"
+               "Validate IMS Registration Flow"
+               "Measure Call Setup Success Rate under Load"
+               "Simulate 1000 Concurrent VoLTE Calls"
+
+             Examples of INCORRECT framing (avoid):
+               "Send SIP INVITE"
+               "Run tts_diameter_client1.jmx"
+               "Execute CCR/CCA exchange"
+
+  REQ-006.2  Each demo scenario card shall display:
+               - Business scenario title
+               - Plain English description of what is being tested
+               - Expected outcome / KPI being validated
+               - Protocol used (as a secondary/badge label)
+               - Complexity level (Basic / Intermediate / Advanced)
+
+Priority  : High
+Phase     : Phase 1
+
+
+--------------------------------------------------------------------------------
+REQ-007 : TARGET AUDIENCE
+--------------------------------------------------------------------------------
+Description:
+  REQ-007.1  Phase 1 target audience: Internal engineers / QA teams
+             - Assumes technical familiarity with TTS setup
+             - Full parameter configuration exposed (host, port, credentials)
+
+  REQ-007.2  Phase 2 target audience: External customers / sales prospects
+             - Simplified UI, hide technical parameters
+             - Branding and polished presentation
+             - No local TTS installation required (remote demo server)
+
+Priority  : Medium (Phase 2 deferred)
+Phase     : Phase 1 for 007.1 | Phase 2 for 007.2
+
+
+--------------------------------------------------------------------------------
+REQ-008 : DEMO EXECUTION ENGINE
+--------------------------------------------------------------------------------
+Description:
+  REQ-008.1  The tool shall invoke TTS/JMeter in non-GUI mode using:
+             C:\TTS\bin\jmeter-n.cmd -n -t {jmx_path} -l {log_path} -J{param}={value}
+
+  REQ-008.2  The tool shall stream live JMeter stdout/stderr output to the UI
+             in real time during test execution
+
+  REQ-008.3  The tool shall support the following configurable parameters
+             per demo scenario:
+               - Target host / IP address
+               - Target port
+               - Number of threads (virtual users)
+               - Loop count / duration
+               - Protocol-specific parameters (e.g. shared secret, realm, username)
+
+  REQ-008.4  The tool shall capture test run metadata:
+               - Scenario name
+               - Start timestamp
+               - End timestamp
+               - Duration
+               - Pass / Fail status
+               - Exit code from JMeter process
+
+Priority  : High
+Phase     : Phase 1
+
+
+--------------------------------------------------------------------------------
+REQ-009 : RUN HISTORY
+--------------------------------------------------------------------------------
+Description:
+  REQ-009.1  The tool shall maintain a history of all executed demo runs
+  REQ-009.2  Run history shall be persisted locally (JSON files in runs/ folder)
+  REQ-009.3  The UI shall display run history in a tabular view showing:
+               - Scenario name, date/time, status, duration
+
+Priority  : Medium
+Phase     : Phase 1
+
+
+--------------------------------------------------------------------------------
+ARCHITECTURE SUMMARY
+--------------------------------------------------------------------------------
+  Phase 1 Stack  : Java + JavaFX (desktop application)
+  Phase 2 Stack  : Spring Boot + Vanilla JS/HTML (web application)
+  Build Tool     : Maven
+  Java Version   : 11+ (compatible with TTS JRE)
+  Package        : com.tts.demo
+
+  Project Layout (C:\testrepo\demo-tool\):
+    src/main/java/com/tts/demo/
+      MainApp.java              - JavaFX entry point
+      controller/               - UI FXML controllers
+      model/                    - POJOs: Demo, RunResult, DemoConfig
+      service/                  - DemoCatalog, DemoRunner, ConfigManager
+    src/main/resources/
+      fxml/                     - FXML layout files
+      css/                      - Stylesheets
+      data/demos.json           - Demo catalog (business scenarios -> JMX mapping)
+    docs/
+      requirements.txt          - This file
+    runs/                       - JSON run history files
+
+================================================================================
+END OF REQUIREMENTS DOCUMENT
+================================================================================

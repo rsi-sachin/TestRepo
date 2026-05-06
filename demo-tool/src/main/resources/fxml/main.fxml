@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.tts.demo.controller.MainController"
+            stylesheets="@../css/styles.css">
+    
+    <!-- Top Menu Bar -->
+    <top>
+        <MenuBar>
+            <Menu text="File">
+                <MenuItem text="Refresh Catalog" onAction="#handleRefreshCatalog"/>
+                <SeparatorMenuItem/>
+                <MenuItem text="Exit" onAction="#handleExit"/>
+            </Menu>
+            <Menu text="View">
+                <MenuItem text="Show Run History" onAction="#handleShowRunHistory"/>
+                <MenuItem text="Clear History" onAction="#handleClearHistory"/>
+            </Menu>
+            <Menu text="Help">
+                <MenuItem text="About" onAction="#handleAbout"/>
+                <MenuItem text="Validate TTS Installation" onAction="#handleValidateTTS"/>
+            </Menu>
+        </MenuBar>
+    </top>
+    
+    <!-- Main Content -->
+    <center>
+        <SplitPane dividerPositions="0.3" fx:id="mainSplitPane">
+            
+            <!-- Left Panel - Demo Catalog -->
+            <VBox spacing="10" styleClass="main-container">
+                <Label text="TTS Demo Catalog" styleClass="title-label"/>
+                
+                <!-- Search and Filter -->
+                <VBox spacing="10" styleClass="filter-panel">
+                    <TextField fx:id="searchField" 
+                              promptText="Search demos..." 
+                              styleClass="search-box"
+                              onKeyReleased="#handleSearch"/>
+                    
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Label text="Protocol:"/>
+                        <ComboBox fx:id="protocolFilter" 
+                                 promptText="All Protocols"
+                                 onAction="#handleFilterChange"/>
+                    </HBox>
+                    
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Label text="Complexity:"/>
+                        <ComboBox fx:id="complexityFilter" 
+                                 promptText="All Levels"
+                                 onAction="#handleFilterChange"/>
+                    </HBox>
+                    
+                    <Button text="Clear Filters" 
+                           onAction="#handleClearFilters"
+                           styleClass="button-secondary"/>
+                </VBox>
+                
+                <!-- Demo List -->
+                <Label fx:id="demoCountLabel" text="0 demos" styleClass="subtitle-label"/>
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                    <VBox fx:id="demoListContainer" spacing="10">
+                        <padding><Insets top="5" right="5" bottom="5" left="5"/></padding>
+                    </VBox>
+                </ScrollPane>
+            </VBox>
+            
+            <!-- Right Panel - Demo Details and Execution -->
+            <VBox spacing="15" styleClass="main-container">
+                
+                <!-- Demo Details -->
+                <VBox fx:id="demoDetailsPane" spacing="10" managed="false" visible="false">
+                    <Label fx:id="demoTitleLabel" styleClass="title-label" wrapText="true"/>
+                    
+                    <HBox spacing="10">
+                        <Label fx:id="protocolBadge" styleClass="protocol-badge"/>
+                        <Label fx:id="complexityBadge" styleClass="complexity-badge"/>
+                    </HBox>
+                    
+                    <VBox spacing="5">
+                        <Label text="Description:" styleClass="subtitle-label"/>
+                        <Label fx:id="demoDescriptionLabel" wrapText="true" styleClass="demo-description"/>
+                    </VBox>
+                    
+                    <VBox spacing="5">
+                        <Label text="Expected Outcome:" styleClass="subtitle-label"/>
+                        <Label fx:id="demoOutcomeLabel" wrapText="true" styleClass="demo-outcome"/>
+                    </VBox>
+                    
+                    <Separator/>
+                    
+                    <!-- Parameters Configuration -->
+                    <Label text="Configuration Parameters:" styleClass="subtitle-label"/>
+                    <ScrollPane maxHeight="200" fitToWidth="true">
+                        <GridPane fx:id="parametersGrid" hgap="10" vgap="10">
+                            <padding><Insets top="5" right="5" bottom="5" left="5"/></padding>
+                        </GridPane>
+                    </ScrollPane>
+                    
+                    <!-- Action Buttons -->
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Button fx:id="runButton" 
+                               text="Run Demo" 
+                               onAction="#handleRunDemo"
+                               styleClass="button-success"
+                               prefWidth="120"/>
+                        <Button fx:id="stopButton" 
+                               text="Stop" 
+                               onAction="#handleStopDemo"
+                               styleClass="button-danger"
+                               prefWidth="120"
+                               disable="true"/>
+                        <ProgressIndicator fx:id="progressIndicator" 
+                                          visible="false" 
+                                          maxWidth="30" 
+                                          maxHeight="30"/>
+                        <Label fx:id="statusLabel" styleClass="status-running"/>
+                    </HBox>
+                    
+                    <Separator/>
+                    
+                    <!-- Live Output -->
+                    <Label text="Live Output:" styleClass="subtitle-label"/>
+                    <TextArea fx:id="outputTextArea" 
+                             editable="false" 
+                             wrapText="false"
+                             VBox.vgrow="ALWAYS"
+                             styleClass="text-area"/>
+                </VBox>
+                
+                <!-- Placeholder when no demo selected -->
+                <VBox fx:id="placeholderPane" 
+                     spacing="20" 
+                     alignment="CENTER"
+                     VBox.vgrow="ALWAYS">
+                    <Label text="Select a demo from the catalog to get started" 
+                          style="-fx-font-size: 16px; -fx-text-fill: #95a5a6;"/>
+                    <Label text="Use the search and filters on the left to find demos" 
+                          style="-fx-font-size: 14px; -fx-text-fill: #bdc3c7;"/>
+                </VBox>
+            </VBox>
+            
+        </SplitPane>
+    </center>
+    
+    <!-- Bottom Status Bar -->
+    <bottom>
+        <HBox spacing="15" style="-fx-background-color: #ecf0f1; -fx-border-color: #bdc3c7; -fx-border-width: 1 0 0 0;">
+            <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+            <Label text="TTS Demo Tool v1.0.0"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="ttsStatusLabel" text="TTS: Not Validated"/>
+            <Label fx:id="historyCountLabel" text="History: 0 runs"/>
+        </HBox>
+    </bottom>
+    
+</BorderPane>
