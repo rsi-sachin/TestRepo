@@ -1,26 +1,36 @@
 package com.tts.demo.controller;
 
+import com.tts.demo.component.CallFlowDiagram;
+import com.tts.demo.model.CallFlow;
 import com.tts.demo.model.Demo;
 import com.tts.demo.model.DemoConfig;
 import com.tts.demo.model.RunResult;
 import com.tts.demo.service.ConfigManager;
 import com.tts.demo.service.DemoCatalog;
 import com.tts.demo.service.DemoRunner;
+import com.tts.demo.service.JtlParser;
 import javafx.application.Platform;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.control.*;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.imageio.ImageIO;
+import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -52,16 +62,26 @@ public class MainController {
     @FXML private Label statusLabel;
     @FXML private TextArea outputTextArea;
     
+    // Call Flow Visualization components (Phase 4+5)
+    @FXML private CheckBox showTerminalCheckBox;
+    @FXML private Button exportDiagramButton;
+    @FXML private Label callFlowStatusLabel;
+    @FXML private SplitPane visualizationSplitPane;
+    @FXML private StackPane diagramContainer;
+    @FXML private TitledPane terminalPane;
+    
     @FXML private Label ttsStatusLabel;
     @FXML private Label historyCountLabel;
     
     private DemoCatalog catalog;
     private ConfigManager configManager;
     private DemoRunner demoRunner;
+    private JtlParser jtlParser;
     
     private Demo selectedDemo;
     private DemoConfig currentConfig;
     private Map<String, TextField> parameterFields;
+    private CallFlowDiagram currentDiagram;
 
     @FXML
     public void initialize() {
@@ -71,6 +91,7 @@ public class MainController {
         catalog = new DemoCatalog();
         configManager = new ConfigManager();
         demoRunner = new DemoRunner(configManager);
+        jtlParser = new JtlParser();
         
         parameterFields = new HashMap<>();
         
@@ -295,6 +316,29 @@ public class MainController {
                     statusLabel.setText("Completed Successfully");
                     statusLabel.getStyleClass().clear();
                     statusLabel.getStyleClass().add("status-success");
+                    
+                    // Parse JTL and create call flow diagram for SIP/IMS demos
+                    if (selectedDemo.getProtocol() == Demo.Protocol.SIP_IMS) {
+                        try {
+                            String jtlPath = result.getLogFilePath();
+                            if (jtlPath != null && new File(jtlPath).exists()) {
+                                CallFlow callFlow = jtlParser.parseJtlFile(jtlPath);
+                                createCallFlowDiagram(callFlow);
+                                updateCallFlowStatus(callFlow);
+                                exportDiagramButton.setDisable(false);
+                                logger.info("Call flow diagram created: {} messages", callFlow.getTotalMessages());
+                            } else {
+                                logger.warn("JTL file not found: {}", jtlPath);
+                            }
+                        } catch (IOException e) {
+                            logger.error("Failed to parse JTL file", e);
+                            callFlowStatusLabel.setText("Call Flow: Parse error");
+                        }
+                    } else {
+                        // For non-SIP protocols, show message
+                        showNonSipMessage();
+                    }
+                    
                     showAlert("Demo Completed", "Demo executed successfully in " + 
                              result.getDurationSeconds() + " seconds.", Alert.AlertType.INFORMATION);
                 } else {
@@ -327,6 +371,115 @@ public class MainController {
         Platform.runLater(() -> {
             outputTextArea.appendText(line + "\n");
         });
+    }
+    
+    /**
+     * Create and display call flow diagram from parsed data
+     */
+    private void createCallFlowDiagram(CallFlow callFlow) {
+        currentDiagram = new CallFlowDiagram(callFlow);
+        diagramContainer.getChildren().clear();
+        diagramContainer.getChildren().add(currentDiagram);
+        logger.info("Call flow diagram added to UI");
+    }
+    
+    /**
+     * Update call flow status label with statistics
+     */
+    private void updateCallFlowStatus(CallFlow callFlow) {
+        String status = String.format("Call Flow: %d messages (%d successful, %.1f%%)",
+                callFlow.getTotalMessages(),
+                callFlow.getSuccessfulMessages(),
+                callFlow.getSuccessRate());
+        
+        callFlowStatusLabel.setText(status);
+        
+        // Change label style based on success rate
+        callFlowStatusLabel.getStyleClass().clear();
+        if (callFlow.getSuccessRate() >= 100.0) {
+            callFlowStatusLabel.getStyleClass().add("status-success");
+        } else if (callFlow.getSuccessRate() >= 90.0) {
+            callFlowStatusLabel.getStyleClass().add("status-warning");
+        } else {
+            callFlowStatusLabel.getStyleClass().add("status-failed");
+        }
+    }
+    
+    /**
+     * Show message for non-SIP protocols
+     */
+    private void showNonSipMessage() {
+        diagramContainer.getChildren().clear();
+        Label message = new Label("Call flow visualization is only available for SIP/IMS demos.\n" +
+                                 "For other protocols, use the terminal output below.");
+        message.setStyle("-fx-text-fill: #95a5a6; -fx-font-size: 14px; -fx-text-alignment: center;");
+        message.setWrapText(true);
+        message.setMaxWidth(600);
+        diagramContainer.getChildren().add(message);
+        callFlowStatusLabel.setText("Call Flow: Not available for this protocol");
+        exportDiagramButton.setDisable(true);
+    }
+    
+    /**
+     * Handle toggle terminal checkbox
+     */
+    @FXML
+    private void handleToggleTerminal() {
+        boolean show = showTerminalCheckBox.isSelected();
+        terminalPane.setExpanded(show);
+        
+        if (!show) {
+            // Hide terminal completely - show only diagram
+            visualizationSplitPane.setDividerPositions(1.0);
+        } else {
+            // Show both - 70/30 split
+            visualizationSplitPane.setDividerPositions(0.7);
+        }
+        
+        logger.debug("Terminal visibility toggled: {}", show);
+    }
+    
+    /**
+     * Handle export diagram button
+     */
+    @FXML
+    private void handleExportDiagram() {
+        if (currentDiagram == null) {
+            showAlert("Export Failed", "No diagram to export", Alert.AlertType.WARNING);
+            return;
+        }
+        
+        try {
+            // Create exports directory if it doesn't exist
+            File exportsDir = new File("exports");
+            if (!exportsDir.exists()) {
+                exportsDir.mkdirs();
+            }
+            
+            // Generate filename with timestamp
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String filename = String.format("%s_callflow_%s.png", 
+                    selectedDemo.getId(), timestamp);
+            File outputFile = new File(exportsDir, filename);
+            
+            // Take snapshot of diagram
+            WritableImage image = currentDiagram.snapshot(new SnapshotParameters(), null);
+            
+            // Write to file
+            ImageIO.write(SwingFXUtils.fromFXImage(image, null), "png", outputFile);
+            
+            showAlert("Export Successful", 
+                     "Diagram exported to: " + outputFile.getPath(), 
+                     Alert.AlertType.INFORMATION);
+            
+            logger.info("Diagram exported to: {}", outputFile.getPath());
+            
+        } catch (IOException e) {
+            logger.error("Failed to export diagram", e);
+            showAlert("Export Failed", 
+                     "Failed to export diagram: " + e.getMessage(), 
+                     Alert.AlertType.ERROR);
+        }
     }
 
     @FXML
