@@ -338,6 +338,158 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
     }
     
     /**
+     * Generate message-specific tooltip text with contextual explanation.
+     * Provides business-level interpretation based on message type and status.
+     * 
+     * @param message The SIP message to generate tooltip for
+     * @param messageIndex The index of this message in the call flow (0-based)
+     * @return Formatted tooltip text with contextual information
+     */
+    private String getMessageTooltipText(SipMessage message, int messageIndex) {
+        StringBuilder tooltip = new StringBuilder();
+        
+        // Header with message type and status indicator
+        String statusIcon = message.isSuccess() ? "✓" : "✗";
+        String statusText = message.isSuccess() ? "Successful" : "Failed";
+        
+        tooltip.append("═══════════════════════════════\n");
+        tooltip.append(String.format("%s %s - %s\n", 
+            statusIcon, 
+            message.getMessageType().getDisplayName(),
+            getMessageTypeDescription(message.getMessageType())));
+        tooltip.append("═══════════════════════════════\n\n");
+        
+        // Status section with business meaning
+        tooltip.append("Status: ").append(statusText).append("\n");
+        tooltip.append("Meaning: ").append(getMessageMeaning(message)).append("\n");
+        tooltip.append("Direction: ").append(message.getDirection().getDisplayName()).append("\n\n");
+        
+        // Timing section
+        tooltip.append("Timing: ").append(message.getElapsed()).append("ms");
+        tooltip.append(getTimingContext(message.getElapsed())).append("\n");
+        tooltip.append("Position: Message ").append(messageIndex + 1)
+            .append(" of ").append(messages.size()).append("\n");
+        tooltip.append("Phase: ").append(getCallPhase(message.getMessageType())).append("\n\n");
+        
+        // Technical Details section
+        tooltip.append("Technical Details:\n");
+        tooltip.append("Response Code: ").append(message.getResponseCode()).append("\n");
+        tooltip.append("Thread: ").append(message.getThreadName()).append("\n");
+        tooltip.append("Timestamp: ").append(new java.text.SimpleDateFormat("HH:mm:ss.SSS")
+            .format(new java.util.Date(message.getTimestamp()))).append("\n");
+        
+        return tooltip.toString();
+    }
+    
+    /**
+     * Get a short description of the message type
+     */
+    private String getMessageTypeDescription(SipMessage.MessageType type) {
+        switch (type) {
+            case INVITE: return "Call Setup Request";
+            case TRYING: return "Processing";
+            case RINGING: return "Alerting";
+            case OK: return "Acknowledgment";
+            case ACK: return "Confirmation";
+            case BYE: return "Hangup";
+            case CANCEL: return "Cancellation";
+            case REGISTER: return "Registration";
+            default: return "Message";
+        }
+    }
+    
+    /**
+     * Get business-level meaning based on message type and success status
+     */
+    private String getMessageMeaning(SipMessage message) {
+        boolean success = message.isSuccess();
+        
+        switch (message.getMessageType()) {
+            case INVITE:
+                return success ? 
+                    "Client initiated VoLTE call establishment" :
+                    "Failed to initiate call - check network connectivity";
+            case TRYING:
+                return success ?
+                    "Server processing request, waiting for final response" :
+                    "Server failed to process request";
+            case RINGING:
+                return success ?
+                    "Destination is ringing, waiting for answer" :
+                    "Failed to alert remote party";
+            case OK:
+                if (message.getDirection() == SipMessage.Direction.SERVER_TO_CLIENT) {
+                    return success ?
+                        "Call established - server confirmed connection" :
+                        "Expected confirmation but got error or timeout";
+                } else {
+                    return success ?
+                        "Acknowledgment sent successfully" :
+                        "Failed to send acknowledgment";
+                }
+            case ACK:
+                return success ?
+                    "Call flow handshake completed successfully" :
+                    "Handshake failed - connection may be unstable";
+            case BYE:
+                return success ?
+                    "Call terminated gracefully" :
+                    "Failed to terminate call properly";
+            case CANCEL:
+                return success ?
+                    "Call attempt cancelled successfully" :
+                    "Failed to cancel call";
+            case REGISTER:
+                return success ?
+                    "Device registered with IMS network" :
+                    "Registration failed - authentication issue";
+            default:
+                return success ?
+                    "Message exchanged successfully" :
+                    "Message failed or timed out";
+        }
+    }
+    
+    /**
+     * Get timing context based on elapsed time
+     */
+    private String getTimingContext(long elapsed) {
+        if (elapsed < 50) {
+            return " (very fast - cached or local response)";
+        } else if (elapsed < 200) {
+            return " (normal network latency)";
+        } else if (elapsed < 1000) {
+            return " (acceptable - within tolerance)";
+        } else if (elapsed < 5000) {
+            return " (slower than expected - may indicate network issues)";
+        } else {
+            return " (very slow - investigate network or server performance)";
+        }
+    }
+    
+    /**
+     * Determine which phase of the call this message belongs to
+     */
+    private String getCallPhase(SipMessage.MessageType type) {
+        switch (type) {
+            case INVITE:
+            case TRYING:
+            case RINGING:
+                return "Call Establishment";
+            case OK:
+            case ACK:
+                return "Connection Confirmation";
+            case BYE:
+            case CANCEL:
+                return "Call Teardown";
+            case REGISTER:
+                return "Network Registration";
+            default:
+                return "Unknown Phase";
+        }
+    }
+    
+    /**
      * Handle mouse movement for tooltips
      */
     private void handleMouseMoved(MouseEvent event) {
@@ -351,23 +503,8 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
         if (messageIndex >= 0 && messageIndex < messages.size()) {
             SipMessage message = messages.get(messageIndex);
             
-            // Build tooltip text
-            String tooltipText = String.format(
-                "%s\n" +
-                "Response Code: %s\n" +
-                "Elapsed: %dms\n" +
-                "Timestamp: %d\n" +
-                "Thread: %s\n" +
-                "Direction: %s\n" +
-                "Status: %s",
-                message.getMessageType().getDisplayName(),
-                message.getResponseCode(),
-                message.getElapsed(),
-                message.getTimestamp(),
-                message.getThreadName(),
-                message.getDirection().getDisplayName(),
-                message.isSuccess() ? "✓ Success" : "✗ Failed"
-            );
+            // Generate message-specific tooltip with contextual information
+            String tooltipText = getMessageTooltipText(message, messageIndex);
             
             messageTooltip.setText(tooltipText);
             Tooltip.install(this, messageTooltip);
