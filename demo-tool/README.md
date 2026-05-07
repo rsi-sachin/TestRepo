@@ -86,11 +86,30 @@ This creates `target/demo-tool-1.0.0-SNAPSHOT.jar`
 
 ## Running the Application
 
-### Using Maven
+### Quick Start (Recommended)
+
+**Windows Batch File:**
+```cmd
+start.bat
+```
+
+**PowerShell:**
+```powershell
+.\quick-start.ps1
+```
+
+These startup scripts automatically:
+- Kill any existing demo-tool instances (prevents multiple GUI windows)
+- Check environment (Java, Maven, TTS)
+- Launch the application
+
+### Using Maven Directly
 
 ```powershell
 mvn javafx:run
 ```
+
+⚠️ **Note**: This may create multiple instances if you run it repeatedly. Use `start.bat` or `quick-start.ps1` instead.
 
 ### Using JAR (with JavaFX modules)
 
