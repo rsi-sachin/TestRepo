@@ -403,31 +403,61 @@ public class MainController {
                     statusLabel.getStyleClass().clear();
                     statusLabel.getStyleClass().add("status-success");
                     
-                    // Parse JTL and create call flow diagram for SIP/IMS demos
+                    // For SIP/IMS demos, keep the live diagram and validate against JTL
                     if (selectedDemo.getProtocol() == Demo.Protocol.SIP_IMS) {
-                        try {
-                            String jtlPath = result.getLogFilePath();
-                            if (jtlPath != null && new File(jtlPath).exists()) {
-                                CallFlow callFlow = jtlParser.parseJtlFile(jtlPath);
-                                
-                                // Check if call flow has messages
-                                if (callFlow.getTotalMessages() == 0) {
-                                    showEmptyCallFlowMessage();
-                                    logger.warn("No SIP messages found in JTL file: {}", jtlPath);
-                                } else {
-                                    createCallFlowDiagram(callFlow);
-                                    updateCallFlowStatus(callFlow);
-                                    exportDiagramButton.setDisable(false);
-                                    logger.info("Call flow diagram created: {} messages", callFlow.getTotalMessages());
+                        // Use the live call flow that was built dynamically during execution
+                        if (liveCallFlow != null && liveCallFlow.getTotalMessages() > 0) {
+                            // Keep the existing live diagram (already displayed and updating)
+                            updateCallFlowStatus(liveCallFlow);
+                            exportDiagramButton.setDisable(false);
+                            logger.info("Live call flow diagram retained: {} messages captured in real-time", 
+                                liveCallFlow.getTotalMessages());
+                            
+                            // Validate against JTL for accuracy (optional verification)
+                            try {
+                                String jtlPath = result.getLogFilePath();
+                                if (jtlPath != null && new File(jtlPath).exists()) {
+                                    CallFlow jtlFlow = jtlParser.parseJtlFile(jtlPath);
+                                    if (jtlFlow.getTotalMessages() != liveCallFlow.getTotalMessages()) {
+                                        logger.warn("Live capture message count ({}) differs from JTL count ({}). " +
+                                            "This may indicate missed messages in real-time parsing.",
+                                            liveCallFlow.getTotalMessages(), jtlFlow.getTotalMessages());
+                                    } else {
+                                        logger.debug("Live capture validated: {} messages match JTL count", 
+                                            liveCallFlow.getTotalMessages());
+                                    }
                                 }
-                            } else {
-                                logger.warn("JTL file not found: {}", jtlPath);
-                                showJtlNotFoundMessage();
+                            } catch (IOException e) {
+                                logger.warn("Could not validate live capture against JTL: {}", e.getMessage());
                             }
-                        } catch (IOException e) {
-                            logger.error("Failed to parse JTL file", e);
-                            callFlowStatusLabel.setText("Call Flow: Parse error");
-                            showParseErrorMessage(e.getMessage());
+                        } else {
+                            // Fallback: parse JTL if live capture failed or is empty
+                            logger.warn("Live call flow is empty, falling back to JTL parsing");
+                            try {
+                                String jtlPath = result.getLogFilePath();
+                                if (jtlPath != null && new File(jtlPath).exists()) {
+                                    CallFlow callFlow = jtlParser.parseJtlFile(jtlPath);
+                                    
+                                    // Check if call flow has messages
+                                    if (callFlow.getTotalMessages() == 0) {
+                                        showEmptyCallFlowMessage();
+                                        logger.warn("No SIP messages found in JTL file: {}", jtlPath);
+                                    } else {
+                                        createCallFlowDiagram(callFlow);
+                                        updateCallFlowStatus(callFlow);
+                                        exportDiagramButton.setDisable(false);
+                                        logger.info("Call flow diagram created from JTL fallback: {} messages", 
+                                            callFlow.getTotalMessages());
+                                    }
+                                } else {
+                                    logger.warn("JTL file not found: {}", jtlPath);
+                                    showJtlNotFoundMessage();
+                                }
+                            } catch (IOException e) {
+                                logger.error("Failed to parse JTL file", e);
+                                callFlowStatusLabel.setText("Call Flow: Parse error");
+                                showParseErrorMessage(e.getMessage());
+                            }
                         }
                     } else {
                         // For non-SIP protocols, show message

@@ -31,10 +31,11 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
     private static final double LIFELINE_SPACING = 200; // Horizontal space between lifelines
     private static final double MESSAGE_HEIGHT = 50;    // Vertical space per message
     private static final double TOP_MARGIN = 80;        // Space for actors at top
-    private static final double LEGEND_HEIGHT = 80;
+    private static final double LEGEND_HEIGHT = 60;     // Reduced - no stats in legend now
     private static final double ARROW_HEAD_SIZE = 8;
     private static final double LIFELINE_DASH = 5;      // Dash pattern for lifelines
-    private static final double DIAGRAM_WIDTH = 400;    // Fixed width for UML diagram
+    private static final double STATS_WIDTH = 150;      // Width for statistics panel
+    private static final double DIAGRAM_WIDTH = 550;    // Increased to accommodate stats (40+200+80+150+80)
     
     // Throttling for real-time updates (Phase 2.2)
     private static final long THROTTLE_MS = 200; // Max 1 refresh per 200ms
@@ -157,7 +158,8 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
         drawActors(gc);
         drawLifelines(gc);
         drawMessages(gc);
-        drawLegend(gc);
+        drawStatistics(gc);  // Statistics beside Server lifeline
+        drawLegend(gc);      // Compact legend at bottom
     }
     
     /**
@@ -291,7 +293,64 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
     }
     
     /**
-     * Draw the legend explaining colors and symbols
+     * Draw statistics panel vertically beside the Server lifeline
+     */
+    private void drawStatistics(GraphicsContext gc) {
+        double statsX = MARGIN + LIFELINE_SPACING + ACTOR_WIDTH + 20; // Right of Server actor
+        double statsY = MARGIN;
+        double statsBoxWidth = STATS_WIDTH - 30;
+        double statsBoxHeight = 120;
+        
+        // Draw statistics background
+        gc.setFill(Color.rgb(250, 250, 250));
+        gc.fillRoundRect(statsX, statsY, statsBoxWidth, statsBoxHeight, 8, 8);
+        gc.setStroke(COLOR_BORDER);
+        gc.setLineWidth(1);
+        gc.strokeRoundRect(statsX, statsY, statsBoxWidth, statsBoxHeight, 8, 8);
+        
+        // Draw statistics title
+        gc.setFill(COLOR_TEXT);
+        gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        gc.setTextAlign(TextAlignment.LEFT);
+        gc.setTextBaseline(VPos.TOP);
+        gc.fillText("Call Flow Stats", statsX + 10, statsY + 8);
+        
+        // Draw statistics items
+        gc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 11));
+        double lineY = statsY + 28;
+        double lineHeight = 18;
+        
+        // Messages count
+        gc.setFill(COLOR_TEXT);
+        gc.fillText(String.format("Messages: %d", callFlow.getTotalMessages()), 
+            statsX + 10, lineY);
+        lineY += lineHeight;
+        
+        // Successful count with color
+        gc.setFill(COLOR_SUCCESS);
+        gc.fillText(String.format("Successful: %d (%.1f%%)", 
+            callFlow.getSuccessfulMessages(), callFlow.getSuccessRate()), 
+            statsX + 10, lineY);
+        lineY += lineHeight;
+        
+        // Duration
+        gc.setFill(COLOR_TEXT);
+        gc.fillText(String.format("Duration: %.1fs", callFlow.getTotalDuration() / 1000.0), 
+            statsX + 10, lineY);
+        lineY += lineHeight;
+        
+        // Status with icon
+        if (callFlow.isCallCompleted()) {
+            gc.setFill(COLOR_SUCCESS);
+            gc.fillText("Status: ✓ Complete", statsX + 10, lineY);
+        } else {
+            gc.setFill(COLOR_FAILURE);
+            gc.fillText("Status: ✗ Incomplete", statsX + 10, lineY);
+        }
+    }
+    
+    /**
+     * Draw the legend explaining colors and symbols (compact version)
      */
     private void drawLegend(GraphicsContext gc) {
         double legendY = getHeight() - LEGEND_HEIGHT - MARGIN / 2;
@@ -307,15 +366,15 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
         
         // Draw legend title
         gc.setFill(COLOR_TEXT);
-        gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 11));
         gc.setTextAlign(TextAlignment.LEFT);
         gc.setTextBaseline(VPos.TOP);
-        gc.fillText("Legend:", legendX + 10, legendY + 10);
+        gc.fillText("Legend:", legendX + 10, legendY + 8);
         
-        // Draw legend items
-        double itemY = legendY + 30;
-        double itemSpacing = 150;
-        gc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 11));
+        // Draw legend items in compact layout
+        double itemY = legendY + 26;
+        double itemSpacing = 140;
+        gc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 10));
         
         // Success indicator
         drawLegendItem(gc, legendX + 10, itemY, COLOR_SUCCESS, "✓ Success");
@@ -325,21 +384,8 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
         
         // Direction indicators
         gc.setFill(COLOR_TEXT);
-        gc.fillText("→ Client to Server", legendX + 10, itemY + 20);
-        gc.fillText("← Server to Client", legendX + 10 + itemSpacing, itemY + 20);
-        
-        // Draw call flow summary
-        String summary = String.format("Call Flow: %d messages | %d successful (%.1f%%) | Duration: %.1fs | Status: %s",
-                callFlow.getTotalMessages(),
-                callFlow.getSuccessfulMessages(),
-                callFlow.getSuccessRate(),
-                callFlow.getTotalDuration() / 1000.0,
-                callFlow.isCallCompleted() ? "✓ Completed" : "✗ Incomplete");
-        
-        gc.setFill(COLOR_TEXT);
-        gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 11));
-        gc.setTextAlign(TextAlignment.CENTER);
-        gc.fillText(summary, getWidth() / 2, legendY + LEGEND_HEIGHT - 15);
+        gc.fillText("→ Client to Server", legendX + 10 + itemSpacing * 2, itemY + 2);
+        gc.fillText("← Server to Client", legendX + 10 + itemSpacing * 2, itemY + 16);
     }
     
     /**
