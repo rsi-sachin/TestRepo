@@ -782,7 +782,41 @@ public class MainController {
 
     @FXML
     private void handleValidateTTS() {
-        validateTTSInstallation();
+        boolean valid = demoRunner.validateJMeterInstallation();
+        
+        // Update status bar
+        if (valid) {
+            ttsStatusLabel.setText("TTS: Ready");
+            ttsStatusLabel.setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold;");
+        } else {
+            ttsStatusLabel.setText("TTS: Not Found");
+            ttsStatusLabel.setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold;");
+        }
+        
+        // Show detailed validation result dialog
+        Alert alert = new Alert(valid ? Alert.AlertType.INFORMATION : Alert.AlertType.WARNING);
+        alert.setTitle("TTS Validation");
+        alert.setHeaderText(valid ? "✓ TTS Installation Valid" : "✗ TTS Installation Not Found");
+        
+        if (valid) {
+            alert.setContentText(
+                "JMeter found at: C:\\TTS\\bin\\jmeter.bat\n\n" +
+                "Status: Ready to run demos\n" +
+                "All demo templates should be accessible\n\n" +
+                "You can now execute SIP/IMS, Diameter, and RADIUS demos."
+            );
+        } else {
+            alert.setContentText(
+                "JMeter not found at: C:\\TTS\\bin\\jmeter.bat\n\n" +
+                "Please install TTS before running demos.\n\n" +
+                "Expected installation directory: C:\\TTS\\\n" +
+                "Required file: C:\\TTS\\bin\\jmeter.bat\n\n" +
+                "Demos will fail to execute until TTS is properly installed."
+            );
+        }
+        
+        alert.showAndWait();
+        logger.info("TTS validation result shown to user: {}", valid ? "Valid" : "Not Found");
     }
 
     private void validateTTSInstallation() {
