@@ -597,6 +597,21 @@ public class DemoRunner {
             } else if (line.contains("BYE")) {
                 messageType = SipMessage.MessageType.BYE;
                 label = "Send BYE";
+            } else if (line.contains("REGISTER")) {
+                messageType = SipMessage.MessageType.REGISTER;
+                label = "Send REGISTER";
+            } else if (line.contains("OPTIONS")) {
+                messageType = SipMessage.MessageType.OPTIONS;
+                label = "Send OPTIONS";
+            } else if (line.contains("INFO")) {
+                messageType = SipMessage.MessageType.INFO;
+                label = "Send INFO";
+            } else if (line.contains("PRACK")) {
+                messageType = SipMessage.MessageType.PRACK;
+                label = "Send PRACK";
+            } else if (line.contains("UPDATE")) {
+                messageType = SipMessage.MessageType.UPDATE;
+                label = "Send UPDATE";
             }
         }
         
@@ -628,6 +643,21 @@ public class DemoRunner {
             } else if (line.contains("BYE")) {
                 messageType = SipMessage.MessageType.BYE;
                 label = "Listen for BYE";
+            } else if (line.contains("REGISTER")) {
+                messageType = SipMessage.MessageType.REGISTER;
+                label = "Listen for REGISTER";
+            } else if (line.contains("OPTIONS")) {
+                messageType = SipMessage.MessageType.OPTIONS;
+                label = "Listen for OPTIONS";
+            } else if (line.contains("INFO")) {
+                messageType = SipMessage.MessageType.INFO;
+                label = "Listen for INFO";
+            } else if (line.contains("PRACK")) {
+                messageType = SipMessage.MessageType.PRACK;
+                label = "Listen for PRACK";
+            } else if (line.contains("UPDATE")) {
+                messageType = SipMessage.MessageType.UPDATE;
+                label = "Listen for UPDATE";
             }
         }
         

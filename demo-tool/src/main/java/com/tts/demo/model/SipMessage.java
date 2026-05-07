@@ -143,6 +143,12 @@ public class SipMessage {
         BYE("BYE"),
         CANCEL("CANCEL"),
         REGISTER("REGISTER"),
+        OPTIONS("OPTIONS"),
+        INFO("INFO"),
+        PRACK("PRACK"),
+        UPDATE("UPDATE"),
+        SUBSCRIBE("SUBSCRIBE"),
+        NOTIFY("NOTIFY"),
         OTHER("OTHER");
 
         private final String displayName;
@@ -171,6 +177,12 @@ public class SipMessage {
             if (upper.contains("BYE")) return BYE;
             if (upper.contains("CANCEL")) return CANCEL;
             if (upper.contains("REGISTER")) return REGISTER;
+            if (upper.contains("OPTIONS")) return OPTIONS;
+            if (upper.contains("INFO")) return INFO;
+            if (upper.contains("PRACK")) return PRACK;
+            if (upper.contains("UPDATE")) return UPDATE;
+            if (upper.contains("SUBSCRIBE")) return SUBSCRIBE;
+            if (upper.contains("NOTIFY")) return NOTIFY;
             
             return OTHER;
         }

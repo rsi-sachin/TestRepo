@@ -441,6 +441,13 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
         tooltip.append("Technical Details:\n");
         tooltip.append("Response Code: ").append(message.getResponseCode()).append("\n");
         tooltip.append("Thread: ").append(message.getThreadName()).append("\n");
+        
+        // Show raw label for OTHER messages to help with debugging
+        if (message.getMessageType() == SipMessage.MessageType.OTHER) {
+            tooltip.append("Raw Label: ").append(message.getLabel()).append("\n");
+            tooltip.append("(This message type is not recognized by the parser)\n");
+        }
+        
         tooltip.append("Timestamp: ").append(new java.text.SimpleDateFormat("HH:mm:ss.SSS")
             .format(new java.util.Date(message.getTimestamp()))).append("\n");
         
@@ -460,6 +467,13 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
             case BYE: return "Hangup";
             case CANCEL: return "Cancellation";
             case REGISTER: return "Registration";
+            case OPTIONS: return "Capability Query";
+            case INFO: return "Mid-Call Info";
+            case PRACK: return "Provisional ACK";
+            case UPDATE: return "Session Update";
+            case SUBSCRIBE: return "Event Subscription";
+            case NOTIFY: return "Event Notification";
+            case OTHER: return "Unrecognized Message";
             default: return "Message";
         }
     }
@@ -509,6 +523,34 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
                 return success ?
                     "Device registered with IMS network" :
                     "Registration failed - authentication issue";
+            case OPTIONS:
+                return success ?
+                    "Capability negotiation successful" :
+                    "Failed to query capabilities";
+            case INFO:
+                return success ?
+                    "Mid-call information delivered" :
+                    "Failed to deliver information";
+            case PRACK:
+                return success ?
+                    "Reliable provisional response acknowledged" :
+                    "Failed to acknowledge provisional response";
+            case UPDATE:
+                return success ?
+                    "Session parameters updated" :
+                    "Failed to update session";
+            case SUBSCRIBE:
+                return success ?
+                    "Subscribed to event notifications" :
+                    "Failed to subscribe to events";
+            case NOTIFY:
+                return success ?
+                    "Event notification delivered" :
+                    "Failed to deliver notification";
+            case OTHER:
+                return success ?
+                    "Unrecognized message - hover to see raw label" :
+                    "Unrecognized message failed";
             default:
                 return success ?
                     "Message exchanged successfully" :
