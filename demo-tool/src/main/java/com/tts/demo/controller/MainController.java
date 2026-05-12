@@ -253,12 +253,17 @@ public class MainController {
         
         // Badges
         HBox badges = new HBox(8);
+        badges.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         
         Label protocolLabel = new Label(demo.getProtocol().getDisplayName());
         protocolLabel.getStyleClass().addAll("protocol-badge", getProtocolStyleClass(demo.getProtocol()));
+        protocolLabel.setWrapText(false);
+        protocolLabel.setMaxHeight(Double.MAX_VALUE);
         
         Label complexityLabel = new Label(demo.getComplexity().getDisplayName());
         complexityLabel.getStyleClass().addAll("complexity-badge", getComplexityStyleClass(demo.getComplexity()));
+        complexityLabel.setWrapText(false);
+        complexityLabel.setMaxHeight(Double.MAX_VALUE);
         
         badges.getChildren().addAll(protocolLabel, complexityLabel);
         
