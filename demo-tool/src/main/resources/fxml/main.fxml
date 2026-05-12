@@ -30,10 +30,10 @@
     
     <!-- Main Content -->
     <center>
-        <SplitPane dividerPositions="0.3" fx:id="mainSplitPane">
+        <SplitPane dividerPositions="0.35" fx:id="mainSplitPane">
             
             <!-- Left Panel - Demo Catalog -->
-            <VBox spacing="10" styleClass="main-container">
+            <VBox spacing="10" styleClass="main-container" minWidth="320" prefWidth="400">
                 <Label text="TTS Demo Catalog" styleClass="title-label"/>
                 
                 <!-- Search and Filter -->

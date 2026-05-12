@@ -68,6 +68,8 @@
     -fx-padding: 4 8 4 8;
     -fx-font-size: 11px;
     -fx-font-weight: bold;
+    -fx-min-width: 70px;
+    -fx-alignment: center;
 }
 
 .protocol-sip {
@@ -90,6 +92,8 @@
     -fx-background-radius: 4;
     -fx-padding: 4 8 4 8;
     -fx-font-size: 11px;
+    -fx-min-width: 90px;
+    -fx-alignment: center;
 }
 
 .complexity-basic {
