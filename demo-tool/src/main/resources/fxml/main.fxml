@@ -43,14 +43,11 @@
                               styleClass="search-box"
                               onKeyReleased="#handleSearch"/>
                     
-                    <HBox spacing="10" alignment="CENTER_LEFT">
+                    <HBox spacing="15" alignment="CENTER_LEFT">
                         <Label text="Protocol:"/>
                         <ComboBox fx:id="protocolFilter" 
                                  promptText="All Protocols"
                                  onAction="#handleFilterChange"/>
-                    </HBox>
-                    
-                    <HBox spacing="10" alignment="CENTER_LEFT">
                         <Label text="Complexity:"/>
                         <ComboBox fx:id="complexityFilter" 
                                  promptText="All Levels"
