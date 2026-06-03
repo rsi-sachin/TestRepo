@@ -45,6 +45,12 @@ class OranTestCase(BaseModel):
     complexity: str = Field(default="BASIC", description="Test complexity (BASIC/INTERMEDIATE/ADVANCED)")
     source_clause: Optional[str] = Field(None, description="Source spec clause number")
     
+    # Phase 2 additions
+    source_spec: Optional[SpecType] = Field(None, description="Source specification type")
+    source_section: Optional[str] = Field(None, description="Section number in source spec")
+    source_page: Optional[int] = Field(None, description="Page number in source spec")
+    enrichment_sources: Dict[str, str] = Field(default_factory=dict, description="Sources of enrichment data")
+    
     class Config:
         json_schema_extra = {
             "example": {
@@ -57,7 +63,11 @@ class OranTestCase(BaseModel):
                 "expected_status": 201,
                 "validations": ["status_code == 201", "schema_valid"],
                 "complexity": "BASIC",
-                "source_clause": "5.3.1"
+                "source_clause": "5.3.1",
+                "source_spec": "TS_103_989",
+                "source_section": "5.3.1",
+                "source_page": 45,
+                "enrichment_sources": {"base": "TS_103_989 Section 5.3.1"}
             }
         }
 
@@ -190,6 +200,8 @@ class TestClause(BaseModel):
     methodology: Optional[str] = Field(None, description="Test execution steps")
     expected_result: Optional[str] = Field(None, description="Expected outcome")
     spec_type: SpecType = Field(..., description="Source specification")
+    page_number: Optional[int] = Field(None, description="Page number in source spec")
+    raw_text: Optional[str] = Field(None, description="Raw extracted text (first 1000 chars)")
     
     class Config:
         json_schema_extra = {
@@ -200,7 +212,9 @@ class TestClause(BaseModel):
                 "entrance_criteria": "A1 interface available",
                 "methodology": "Send PUT request to /policies/{id}",
                 "expected_result": "HTTP 201 Created response",
-                "spec_type": "TS_103_989"
+                "spec_type": "TS_103_989",
+                "page_number": 45,
+                "raw_text": "..."
             }
         }
 
@@ -229,6 +243,8 @@ class EnrichedTestCase(BaseModel):
     """Test case enriched with data from multiple specifications"""
     base_clause: TestClause = Field(..., description="Base test clause from test spec")
     semantics: TestSemantics = Field(..., description="Extracted semantic information")
+    complexity: str = Field(default="BASIC", description="Test complexity level")
+    enrichment_sources: Dict[str, str] = Field(default_factory=dict, description="Sources of enrichment data")
     
     # Cross-referenced data
     api_definition: Optional[Dict] = Field(None, description="API definition from TS 103 987")
@@ -244,6 +260,8 @@ class EnrichedTestCase(BaseModel):
             "example": {
                 "base_clause": {},
                 "semantics": {},
+                "complexity": "BASIC",
+                "enrichment_sources": {"base": "TS_103_989 Section 5.3.1", "endpoint": "TS_103_987"},
                 "api_definition": {"endpoint": "/policies/{id}", "method": "PUT"},
                 "payload_schema": {"type": "object", "properties": {}},
                 "conflicts": [],

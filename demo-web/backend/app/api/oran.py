@@ -16,10 +16,23 @@ from app.models.oran import (
     SpecType
 )
 from app.services.oran_execution_service import OranExecutionService
+from app.services.spec_parser_service import SpecParserService
+from app.services.catalog_generator_service import CatalogGeneratorService
 from app.config import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 oran_execution_service = OranExecutionService()
+
+# Initialize parser and catalog generator
+specs_upload_dir = Path("./data/spec_uploads")
+specs_upload_dir.mkdir(parents=True, exist_ok=True)
+
+catalogs_dir = settings.oran_catalogs_path or (settings.runs_directory / "oran_catalogs")
+spec_parser = SpecParserService(specs_upload_dir)
+catalog_generator = CatalogGeneratorService(catalogs_dir)
 
 
 # ==================== CATALOG MANAGEMENT ====================
@@ -140,27 +153,80 @@ async def download_test_script(test_id: str):
 
 @router.post("/generate", response_model=Dict[str, str])
 async def generate_test_catalog(
-    background_tasks: BackgroundTasks,
     catalog_name: str = Query(..., description="Name for the generated catalog"),
-    description: Optional[str] = Query(None, description="Catalog description")
+    description: Optional[str] = Query("", description="Catalog description")
 ):
     """
     Generate O-RAN test catalog from uploaded specifications
     
-    This is a placeholder endpoint. Full implementation requires Phase 2 (spec parsing).
-    
-    Returns catalog_id for tracking generation progress via WebSocket
+    Parses PDF/DOCX specs, extracts test clauses, cross-references, and generates catalog
     """
-    catalog_id = f"oran-catalog-{uuid.uuid4().hex[:8]}"
+    try:
+        logger.info(f"Starting catalog generation: {catalog_name}")
+        
+        # Map uploaded files to SpecType
+        spec_files = {}
+        for spec_type in [SpecType.TS_103_989, SpecType.TS_103_987, 
+                          SpecType.TS_103_988, SpecType.TS_103_983]:
+            # Check for both .pdf and .docx
+            pdf_path = specs_upload_dir / f"{spec_type.value}.pdf"
+            docx_path = specs_upload_dir / f"{spec_type.value}.docx"
+            
+            if pdf_path.exists():
+                spec_files[spec_type] = pdf_path
+            elif docx_path.exists():
+                spec_files[spec_type] = docx_path
+        
+        if not spec_files:
+            raise HTTPException(
+                status_code=400,
+                detail="No specification files found. Upload specs first using /upload-specs"
+            )
+        
+        logger.info(f"Found {len(spec_files)} specification files")
+        
+        # Parse all specifications
+        all_clauses = spec_parser.parse_all_specs(spec_files)
+        total_clauses = sum(len(clauses) for clauses in all_clauses.values())
+        logger.info(f"Extracted {total_clauses} total test clauses")
+        
+        # Cross-reference specs for enrichment
+        enriched_cases = spec_parser.cross_reference_specs(all_clauses)
+        logger.info(f"Created {len(enriched_cases)} enriched test cases")
+        
+        # Generate catalog (with section limit)
+        catalog = catalog_generator.generate_catalog(
+            enriched_cases,
+            catalog_name,
+            description,
+            apply_section_limit=True  # MVP constraint: 1 test per section
+        )
+        
+        # Save catalog
+        catalog_path = catalog_generator.save_catalog(catalog)
+        logger.info(f"Saved catalog to {catalog_path}")
+        
+        # Save conflicts if any
+        conflicts = spec_parser.detect_conflicts(enriched_cases)
+        if conflicts:
+            conflicts_path = catalogs_dir / "spec_conflicts.json"
+            spec_parser.save_conflicts(conflicts_path)
+            logger.info(f"Saved {len(conflicts)} conflicts")
+        
+        return {
+            "catalog_id": catalog.catalog_id,
+            "status": "completed",
+            "message": f"Successfully generated catalog with {catalog.total_tests} test cases",
+            "total_tests": str(catalog.total_tests),
+            "total_clauses_parsed": str(total_clauses),
+            "conflicts_detected": str(len(conflicts))
+        }
     
-    # TODO: Implement full generation pipeline in Phase 2
-    # For now, return placeholder response
-    
-    return {
-        "catalog_id": catalog_id,
-        "status": "queued",
-        "message": "Test generation queued. Full implementation in Phase 2."
-    }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating catalog: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error generating catalog: {str(e)}")
 
 
 @router.post("/upload-specs")
@@ -173,34 +239,39 @@ async def upload_specifications(
     """
     Upload ETSI specification files for test generation
     
-    This is a placeholder endpoint. Full implementation requires Phase 2 (spec parsing).
+    Saves uploaded PDF/DOCX files to spec_uploads directory
     """
-    specs_dir = settings.tts_path / "oran_specs"
-    specs_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        uploaded_specs = {}
+        
+        for spec_file, spec_type_str in [
+            (ts_103_989, "TS_103_989"),
+            (ts_103_987, "TS_103_987"),
+            (ts_103_988, "TS_103_988"),
+            (ts_103_983, "TS_103_983")
+        ]:
+            if spec_file:
+                # Save file with spec type name
+                file_ext = Path(spec_file.filename).suffix
+                file_path = specs_upload_dir / f"{spec_type_str}{file_ext}"
+                
+                # Save uploaded file
+                with open(file_path, 'wb') as f:
+                    content = await spec_file.read()
+                    f.write(content)
+                
+                uploaded_specs[spec_type_str] = str(file_path)
+                logger.info(f"Uploaded {spec_type_str}: {file_path}")
+        
+        return {
+            "message": f"Successfully uploaded {len(uploaded_specs)} specification file(s)",
+            "specs": uploaded_specs,
+            "status": "ready"
+        }
     
-    uploaded_specs = {}
-    
-    for spec_file, spec_type in [
-        (ts_103_989, "TS_103_989"),
-        (ts_103_987, "TS_103_987"),
-        (ts_103_988, "TS_103_988"),
-        (ts_103_983, "TS_103_983")
-    ]:
-        if spec_file:
-            file_path = specs_dir / f"{spec_type}_{spec_file.filename}"
-            
-            # Save uploaded file
-            with open(file_path, 'wb') as f:
-                content = await spec_file.read()
-                f.write(content)
-            
-            uploaded_specs[spec_type] = str(file_path)
-    
-    return {
-        "message": f"Uploaded {len(uploaded_specs)} specification file(s)",
-        "specs": uploaded_specs,
-        "note": "Full parsing implementation in Phase 2"
-    }
+    except Exception as e:
+        logger.error(f"Error uploading specs: {e}")
+        raise HTTPException(status_code=500, detail=f"Error uploading specifications: {str(e)}")
 
 
 # ==================== TEST EXECUTION ====================
