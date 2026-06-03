@@ -1,0 +1,285 @@
+"""
+ORAN models - Pydantic schemas for O-RAN A1 test generation and execution
+"""
+
+from pydantic import BaseModel, Field
+from typing import Dict, Optional, List
+from datetime import datetime
+from enum import Enum
+
+
+class SpecType(str, Enum):
+    """ETSI specification types"""
+    TS_103_989 = "TS_103_989"  # A1 Test Specification
+    TS_103_987 = "TS_103_987"  # A1 Application Protocol
+    TS_103_988 = "TS_103_988"  # A1 Type Definitions
+    TS_103_983 = "TS_103_983"  # A1 General Principles
+
+
+class HttpMethod(str, Enum):
+    """HTTP methods for A1 interface"""
+    GET = "GET"
+    PUT = "PUT"
+    POST = "POST"
+    DELETE = "DELETE"
+    PATCH = "PATCH"
+
+
+class OranTestCase(BaseModel):
+    """Individual O-RAN A1 test case"""
+    test_id: str = Field(..., description="Unique test identifier (e.g., A1_TC_001)")
+    scenario: str = Field(..., description="Test scenario name")
+    description: str = Field(..., description="Test description")
+    
+    # Request specification
+    method: HttpMethod = Field(..., description="HTTP method")
+    endpoint: str = Field(..., description="API endpoint pattern (e.g., /policies/{id})")
+    payload_type: Optional[str] = Field(None, description="Payload type (PolicyObject, EiJobObject, etc.)")
+    payload_schema: Optional[Dict] = Field(None, description="JSON schema for request payload")
+    
+    # Validation specification
+    expected_status: int = Field(..., description="Expected HTTP status code")
+    validations: List[str] = Field(default_factory=list, description="Validation assertions")
+    
+    # Metadata
+    complexity: str = Field(default="BASIC", description="Test complexity (BASIC/INTERMEDIATE/ADVANCED)")
+    source_clause: Optional[str] = Field(None, description="Source spec clause number")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "test_id": "A1_TC_001",
+                "scenario": "Create A1 Policy",
+                "description": "Test creation of A1 policy via PUT request",
+                "method": "PUT",
+                "endpoint": "/policies/{policy_id}",
+                "payload_type": "PolicyObject",
+                "expected_status": 201,
+                "validations": ["status_code == 201", "schema_valid"],
+                "complexity": "BASIC",
+                "source_clause": "5.3.1"
+            }
+        }
+
+
+class OranTestCatalog(BaseModel):
+    """Collection of O-RAN test cases generated from specifications"""
+    catalog_id: str = Field(..., description="Unique catalog identifier")
+    name: str = Field(..., description="Catalog name")
+    description: Optional[str] = Field(None, description="Catalog description")
+    
+    # Source specifications
+    spec_sources: Dict[str, str] = Field(default_factory=dict, description="Source spec files (SpecType -> file path)")
+    generated_at: datetime = Field(default_factory=datetime.now, description="Generation timestamp")
+    
+    # Test cases
+    test_cases: List[OranTestCase] = Field(default_factory=list, description="List of test cases")
+    
+    # Statistics
+    total_tests: int = Field(default=0, description="Total number of test cases")
+    by_complexity: Dict[str, int] = Field(default_factory=dict, description="Count by complexity level")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "catalog_id": "oran-catalog-001",
+                "name": "A1 Interface Conformance Tests",
+                "description": "Generated from ETSI TS 103 989",
+                "spec_sources": {
+                    "TS_103_989": "specs/ts_103_989.pdf",
+                    "TS_103_987": "specs/ts_103_987.pdf"
+                },
+                "test_cases": [],
+                "total_tests": 15,
+                "by_complexity": {"BASIC": 8, "INTERMEDIATE": 5, "ADVANCED": 2}
+            }
+        }
+
+
+class OranKpiMetrics(BaseModel):
+    """O-RAN specific KPI metrics"""
+    # Latency metrics
+    avg_latency_ms: Optional[float] = Field(None, description="Average request latency (ms)")
+    p95_latency_ms: Optional[float] = Field(None, description="95th percentile latency (ms)")
+    p99_latency_ms: Optional[float] = Field(None, description="99th percentile latency (ms)")
+    
+    # Throughput metrics
+    requests_per_second: Optional[float] = Field(None, description="Request throughput (req/s)")
+    successful_requests_per_second: Optional[float] = Field(None, description="Successful request rate")
+    
+    # Conformance metrics
+    conformance_rate: Optional[float] = Field(None, description="Conformance test pass rate (%)")
+    schema_validation_rate: Optional[float] = Field(None, description="Schema validation pass rate (%)")
+    
+    # Resource metrics (optional)
+    cpu_usage_percent: Optional[float] = Field(None, description="Average CPU usage during test")
+    memory_usage_mb: Optional[float] = Field(None, description="Average memory usage (MB)")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "avg_latency_ms": 45.2,
+                "p95_latency_ms": 78.5,
+                "p99_latency_ms": 125.3,
+                "requests_per_second": 150.5,
+                "successful_requests_per_second": 148.2,
+                "conformance_rate": 98.5,
+                "schema_validation_rate": 100.0
+            }
+        }
+
+
+class OranExecutionResult(BaseModel):
+    """Execution result for O-RAN test with KPI metrics"""
+    execution_id: str
+    test_id: str  # References OranTestCase.test_id
+    catalog_id: Optional[str] = None
+    
+    # Status
+    status: str  # Uses ExecutionStatus enum values
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    duration_seconds: Optional[float] = None
+    
+    # Test results
+    total_tests: int = 0
+    passed: int = 0
+    failed: int = 0
+    skipped: int = 0
+    pass_rate: float = 0.0
+    
+    # ORAN-specific KPIs
+    kpis: Optional[OranKpiMetrics] = Field(None, description="O-RAN KPI metrics")
+    
+    # Output
+    output_log: Optional[str] = None
+    pytest_json_report: Optional[str] = None  # Path to pytest JSON report
+    error_message: Optional[str] = None
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "execution_id": "oran-exec-001",
+                "test_id": "A1_TC_001",
+                "catalog_id": "oran-catalog-001",
+                "status": "completed",
+                "started_at": "2026-06-03T10:00:00Z",
+                "completed_at": "2026-06-03T10:02:30Z",
+                "duration_seconds": 150.0,
+                "total_tests": 10,
+                "passed": 9,
+                "failed": 1,
+                "skipped": 0,
+                "pass_rate": 90.0,
+                "kpis": {
+                    "avg_latency_ms": 45.2,
+                    "conformance_rate": 90.0
+                }
+            }
+        }
+
+
+# ======== PHASE 2 MODELS: Spec Parsing Pipeline ========
+
+class TestClause(BaseModel):
+    """Extracted test clause from ETSI specification"""
+    clause_number: str = Field(..., description="Clause number (e.g., 5.3.1)")
+    title: str = Field(..., description="Clause title")
+    description: str = Field(..., description="Test description")
+    entrance_criteria: Optional[str] = Field(None, description="Pre-conditions")
+    methodology: Optional[str] = Field(None, description="Test execution steps")
+    expected_result: Optional[str] = Field(None, description="Expected outcome")
+    spec_type: SpecType = Field(..., description="Source specification")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "clause_number": "5.3.1",
+                "title": "Policy Creation Test",
+                "description": "Test A1 policy creation via PUT request",
+                "entrance_criteria": "A1 interface available",
+                "methodology": "Send PUT request to /policies/{id}",
+                "expected_result": "HTTP 201 Created response",
+                "spec_type": "TS_103_989"
+            }
+        }
+
+
+class TestSemantics(BaseModel):
+    """Semantic information extracted from test clause"""
+    http_method: Optional[HttpMethod] = Field(None, description="Extracted HTTP method")
+    endpoint: Optional[str] = Field(None, description="Extracted API endpoint")
+    payload_type: Optional[str] = Field(None, description="Extracted payload type")
+    expected_status: Optional[int] = Field(None, description="Extracted expected status code")
+    assertions: List[str] = Field(default_factory=list, description="Extracted assertions")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "http_method": "PUT",
+                "endpoint": "/policies/{policy_id}",
+                "payload_type": "PolicyObject",
+                "expected_status": 201,
+                "assertions": ["status_code == 201", "response.headers['Content-Type'] == 'application/json'"]
+            }
+        }
+
+
+class EnrichedTestCase(BaseModel):
+    """Test case enriched with data from multiple specifications"""
+    base_clause: TestClause = Field(..., description="Base test clause from test spec")
+    semantics: TestSemantics = Field(..., description="Extracted semantic information")
+    
+    # Cross-referenced data
+    api_definition: Optional[Dict] = Field(None, description="API definition from TS 103 987")
+    payload_schema: Optional[Dict] = Field(None, description="Payload schema from TS 103 988")
+    terminology: Optional[Dict] = Field(None, description="Terminology from TS 103 983")
+    
+    # Conflict tracking
+    conflicts: List[Dict] = Field(default_factory=list, description="Detected specification conflicts")
+    resolution: Optional[str] = Field(None, description="Conflict resolution applied")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "base_clause": {},
+                "semantics": {},
+                "api_definition": {"endpoint": "/policies/{id}", "method": "PUT"},
+                "payload_schema": {"type": "object", "properties": {}},
+                "conflicts": [],
+                "resolution": "priority_order"
+            }
+        }
+
+
+class SpecConflict(BaseModel):
+    """Detected conflict between specifications"""
+    conflict_id: str = Field(..., description="Unique conflict identifier")
+    timestamp: datetime = Field(default_factory=datetime.now)
+    
+    # Conflict details
+    field: str = Field(..., description="Conflicting field (e.g., 'endpoint', 'status_code')")
+    spec1: SpecType
+    value1: str
+    spec2: SpecType
+    value2: str
+    
+    # Resolution
+    resolution: Optional[str] = Field(None, description="Applied resolution (e.g., 'priority_order', 'manual')")
+    resolved_value: Optional[str] = Field(None, description="Final resolved value")
+    reviewed: bool = Field(default=False, description="Whether conflict has been reviewed")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "conflict_id": "conflict-001",
+                "field": "endpoint",
+                "spec1": "TS_103_989",
+                "value1": "/policies/{id}",
+                "spec2": "TS_103_987",
+                "value2": "/a1-p/policies/{policy_id}",
+                "resolution": "priority_order",
+                "resolved_value": "/policies/{id}",
+                "reviewed": False
+            }
+        }
