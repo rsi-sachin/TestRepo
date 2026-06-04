@@ -3,7 +3,7 @@
     {
       "id": "sip-001",
       "title": "Self-Contained VoLTE Call Setup & Teardown",
-      "description": "Fully isolated client-server VoLTE test with automatic thread synchronization (15-second startup buffer). Simulates both SIP client and server within same test. Demonstrates complete call flow: INVITE → TRYING → RINGING → 200 OK → ACK → BYE. No external dependencies required.",
+      "description": "Fully isolated client-server VoLTE test with automatic thread synchronization (15-second startup buffer). Simulates both SIP client and server within same test. Demonstrates complete call flow: INVITE -> TRYING -> RINGING -> 200 OK -> ACK -> BYE. No external dependencies required.",
       "expectedOutcome": "Successful call establishment with proper SIP signaling between internal client and server threads. Validates thread synchronization, complete VoLTE call flow, and graceful teardown in isolated environment. Both Server and Client threads execute successfully.",
       "protocol": "SIP_IMS",
       "complexity": "INTERMEDIATE",
