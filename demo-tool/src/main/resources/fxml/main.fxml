@@ -30,10 +30,10 @@
     
     <!-- Main Content -->
     <center>
-        <SplitPane dividerPositions="0.3" fx:id="mainSplitPane">
+        <SplitPane dividerPositions="0.35" fx:id="mainSplitPane">
             
             <!-- Left Panel - Demo Catalog -->
-            <VBox spacing="10" styleClass="main-container">
+            <VBox spacing="10" styleClass="main-container" minWidth="320" prefWidth="400">
                 <Label text="TTS Demo Catalog" styleClass="title-label"/>
                 
                 <!-- Search and Filter -->
@@ -43,14 +43,11 @@
                               styleClass="search-box"
                               onKeyReleased="#handleSearch"/>
                     
-                    <HBox spacing="10" alignment="CENTER_LEFT">
+                    <HBox spacing="15" alignment="CENTER_LEFT">
                         <Label text="Protocol:"/>
                         <ComboBox fx:id="protocolFilter" 
                                  promptText="All Protocols"
                                  onAction="#handleFilterChange"/>
-                    </HBox>
-                    
-                    <HBox spacing="10" alignment="CENTER_LEFT">
                         <Label text="Complexity:"/>
                         <ComboBox fx:id="complexityFilter" 
                                  promptText="All Levels"
@@ -74,8 +71,10 @@
             <!-- Right Panel - Demo Details and Execution -->
             <VBox spacing="15" styleClass="main-container">
                 
-                <!-- Demo Details -->
-                <VBox fx:id="demoDetailsPane" spacing="10" managed="false" visible="false">
+                <!-- Demo Details with Tabbed Interface -->
+                <VBox fx:id="demoDetailsPane" spacing="10" managed="false" visible="false" VBox.vgrow="ALWAYS">
+                    
+                    <!-- Demo Title (stays outside tabs) -->
                     <Label fx:id="demoTitleLabel" styleClass="title-label" wrapText="true"/>
                     
                     <HBox spacing="10">
@@ -83,55 +82,132 @@
                         <Label fx:id="complexityBadge" styleClass="complexity-badge"/>
                     </HBox>
                     
-                    <VBox spacing="5">
-                        <Label text="Description:" styleClass="subtitle-label"/>
-                        <Label fx:id="demoDescriptionLabel" wrapText="true" styleClass="demo-description"/>
-                    </VBox>
-                    
-                    <VBox spacing="5">
-                        <Label text="Expected Outcome:" styleClass="subtitle-label"/>
-                        <Label fx:id="demoOutcomeLabel" wrapText="true" styleClass="demo-outcome"/>
-                    </VBox>
-                    
-                    <Separator/>
-                    
-                    <!-- Parameters Configuration -->
-                    <Label text="Configuration Parameters:" styleClass="subtitle-label"/>
-                    <ScrollPane maxHeight="200" fitToWidth="true">
-                        <GridPane fx:id="parametersGrid" hgap="10" vgap="10">
-                            <padding><Insets top="5" right="5" bottom="5" left="5"/></padding>
-                        </GridPane>
-                    </ScrollPane>
-                    
-                    <!-- Action Buttons -->
-                    <HBox spacing="10" alignment="CENTER_LEFT">
-                        <Button fx:id="runButton" 
-                               text="Run Demo" 
-                               onAction="#handleRunDemo"
-                               styleClass="button-success"
-                               prefWidth="120"/>
-                        <Button fx:id="stopButton" 
-                               text="Stop" 
-                               onAction="#handleStopDemo"
-                               styleClass="button-danger"
-                               prefWidth="120"
-                               disable="true"/>
-                        <ProgressIndicator fx:id="progressIndicator" 
-                                          visible="false" 
-                                          maxWidth="30" 
-                                          maxHeight="30"/>
-                        <Label fx:id="statusLabel" styleClass="status-running"/>
-                    </HBox>
-                    
-                    <Separator/>
-                    
-                    <!-- Live Output -->
-                    <Label text="Live Output:" styleClass="subtitle-label"/>
-                    <TextArea fx:id="outputTextArea" 
-                             editable="false" 
-                             wrapText="false"
-                             VBox.vgrow="ALWAYS"
-                             styleClass="text-area"/>
+                    <!-- Tabbed Content -->
+                    <TabPane fx:id="demoTabPane" VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE">
+                        
+                        <!-- Tab 1: Configuration -->
+                        <Tab fx:id="configTab" text="Configuration" closable="false">
+                            <ScrollPane fitToWidth="true" fitToHeight="true">
+                                <VBox spacing="10" styleClass="tab-content">
+                                    <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+                                    
+                                    <VBox spacing="5">
+                                        <Label text="Description:" styleClass="subtitle-label"/>
+                                        <Label fx:id="demoDescriptionLabel" wrapText="true" styleClass="demo-description"/>
+                                    </VBox>
+                                    
+                                    <VBox spacing="5">
+                                        <Label text="Expected Outcome:" styleClass="subtitle-label"/>
+                                        <Label fx:id="demoOutcomeLabel" wrapText="true" styleClass="demo-outcome"/>
+                                    </VBox>
+                                    
+                                    <Separator/>
+                                    
+                                    <!-- Parameters Configuration -->
+                                    <Label text="Configuration Parameters:" styleClass="subtitle-label"/>
+                                    <ScrollPane maxHeight="200" fitToWidth="true">
+                                        <GridPane fx:id="parametersGrid" hgap="10" vgap="10">
+                                            <padding><Insets top="5" right="5" bottom="5" left="5"/></padding>
+                                        </GridPane>
+                                    </ScrollPane>
+                                    
+                                    <Separator/>
+                                    
+                                    <!-- Action Buttons -->
+                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                        <Button fx:id="runButton" 
+                                               text="Run Demo" 
+                                               onAction="#handleRunDemo"
+                                               styleClass="button-success"
+                                               prefWidth="120"/>
+                                        <Button fx:id="stopButton" 
+                                               text="Stop" 
+                                               onAction="#handleStopDemo"
+                                               styleClass="button-danger"
+                                               prefWidth="120"
+                                               disable="true"/>
+                                        <ProgressIndicator fx:id="progressIndicator" 
+                                                          visible="false" 
+                                                          maxWidth="30" 
+                                                          maxHeight="30"/>
+                                        <Label fx:id="statusLabel" styleClass="status-running"/>
+                                    </HBox>
+                                </VBox>
+                            </ScrollPane>
+                        </Tab>
+                        
+                        <!-- Tab 2: Execution -->
+                        <Tab fx:id="executionTab" text="Execution" closable="false">
+                            <VBox spacing="10" VBox.vgrow="ALWAYS">
+                                <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+                                
+                                <!-- Execution Controls -->
+                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                    <Label text="Test Execution:" styleClass="subtitle-label"/>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                    <Button fx:id="executionTabStopButton" 
+                                           text="Stop" 
+                                           onAction="#handleStopDemo"
+                                           styleClass="button-danger"
+                                           prefWidth="120"
+                                           disable="true"/>
+                                </HBox>
+                                
+                                <Separator/>
+                                
+                                <!-- Call Flow Visualization -->
+                                <Label text="Call Flow Visualization:" styleClass="subtitle-label"/>
+                                
+                                <!-- Diagram Controls -->
+                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                    <CheckBox fx:id="showTerminalCheckBox" 
+                                             text="Show Terminal" 
+                                             onAction="#handleToggleTerminal"
+                                             selected="false"/>
+                                    <Button text="Export Diagram" 
+                                           fx:id="exportDiagramButton"
+                                           onAction="#handleExportDiagram"
+                                           styleClass="button-secondary"
+                                           disable="true"/>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                    <Label fx:id="callFlowStatusLabel" 
+                                          text="Call Flow: Not started"
+                                          styleClass="status-info"/>
+                                </HBox>
+                                
+                                <!-- Main Visualization Area (Phase 3: Horizontal Split) -->
+                                <SplitPane fx:id="visualizationSplitPane" 
+                                          orientation="HORIZONTAL" 
+                                          dividerPositions="0.6"
+                                          VBox.vgrow="ALWAYS">
+                                    
+                                    <!-- Call Flow Diagram (Left - 60%) -->
+                                    <ScrollPane fitToWidth="true" fitToHeight="true">
+                                        <StackPane fx:id="diagramContainer" 
+                                                  style="-fx-background-color: white; -fx-border-color: #bdc3c7; -fx-border-width: 1;"
+                                                  prefWidth="600">
+                                            <Label text="Call flow diagram will appear here after running a SIP/IMS demo"
+                                                  style="-fx-text-fill: #95a5a6; -fx-font-size: 14px;"/>
+                                        </StackPane>
+                                    </ScrollPane>
+                                    
+                                    <!-- Terminal Output (Right - 40%, Initially visible) -->
+                                    <TitledPane fx:id="terminalPane" 
+                                               text="Terminal Output (Advanced)" 
+                                               expanded="true"
+                                               collapsible="true"
+                                               animated="true">
+                                        <TextArea fx:id="outputTextArea" 
+                                                editable="false" 
+                                                wrapText="false"
+                                                styleClass="text-area"/>
+                                    </TitledPane>
+                                    
+                                </SplitPane>
+                            </VBox>
+                        </Tab>
+                        
+                    </TabPane>
                 </VBox>
                 
                 <!-- Placeholder when no demo selected -->
