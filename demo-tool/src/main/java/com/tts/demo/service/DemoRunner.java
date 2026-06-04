@@ -3,7 +3,6 @@ package com.tts.demo.service;
 import com.tts.demo.model.Demo;
 import com.tts.demo.model.DemoConfig;
 import com.tts.demo.model.RunResult;
-import com.tts.demo.model.SipMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,21 +72,6 @@ public class DemoRunner {
      * @return RunResult with execution metadata
      */
     public RunResult runDemo(Demo demo, DemoConfig config, Consumer<String> outputConsumer) {
-        // Call the dual-consumer version with a no-op message consumer for backward compatibility
-        return runDemo(demo, config, outputConsumer, null);
-    }
-    
-    /**
-     * Executes a demo scenario asynchronously with real-time SIP message capture.
-     * Streams output to the provided consumer and captures SIP messages for live visualization.
-     * 
-     * @param demo The demo to execute
-     * @param config Configuration parameters for the demo
-     * @param outputConsumer Consumer that receives live output lines (for terminal display)
-     * @param messageConsumer Consumer that receives parsed SipMessage objects (for live diagram), can be null
-     * @return RunResult with execution metadata
-     */
-    public RunResult runDemo(Demo demo, DemoConfig config, Consumer<String> outputConsumer, Consumer<SipMessage> messageConsumer) {
         String runId = UUID.randomUUID().toString();
         RunResult result = new RunResult(runId, demo.getId(), demo.getTitle());
         
@@ -139,8 +123,8 @@ public class DemoRunner {
             pb.environment().put("JMETER_HOME", JMETER_HOME);
             currentProcess = pb.start();
             
-            // Stream output with enhanced progress logging and real-time message capture
-            new Thread(() -> streamOutput(currentProcess, outputConsumer, messageConsumer, demo)).start();
+            // Stream output with enhanced progress logging
+            new Thread(() -> streamOutput(currentProcess, outputConsumer, demo)).start();
             
             // Log expected timing for SIP/IMS demos
             if (demo.getProtocol() == Demo.Protocol.SIP_IMS && outputConsumer != null) {
@@ -227,23 +211,22 @@ public class DemoRunner {
     /**
      * Streams process output to the consumer line by line with enhanced progress indicators.
      * Detects and highlights key execution events for better user feedback.
-     * Captures SIP messages in real-time for live call flow visualization.
      * 
      * @param process The JMeter process
-     * @param outputConsumer Consumer that receives output lines (for terminal display)
-     * @param messageConsumer Consumer that receives parsed SipMessage objects (for live diagram), can be null
+     * @param outputConsumer Consumer that receives output lines
      * @param demo The demo being executed (for protocol-specific enhancements)
      */
-    private void streamOutput(Process process, Consumer<String> outputConsumer, Consumer<SipMessage> messageConsumer, Demo demo) {
+    private void streamOutput(Process process, Consumer<String> outputConsumer, Demo demo) {
         boolean testStarted = false;
         boolean summaryShown = false;
-        int sipMessageCount = 0;
-        int successfulSipMessages = 0;
         
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
+                // Enhance key log patterns for better visibility
+                String enhancedLine = line;
+                
                 // Detect test start
                 if (line.contains("Starting standalone test")) {
                     if (outputConsumer != null) {
@@ -263,41 +246,15 @@ public class DemoRunner {
                     }
                 }
                 
-                // Detect and format SIP messages for SIP/IMS protocol
-                if (demo.getProtocol() == Demo.Protocol.SIP_IMS) {
-                    // Parse SIP message for real-time capture
-                    SipMessage sipMessage = parseSipMessageFromOutput(line);
-                    if (sipMessage != null) {
-                        sipMessageCount++;
-                        if (sipMessage.isSuccess()) {
-                            successfulSipMessages++;
-                        }
-                        
-                        // Send parsed message to live diagram consumer (if provided)
-                        if (messageConsumer != null) {
-                            messageConsumer.accept(sipMessage);
-                        }
-                        
-                        // Format and send to terminal output consumer
-                        String formattedSipMessage = detectAndFormatSipMessage(line);
-                        if (outputConsumer != null && formattedSipMessage != null) {
-                            outputConsumer.accept(formattedSipMessage);
-                        }
-                        
-                        logger.debug("SIP Message detected: {}", formattedSipMessage);
-                        continue; // Skip normal processing for SIP messages
-                    }
-                }
-                
                 // Enhance summary output
                 if (line.contains("summary =") && !summaryShown) {
                     if (outputConsumer != null) {
                         outputConsumer.accept("[PROGRESS] Execution in progress...");
-                        outputConsumer.accept("[INFO] " + line.trim());
+                        outputConsumer.accept(enhancedLine);
                     }
                     summaryShown = true;
                     logger.info("JMeter summary: {}", line.trim());
-                    continue;
+                    continue; // Skip normal processing for summary line
                 }
                 
                 // Detect test completion
@@ -310,29 +267,12 @@ public class DemoRunner {
                 if (line.contains("end of run")) {
                     if (outputConsumer != null) {
                         outputConsumer.accept("[PROGRESS] JMeter execution finished");
-                        
-                        // Add call flow summary for SIP/IMS tests
-                        if (demo.getProtocol() == Demo.Protocol.SIP_IMS && sipMessageCount > 0) {
-                            outputConsumer.accept("");
-                            outputConsumer.accept("════════════════════════════════════════════");
-                            outputConsumer.accept("            Call Flow Summary               ");
-                            outputConsumer.accept("════════════════════════════════════════════");
-                            outputConsumer.accept(String.format("Total SIP Messages: %d", sipMessageCount));
-                            outputConsumer.accept(String.format("Successful: %d (%.1f%%)", 
-                                    successfulSipMessages, 
-                                    (successfulSipMessages * 100.0) / sipMessageCount));
-                            outputConsumer.accept(String.format("Failed: %d", sipMessageCount - successfulSipMessages));
-                            outputConsumer.accept("════════════════════════════════════════════");
-                            outputConsumer.accept("");
-                        }
                     }
                 }
                 
-                // Filter out noise - only show important lines
-                if (shouldShowLine(line)) {
-                    if (outputConsumer != null) {
-                        outputConsumer.accept(line);
-                    }
+                // Send line to consumer (unless already sent above)
+                if (outputConsumer != null && !line.contains("summary =")) {
+                    outputConsumer.accept(enhancedLine);
                 }
                 
                 // Log all output at debug level
@@ -341,138 +281,6 @@ public class DemoRunner {
         } catch (IOException e) {
             logger.error("Error reading process output", e);
         }
-    }
-    
-    /**
-     * Detect and format SIP messages from JMeter output
-     * 
-     * @param line JMeter output line
-     * @return Formatted SIP message or null if not a SIP message
-     */
-    private String detectAndFormatSipMessage(String line) {
-        if (line == null || line.isEmpty()) {
-            return null;
-        }
-        
-        // Skip timer and utility messages
-        if (line.contains("Wait for") || line.contains("Generate") || line.contains("Timer")) {
-            return null;
-        }
-        
-        // Detect Send/Listen patterns
-        String direction = null;
-        String messageType = null;
-        String threadType = null;
-        String elapsedTime = null;
-        
-        // Extract thread type (Client or Server)
-        if (line.contains("Client")) {
-            threadType = "Client";
-        } else if (line.contains("Server")) {
-            threadType = "Server";
-        } else {
-            return null; // Not a client/server message
-        }
-        
-        // Detect Send messages (outgoing)
-        if (line.contains("Send ")) {
-            if (threadType.equals("Client")) {
-                direction = "Client → Server";
-            } else {
-                direction = "Server → Client";
-            }
-            
-            // Extract message type
-            if (line.contains("INVITE")) messageType = "INVITE";
-            else if (line.contains("TRYING")) messageType = "TRYING";
-            else if (line.contains("RINGING")) messageType = "RINGING";
-            else if (line.contains("OK")) messageType = "OK";
-            else if (line.contains("ACK")) messageType = "ACK";
-            else if (line.contains("BYE")) messageType = "BYE";
-        }
-        
-        // Detect Listen messages (incoming - reverse direction)
-        else if (line.contains("Listen for ")) {
-            if (threadType.equals("Client")) {
-                direction = "Server → Client"; // Client listening receives from server
-            } else {
-                direction = "Client → Server"; // Server listening receives from client
-            }
-            
-            // Extract message type
-            if (line.contains("INVITE")) messageType = "INVITE";
-            else if (line.contains("TRYING")) messageType = "TRYING";
-            else if (line.contains("RINGING")) messageType = "RINGING";
-            else if (line.contains("OK")) messageType = "OK";
-            else if (line.contains("ACK")) messageType = "ACK";
-            else if (line.contains("BYE")) messageType = "BYE";
-        }
-        
-        // If we found a SIP message, format it
-        if (direction != null && messageType != null) {
-            // Try to extract elapsed time if available (format: "elapsed: 97ms")
-            if (line.contains("elapsed:")) {
-                int elapsedIdx = line.indexOf("elapsed:");
-                if (elapsedIdx != -1) {
-                    String remaining = line.substring(elapsedIdx + 8).trim();
-                    int spaceIdx = remaining.indexOf(' ');
-                    if (spaceIdx != -1) {
-                        elapsedTime = remaining.substring(0, spaceIdx);
-                    }
-                }
-            }
-            
-            // Format the message
-            String status = line.contains("successfully") ? "[OK]" : 
-                           line.contains("failed") ? "[FAIL]" : "";
-            
-            if (elapsedTime != null) {
-                return String.format("[SIP] %s %s (elapsed: %s) %s", 
-                        direction, messageType, elapsedTime, status);
-            } else {
-                return String.format("[SIP] %s %s %s", direction, messageType, status);
-            }
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Determine if a line should be shown in the output (filter noise)
-     * 
-     * @param line JMeter output line
-     * @return true if line should be shown
-     */
-    private boolean shouldShowLine(String line) {
-        if (line == null || line.isEmpty()) {
-            return false;
-        }
-        
-        // Always show lines with these markers
-        if (line.contains("[PROGRESS]") || 
-            line.contains("[INFO]") || 
-            line.contains("[SIP]") ||
-            line.contains("[ERROR]") ||
-            line.contains("summary =")) {
-            return true;
-        }
-        
-        // Filter out common noise patterns
-        if (line.contains("Waiting for possible Shutdown") ||
-            line.contains("Notifying test listeners") ||
-            line.contains("StandardJMeterEngine") ||
-            line.contains("Listener") ||
-            line.contains("DEBUG") ||
-            line.trim().isEmpty()) {
-            return false;
-        }
-        
-        // Show errors and warnings
-        if (line.contains("ERROR") || line.contains("WARN")) {
-            return true;
-        }
-        
-        return false; // Filter everything else
     }
 
     /**
@@ -535,171 +343,6 @@ public class DemoRunner {
                 tempJmxFile = null;
             }
         }
-    }
-    
-    /**
-     * Parse SIP message from JMeter output line and create SipMessage object.
-     * This method extracts message metadata for real-time call flow visualization.
-     * 
-     * @param line JMeter output line
-     * @return SipMessage object or null if line is not a SIP message
-     */
-    public SipMessage parseSipMessageFromOutput(String line) {
-        if (line == null || line.isEmpty()) {
-            return null;
-        }
-        
-        // Skip timer and utility messages
-        if (line.contains("Wait for") || line.contains("Generate") || line.contains("Timer")) {
-            return null;
-        }
-        
-        // Extract thread type (Client or Server)
-        String threadName = null;
-        if (line.contains("Client")) {
-            threadName = "Client";
-        } else if (line.contains("Server")) {
-            threadName = "Server";
-        } else {
-            return null; // Not a client/server message
-        }
-        
-        // Determine message type and direction
-        SipMessage.MessageType messageType = null;
-        SipMessage.Direction direction = null;
-        String label = null;
-        
-        // Detect Send messages (outgoing)
-        if (line.contains("Send ")) {
-            label = "Send";
-            if (threadName.equals("Client")) {
-                direction = SipMessage.Direction.CLIENT_TO_SERVER;
-            } else {
-                direction = SipMessage.Direction.SERVER_TO_CLIENT;
-            }
-            
-            // Extract message type from line
-            if (line.contains("INVITE")) {
-                messageType = SipMessage.MessageType.INVITE;
-                label = "Send INVITE";
-            } else if (line.contains("TRYING")) {
-                messageType = SipMessage.MessageType.TRYING;
-                label = "Send TRYING";
-            } else if (line.contains("RINGING")) {
-                messageType = SipMessage.MessageType.RINGING;
-                label = "Send RINGING";
-            } else if (line.contains("OK")) {
-                messageType = SipMessage.MessageType.OK;
-                label = "Send OK";
-            } else if (line.contains("ACK")) {
-                messageType = SipMessage.MessageType.ACK;
-                label = "Send ACK";
-            } else if (line.contains("BYE")) {
-                messageType = SipMessage.MessageType.BYE;
-                label = "Send BYE";
-            } else if (line.contains("REGISTER")) {
-                messageType = SipMessage.MessageType.REGISTER;
-                label = "Send REGISTER";
-            } else if (line.contains("OPTIONS")) {
-                messageType = SipMessage.MessageType.OPTIONS;
-                label = "Send OPTIONS";
-            } else if (line.contains("INFO")) {
-                messageType = SipMessage.MessageType.INFO;
-                label = "Send INFO";
-            } else if (line.contains("PRACK")) {
-                messageType = SipMessage.MessageType.PRACK;
-                label = "Send PRACK";
-            } else if (line.contains("UPDATE")) {
-                messageType = SipMessage.MessageType.UPDATE;
-                label = "Send UPDATE";
-            }
-        }
-        
-        // Detect Listen messages (incoming - reverse direction)
-        else if (line.contains("Listen for ")) {
-            label = "Listen for";
-            if (threadName.equals("Client")) {
-                direction = SipMessage.Direction.SERVER_TO_CLIENT; // Client listening receives from server
-            } else {
-                direction = SipMessage.Direction.CLIENT_TO_SERVER; // Server listening receives from client
-            }
-            
-            // Extract message type from line
-            if (line.contains("INVITE")) {
-                messageType = SipMessage.MessageType.INVITE;
-                label = "Listen for INVITE";
-            } else if (line.contains("TRYING")) {
-                messageType = SipMessage.MessageType.TRYING;
-                label = "Listen for TRYING";
-            } else if (line.contains("RINGING")) {
-                messageType = SipMessage.MessageType.RINGING;
-                label = "Listen for RINGING";
-            } else if (line.contains("OK")) {
-                messageType = SipMessage.MessageType.OK;
-                label = "Listen for OK";
-            } else if (line.contains("ACK")) {
-                messageType = SipMessage.MessageType.ACK;
-                label = "Listen for ACK";
-            } else if (line.contains("BYE")) {
-                messageType = SipMessage.MessageType.BYE;
-                label = "Listen for BYE";
-            } else if (line.contains("REGISTER")) {
-                messageType = SipMessage.MessageType.REGISTER;
-                label = "Listen for REGISTER";
-            } else if (line.contains("OPTIONS")) {
-                messageType = SipMessage.MessageType.OPTIONS;
-                label = "Listen for OPTIONS";
-            } else if (line.contains("INFO")) {
-                messageType = SipMessage.MessageType.INFO;
-                label = "Listen for INFO";
-            } else if (line.contains("PRACK")) {
-                messageType = SipMessage.MessageType.PRACK;
-                label = "Listen for PRACK";
-            } else if (line.contains("UPDATE")) {
-                messageType = SipMessage.MessageType.UPDATE;
-                label = "Listen for UPDATE";
-            }
-        }
-        
-        // If we found a valid SIP message, create SipMessage object
-        if (direction != null && messageType != null && label != null) {
-            // Try to extract elapsed time if available (format: "elapsed: 97ms")
-            long elapsed = 0;
-            if (line.contains("elapsed:")) {
-                try {
-                    int elapsedIdx = line.indexOf("elapsed:");
-                    String remaining = line.substring(elapsedIdx + 8).trim();
-                    int spaceIdx = remaining.indexOf(' ');
-                    if (spaceIdx != -1) {
-                        String elapsedStr = remaining.substring(0, spaceIdx).replace("ms", "").trim();
-                        elapsed = Long.parseLong(elapsedStr);
-                    }
-                } catch (Exception e) {
-                    logger.debug("Failed to parse elapsed time from line: {}", line);
-                    elapsed = 0;
-                }
-            }
-            
-            // Determine success status
-            boolean success = line.contains("successfully") || !line.contains("failed");
-            
-            // Use current timestamp (JMeter output doesn't include absolute timestamps)
-            long timestamp = System.currentTimeMillis();
-            
-            // Create and return SipMessage
-            return new SipMessage(
-                messageType,
-                direction,
-                threadName,
-                timestamp,
-                elapsed,
-                success,
-                success ? "200" : "500", // Response code
-                label
-            );
-        }
-        
-        return null;
     }
     
     /**

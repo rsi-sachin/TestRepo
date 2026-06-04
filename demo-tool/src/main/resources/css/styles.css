@@ -68,8 +68,6 @@
     -fx-padding: 4 8 4 8;
     -fx-font-size: 11px;
     -fx-font-weight: bold;
-    -fx-min-width: 70px;
-    -fx-alignment: center;
 }
 
 .protocol-sip {
@@ -92,8 +90,6 @@
     -fx-background-radius: 4;
     -fx-padding: 4 8 4 8;
     -fx-font-size: 11px;
-    -fx-min-width: 90px;
-    -fx-alignment: center;
 }
 
 .complexity-basic {
@@ -250,64 +246,6 @@
 
 .tab-label {
     -fx-font-weight: bold;
-}
-
-/* Call Flow Visualization (Phase 6) */
-.call-flow-container {
-    -fx-background-color: white;
-    -fx-border-color: #bdc3c7;
-    -fx-border-width: 1;
-    -fx-border-radius: 5;
-}
-
-.call-flow-status-label {
-    -fx-font-size: 12px;
-    -fx-padding: 5;
-}
-
-.status-warning {
-    -fx-text-fill: #f39c12;
-    -fx-font-weight: bold;
-}
-
-.status-info {
-    -fx-text-fill: #3498db;
-    -fx-font-weight: normal;
-}
-
-/* Terminal Pane */
-.titled-pane {
-    -fx-background-color: #ecf0f1;
-}
-
-.titled-pane > .title {
-    -fx-background-color: #34495e;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-padding: 8;
-}
-
-.titled-pane > .content {
-    -fx-background-color: #2c3e50;
-    -fx-border-color: #34495e;
-    -fx-border-width: 0;
-}
-
-/* Diagram Buttons */
-#exportDiagramButton {
-    -fx-font-size: 11px;
-    -fx-padding: 5 10 5 10;
-}
-
-#showTerminalCheckBox {
-    -fx-font-size: 12px;
-}
-
-/* Call Flow Labels */
-#callFlowStatusLabel {
-    -fx-font-size: 13px;
-    -fx-padding: 3 8 3 8;
-    -fx-background-radius: 3;
 }
 
 /* Scroll Pane */
