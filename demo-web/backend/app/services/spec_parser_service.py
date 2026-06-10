@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 import logging
 import json
+import hashlib
 from datetime import datetime
 
 from app.models.oran import (
@@ -15,6 +16,7 @@ from app.models.oran import (
 )
 from app.parsers.pdf_parser import PdfParser
 from app.parsers.docx_parser import DocxParser
+from app.parsers.methodology_extractor import MethodologyExtractor
 from app.parsers.test_clause_extractor import TestClauseExtractor
 
 logger = logging.getLogger(__name__)
@@ -31,7 +33,7 @@ class SpecParserService:
         SpecType.TS_103_983   # General principles last
     ]
     
-    def __init__(self, spec_dir: Path):
+    def __init__(self, spec_dir: Path, learning_metadata_dir: Optional[Path] = None):
         """
         Initialize parser service
         
@@ -42,10 +44,16 @@ class SpecParserService:
         self.pdf_parser = PdfParser()
         self.docx_parser = DocxParser()
         self.clause_extractor = TestClauseExtractor()
+        self.methodology_extractor = MethodologyExtractor()
         self.conflicts: List[SpecConflict] = []
+        self.learning_metadata_dir = learning_metadata_dir or Path("./data/oran_learning")
+        self.learning_metadata_dir.mkdir(parents=True, exist_ok=True)
+        self.learning_metadata_file = self.learning_metadata_dir / "learning_metadata.jsonl"
+        self.learning_metadata_latest_dir = self.learning_metadata_dir / "latest"
+        self.learning_metadata_latest_dir.mkdir(parents=True, exist_ok=True)
     
     def parse_specification(
-        self, file_path: Path, spec_type: SpecType
+        self, file_path: Path, spec_type: SpecType, max_tests: Optional[int] = None
     ) -> List[TestClause]:
         """
         Parse a single specification file
@@ -53,6 +61,7 @@ class SpecParserService:
         Args:
             file_path: Path to spec file (PDF or DOCX)
             spec_type: Type of specification
+            max_tests: Maximum tests to extract per spec (MVP constraint)
             
         Returns:
             List of extracted test clauses
@@ -67,20 +76,21 @@ class SpecParserService:
         else:
             raise ValueError(f"Unsupported file type: {file_path.suffix}")
         
-        # Extract test clauses
-        clauses = self.clause_extractor.extract_clauses(text, spec_type)
+        # Extract test clauses with limit
+        clauses = self.clause_extractor.extract_clauses(text, spec_type, max_tests)
         
         logger.info(f"Extracted {len(clauses)} clauses from {spec_type}")
         return clauses
     
     def parse_all_specs(
-        self, spec_files: Dict[SpecType, Path]
+        self, spec_files: Dict[SpecType, Path], max_tests_per_spec: Optional[int] = None
     ) -> Dict[SpecType, List[TestClause]]:
         """
         Parse all specification files
         
         Args:
             spec_files: Dict mapping spec types to file paths
+            max_tests_per_spec: Maximum tests to extract per spec (MVP constraint)
             
         Returns:
             Dict mapping spec types to extracted clauses
@@ -89,13 +99,166 @@ class SpecParserService:
         
         for spec_type, file_path in spec_files.items():
             try:
-                clauses = self.parse_specification(file_path, spec_type)
+                clauses = self.parse_specification(file_path, spec_type, max_tests_per_spec)
                 all_clauses[spec_type] = clauses
             except Exception as e:
                 logger.error(f"Failed to parse {spec_type}: {e}")
                 all_clauses[spec_type] = []
         
         return all_clauses
+
+    def extract_methodology_plan(
+        self,
+        file_path: Path,
+        spec_type: SpecType,
+        max_modules: int = 12,
+    ) -> Dict[str, object]:
+        """Extract methodology sections and machine-assisted module/title candidates."""
+        if file_path.suffix.lower() == '.pdf':
+            text = self.pdf_parser.parse_file(file_path)
+        elif file_path.suffix.lower() in ['.docx', '.doc']:
+            text = self.docx_parser.parse_file(file_path)
+        else:
+            raise ValueError(f"Unsupported file type: {file_path.suffix}")
+
+        sections = self.methodology_extractor.extract_methodology_sections(text)
+        modules = self.methodology_extractor.generate_module_candidates(sections, text, max_modules=max_modules)
+        titles = self.methodology_extractor.generate_test_title_candidates(modules, sections)
+
+        learning_saved = False
+        try:
+            learning_metadata = self._build_learning_metadata(
+                spec_type=spec_type,
+                file_path=file_path,
+                text=text,
+                sections=sections,
+                modules=modules,
+                titles=titles,
+            )
+            self._persist_learning_metadata(learning_metadata)
+            learning_saved = True
+        except Exception as e:
+            logger.warning(f"Failed to persist learning metadata for {spec_type.value}: {e}")
+
+        return {
+            'spec_type': spec_type,
+            'spec_file': file_path.name,
+            'methodology_sections': sections,
+            'modules': modules,
+            'titles': titles,
+            'summary': {
+                'methodology_sections_found': len(sections),
+                'test_modules_found': len(modules),
+                'test_titles_found': len(titles),
+                'learning_metadata_saved': 1 if learning_saved else 0,
+            }
+        }
+
+    def _build_learning_metadata(
+        self,
+        spec_type: SpecType,
+        file_path: Path,
+        text: str,
+        sections: List,
+        modules: List,
+        titles: List,
+    ) -> Dict[str, object]:
+        """Build reusable metadata that captures document-specific extraction behavior."""
+        timestamp = datetime.now().isoformat()
+        module_confidences = [float(getattr(module, "confidence", 0.0)) for module in modules]
+
+        depth_histogram: Dict[str, int] = {}
+        for section in sections:
+            depth_key = str(getattr(section, "depth", 0))
+            depth_histogram[depth_key] = depth_histogram.get(depth_key, 0) + 1
+
+        keyword_frequency: Dict[str, int] = {}
+        for module in modules:
+            for keyword in getattr(module, "keywords", []):
+                key = str(keyword).strip().lower()
+                if not key:
+                    continue
+                keyword_frequency[key] = keyword_frequency.get(key, 0) + 1
+
+        top_keywords = [
+            key for key, _ in sorted(
+                keyword_frequency.items(),
+                key=lambda item: (-item[1], item[0])
+            )[:12]
+        ]
+
+        fingerprint = {
+            "spec_type": spec_type.value,
+            "file_name": file_path.name,
+            "file_extension": file_path.suffix.lower(),
+            "text_hash": hashlib.sha256(text.encode("utf-8", errors="ignore")).hexdigest()[:16],
+            "section_numbering_style": "dotted_numeric" if any("." in getattr(section, "section_number", "") for section in sections) else "numeric",
+            "depth_histogram": depth_histogram,
+            "sample_headings": [
+                {
+                    "section_number": getattr(section, "section_number", ""),
+                    "title": getattr(section, "title", ""),
+                }
+                for section in sections[:8]
+            ],
+        }
+
+        quality_signals = {
+            "methodology_sections_found": len(sections),
+            "module_candidates_found": len(modules),
+            "title_candidates_found": len(titles),
+            "avg_module_confidence": round(sum(module_confidences) / len(module_confidences), 3) if module_confidences else 0.0,
+            "max_module_confidence": round(max(module_confidences), 3) if module_confidences else 0.0,
+        }
+
+        learned_rules = {
+            "extraction": {
+                "section_pattern": self.methodology_extractor.SECTION_RE.pattern,
+                "page_pattern": self.methodology_extractor.PAGE_RE.pattern,
+                "methodology_hints": list(self.methodology_extractor.METHODOLOGY_HINTS),
+            },
+            "interpretation": {
+                "module_rank_strategy": "section-title scoring plus phrase scoring with module_id deduplication",
+                "title_rank_strategy": "module-based title candidates plus evidence-derived phrases",
+                "confidence_observed": quality_signals,
+            },
+            "domain": {
+                "top_keywords": top_keywords,
+                "domain_hints": self.methodology_extractor.DOMAIN_HINTS,
+                "generic_blocklist": sorted(self.methodology_extractor.GENERIC_BLOCKLIST),
+                "module_names_seen": [getattr(module, "module_name", "") for module in modules[:20]],
+            },
+        }
+
+        return {
+            "metadata_id": f"{spec_type.value}-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            "created_at": timestamp,
+            "document_fingerprint": fingerprint,
+            "learned_rules": learned_rules,
+            "quality_signals": quality_signals,
+            "reuse_hints": {
+                "applies_to": "similar ETSI/O-RAN style numbered specification documents",
+                "recommended_reuse_fields": [
+                    "extraction.section_pattern",
+                    "extraction.methodology_hints",
+                    "interpretation.module_rank_strategy",
+                    "domain.top_keywords",
+                    "domain.domain_hints",
+                ],
+            },
+        }
+
+    def _persist_learning_metadata(self, metadata: Dict[str, object]) -> None:
+        """Append metadata history and keep latest snapshot per spec type for quick reuse."""
+        with open(self.learning_metadata_file, "a", encoding="utf-8") as file_handle:
+            file_handle.write(json.dumps(metadata, ensure_ascii=True) + "\n")
+
+        spec_type = str(
+            metadata.get("document_fingerprint", {}).get("spec_type", "unknown")
+        )
+        latest_file = self.learning_metadata_latest_dir / f"{spec_type}.json"
+        with open(latest_file, "w", encoding="utf-8") as file_handle:
+            json.dump(metadata, file_handle, indent=2, ensure_ascii=True)
     
     def cross_reference_specs(
         self, all_clauses: Dict[SpecType, List[TestClause]]
