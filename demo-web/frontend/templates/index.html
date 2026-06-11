@@ -17,8 +17,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
     
     <!-- App Scripts -->
-    <script type="module" src="/static/js/app.js" defer></script>
-    <script type="module" src="/static/js/oran.js" defer></script>
+    <script type="module" src="/static/js/app.js?v=6" defer></script>
 </head>
 <body>
     <!-- Header -->
@@ -29,6 +28,7 @@
                 <!-- ORAN MVP Tabs (TTS tabs hidden) -->
                 <button class="nav-btn active" data-tab="oran-upload">Upload Specs</button>
                 <button class="nav-btn" data-tab="oran-catalog">Test Catalog</button>
+                <button class="nav-btn" data-tab="test-management">Manage Tests</button>
                 <button class="nav-btn" data-tab="execution">Execution</button>
                 <button class="nav-btn" data-tab="history">History</button>
             </nav>
@@ -46,56 +46,75 @@
             <div class="container">
                 <div class="oran-upload-layout">
                     <div class="upload-header">
-                        <h2>Upload ETSI O-RAN Specifications</h2>
-                        <p>Upload 4 ETSI specification files to generate O-RAN A1 conformance test catalog</p>
+                        <h2>Select O-RAN Specifications</h2>
+                        <p>Choose a Protocol/Interface and select which specification documents to include in the test catalog.</p>
                     </div>
 
-                    <!-- Spec Upload Form -->
-                    <div class="spec-upload-grid">
-                        <div class="spec-upload-card">
-                            <h3>TS 103 989</h3>
-                            <p>A1 Test Specification</p>
-                            <input type="file" id="spec-ts-103-989" accept=".pdf,.docx" class="file-input">
-                            <label for="spec-ts-103-989" class="file-label">
-                                <span class="file-name">No file selected</span>
-                                <button type="button" class="btn-upload">Choose File</button>
-                            </label>
-                            <div class="file-status"></div>
-                        </div>
+                    <!-- Step 1: Protocol / Interface selector -->
+                    <div class="selector-section">
+                        <div class="selector-row">
+                            <div class="selector-group">
+                                <label for="protocol-select" class="selector-label">
+                                    Protocol / Interface
+                                </label>
+                                <select id="protocol-select" class="selector-dropdown">
+                                    <option value="A1" selected>A1 Application Protocol</option>
+                                </select>
+                            </div>
 
-                        <div class="spec-upload-card">
-                            <h3>TS 103 987</h3>
-                            <p>A1 Application Protocol</p>
-                            <input type="file" id="spec-ts-103-987" accept=".pdf,.docx" class="file-input">
-                            <label for="spec-ts-103-987" class="file-label">
-                                <span class="file-name">No file selected</span>
-                                <button type="button" class="btn-upload">Choose File</button>
-                            </label>
-                            <div class="file-status"></div>
-                        </div>
-
-                        <div class="spec-upload-card">
-                            <h3>TS 103 988</h3>
-                            <p>A1 Type Definitions</p>
-                            <input type="file" id="spec-ts-103-988" accept=".pdf,.docx" class="file-input">
-                            <label for="spec-ts-103-988" class="file-label">
-                                <span class="file-name">No file selected</span>
-                                <button type="button" class="btn-upload">Choose File</button>
-                            </label>
-                            <div class="file-status"></div>
-                        </div>
-
-                        <div class="spec-upload-card">
-                            <h3>TS 103 983</h3>
-                            <p>A1 General Principles</p>
-                            <input type="file" id="spec-ts-103-983" accept=".pdf,.docx" class="file-input">
-                            <label for="spec-ts-103-983" class="file-label">
-                                <span class="file-name">No file selected</span>
-                                <button type="button" class="btn-upload">Choose File</button>
-                            </label>
-                            <div class="file-status"></div>
+                            <!-- Step 2: Specification multi-select -->
+                            <div class="selector-group selector-group--wide">
+                                <label class="selector-label">
+                                    Specification Selection
+                                    <span class="selector-hint">(select one or more)</span>
+                                </label>
+                                <div id="spec-checkboxes" class="spec-checkbox-group">
+                                    <label class="spec-checkbox-item">
+                                        <input type="checkbox" class="spec-checkbox" value="TS_103_989" checked>
+                                        <span class="spec-checkbox-label">
+                                            <strong>TS 103 989</strong>
+                                            <span class="spec-title">A1 Test Specification</span>
+                                        </span>
+                                    </label>
+                                    <label class="spec-checkbox-item">
+                                        <input type="checkbox" class="spec-checkbox" value="TS_103_987" checked>
+                                        <span class="spec-checkbox-label">
+                                            <strong>TS 103 987</strong>
+                                            <span class="spec-title">A1 Application Protocol</span>
+                                        </span>
+                                    </label>
+                                    <label class="spec-checkbox-item">
+                                        <input type="checkbox" class="spec-checkbox" value="TS_103_988" checked>
+                                        <span class="spec-checkbox-label">
+                                            <strong>TS 103 988</strong>
+                                            <span class="spec-title">A1 Type Definitions</span>
+                                        </span>
+                                    </label>
+                                    <label class="spec-checkbox-item">
+                                        <input type="checkbox" class="spec-checkbox" value="TS_103_983" checked>
+                                        <span class="spec-checkbox-label">
+                                            <strong>TS 103 983</strong>
+                                            <span class="spec-title">A1 General Principles</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Step 3: Per-spec resolution status list -->
+                    <div id="spec-resolution-list" class="spec-resolution-list" style="display:none;">
+                        <h3 class="spec-resolution-title">Document Status</h3>
+                        <div id="spec-resolution-items" class="spec-resolution-items">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Hidden file inputs (one per spec, triggered programmatically) -->
+                    <input type="file" id="spec-ts-103-989" accept=".pdf,.docx" class="file-input" style="display:none;">
+                    <input type="file" id="spec-ts-103-987" accept=".pdf,.docx" class="file-input" style="display:none;">
+                    <input type="file" id="spec-ts-103-988" accept=".pdf,.docx" class="file-input" style="display:none;">
+                    <input type="file" id="spec-ts-103-983" accept=".pdf,.docx" class="file-input" style="display:none;">
 
                     <!-- Upload Progress -->
                     <div id="upload-progress" class="upload-progress" style="display: none;">
@@ -115,7 +134,153 @@
                             <label for="catalog-description">Description (optional):</label>
                             <textarea id="catalog-description" rows="3" placeholder="Describe the test catalog..." class="input-textarea"></textarea>
                         </div>
-                        <button id="generate-catalog-btn" class="btn-primary btn-large" disabled>Generate Test Catalog</button>
+                        
+                        <!-- MVP Extraction Limit Notice -->
+                        <div class="mvp-notice">
+                            <svg class="info-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="2"/>
+                                <path d="M10 6V10M10 14H10.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            <span><strong>MVP Demo Mode:</strong> Extraction limited to 2 tests per specification (8 total tests from 4 docs) to demonstrate parsing capability.</span>
+                        </div>
+
+                        <!-- Methodology Analysis Preview -->
+                        <div class="methodology-analysis-panel">
+                            <div class="analysis-header">
+                                <div>
+                                    <h3>Methodology Analysis</h3>
+                                    <p>Preview methodology sections, machine-assisted module names, and test-title candidates before generating a catalog.</p>
+                                </div>
+                                <div class="analysis-controls">
+                                    <select id="methodology-spec-select" class="selector-dropdown selector-dropdown--compact">
+                                        <option value="TS_103_989" selected>TS 103 989 - A1 Test Specification</option>
+                                        <option value="TS_103_987">TS 103 987 - A1 Application Protocol</option>
+                                        <option value="TS_103_988">TS 103 988 - A1 Type Definitions</option>
+                                        <option value="TS_103_983">TS 103 983 - A1 General Principles</option>
+                                    </select>
+                                    <button id="analyze-methodology-btn" class="btn-secondary btn-large btn-large--inline">Preview Modules & Titles</button>
+                                </div>
+                            </div>
+                            <div id="methodology-analysis-summary" class="analysis-summary">
+                                Select a specification and click Preview Modules & Titles.
+                            </div>
+                            <div class="analysis-grid">
+                                <div class="analysis-card">
+                                    <h4>Methodology Sections</h4>
+                                    <div id="methodology-analysis-sections" class="analysis-list"></div>
+                                </div>
+                                <div class="analysis-card">
+                                    <h4>Module Candidates</h4>
+                                    <div id="methodology-analysis-modules" class="analysis-list"></div>
+                                </div>
+                                <div class="analysis-card">
+                                    <h4>Test Title Candidates</h4>
+                                    <div id="methodology-analysis-titles" class="analysis-list"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Rule-Based Extraction Settings -->
+                        <div class="rule-extraction-panel">
+                            <div class="panel-header-row">
+                                <h3>Extraction Method</h3>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="use-rules-toggle" checked>
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-label">Use Rule-Based Extraction</span>
+                                </label>
+                            </div>
+                            
+                            <div id="rule-extraction-info" class="rule-info-panel">
+                                <div class="rule-status">
+                                    <div class="status-icon">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                                            <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                        </svg>
+                                    </div>
+                                    <div class="status-text">
+                                        <strong id="rule-pack-name">Loading rule packs...</strong>
+                                        <p id="rule-pack-description">Analyzing document structure to find matching extraction rules...</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="rule-actions">
+                                    <button id="view-hierarchy-btn" class="btn-secondary btn-compact" disabled>
+                                        <svg class="btn-icon-sm" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                            <path d="M2 4H6V8H2V4Z" stroke="currentColor" stroke-width="1.5"/>
+                                            <path d="M10 4H14V8H10V4Z" stroke="currentColor" stroke-width="1.5"/>
+                                            <path d="M6 10H10V14H6V10Z" stroke="currentColor" stroke-width="1.5"/>
+                                        </svg>
+                                        View Hierarchy
+                                    </button>
+                                    <button id="manage-rules-btn" class="btn-secondary btn-compact">
+                                        <svg class="btn-icon-sm" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                            <path d="M2 8H14M8 2V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                        </svg>
+                                        Manage Rules
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="heuristic-fallback-notice" class="fallback-notice" style="display:none;">
+                                <svg class="notice-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M10 2C5.58 2 2 5.58 2 10s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 13c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm1-3H9V6h2v6z" fill="currentColor"/>
+                                </svg>
+                                <div class="notice-content">
+                                    <strong>No matching rules found</strong>
+                                    <p>Using heuristic extraction. <button id="learn-from-doc-btn" class="btn-link">Learn from this document</button></p>
+                                </div>
+                            </div>
+                            
+                            <div id="hybrid-mode-notice" class="hybrid-notice" style="display:none;">
+                                <div class="comparison-header">
+                                    <svg class="notice-icon" width="20" height="20" viewBox="0 0 20 20">
+                                        <path d="M10 2C5.58 2 2 5.58 2 10s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 13c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm1-3H9V6h2v6z" fill="#f59e0b"/>
+                                    </svg>
+                                    <strong>Multiple extraction results available</strong>
+                                </div>
+                                <div class="extraction-comparison">
+                                    <div class="extraction-option">
+                                        <input type="radio" name="extraction-choice" id="choice-rules" value="rules" checked>
+                                        <label for="choice-rules">
+                                            <strong>Rule-Based</strong>
+                                            <div class="option-stats">
+                                                <span id="rules-test-count">0 tests</span>
+                                                <span class="quality-badge" id="rules-quality">Quality: 0%</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="extraction-option">
+                                        <input type="radio" name="extraction-choice" id="choice-heuristic" value="heuristic">
+                                        <label for="choice-heuristic">
+                                            <strong>Heuristic</strong>
+                                            <div class="option-stats">
+                                                <span id="heuristic-test-count">0 tests</span>
+                                                <span class="quality-badge" id="heuristic-quality">Quality: 0%</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Generation Buttons -->
+                        <div class="generation-buttons">
+                            <button id="preview-sections-btn" class="btn-secondary btn-large" disabled>
+                                <svg class="btn-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M10 3C5.58172 3 2 6.58172 2 11C2 15.4183 5.58172 19 10 19C14.4183 19 18 15.4183 18 11C18 6.58172 14.4183 3 10 3Z" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M10 7V11L13 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                                Preview & Select Sections
+                            </button>
+                            <button id="generate-catalog-btn" class="btn-primary btn-large" disabled>
+                                <svg class="btn-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M10 3V17M3 10H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                                Generate Test Catalog (Auto)
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Generation Status -->
@@ -131,7 +296,7 @@
         <section id="oran-catalog-tab" class="tab-content">
             <div class="container">
                 <div class="catalog-header">
-                    <h2>Generated Test Catalogs</h2>
+                    <h2 title="Test Catalog = a generated bundle of O-RAN test cases created from uploaded ETSI specs, including test metadata, source mappings, and test count.">Generated Test Catalogs</h2>
                     <button id="refresh-catalogs-btn" class="btn-secondary">Refresh</button>
                 </div>
 
@@ -169,6 +334,93 @@
                                 <!-- Dynamically populated -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Test Management Tab (Phase 3) -->
+        <section id="test-management-tab" class="tab-content">
+            <div class="container">
+                <div class="test-mgmt-header">
+                    <h2>Test Case Management</h2>
+                    <div class="test-mgmt-actions">
+                        <span id="test-count-badge" class="badge">0 tests</span>
+                        <button id="refresh-tests-btn" class="btn-secondary">Refresh</button>
+                    </div>
+                </div>
+
+                <!-- Filters Panel -->
+                <div class="filters-panel">
+                    <h3>Filters</h3>
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label>Source Specification</label>
+                            <select id="filter-spec">
+                                <option value="">All Specs</option>
+                                <option value="TS_103_989">TS 103 989</option>
+                                <option value="TS_103_987">TS 103 987</option>
+                                <option value="TS_103_988">TS 103 988</option>
+                                <option value="TS_103_983">TS 103 983</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label>Section Number</label>
+                            <input type="text" id="filter-section" list="filter-section-options" placeholder="Type or select section (e.g., 5.3)" />
+                            <datalist id="filter-section-options"></datalist>
+                        </div>
+
+                        <div class="filter-group">
+                            <label>HTTP Method</label>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" name="method" value="GET" checked> GET</label>
+                                <label><input type="checkbox" name="method" value="POST"> POST</label>
+                                <label><input type="checkbox" name="method" value="PUT"> PUT</label>
+                                <label><input type="checkbox" name="method" value="DELETE"> DELETE</label>
+                                <label><input type="checkbox" name="method" value="PATCH"> PATCH</label>
+                            </div>
+                        </div>
+
+                        <div class="filter-actions">
+                            <button id="apply-filters-btn" class="btn-primary">Apply Filters</button>
+                            <button id="clear-filters-btn" class="btn-secondary">Clear</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Cases Table -->
+                <div class="test-cases-panel">
+                    <div class="table-header">
+                        <h3>Test Cases</h3>
+                        <div class="pagination-info">
+                            <span id="pagination-text">Page 1 of 1</span>
+                        </div>
+                    </div>
+
+                    <table class="test-management-table">
+                        <thead>
+                            <tr>
+                                <th>Test ID</th>
+                                <th>Scenario</th>
+                                <th>Source</th>
+                                <th>Method</th>
+                                <th>Endpoint</th>
+                                <th>Status</th>
+                                <th>Enrichment</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="test-management-tbody">
+                            <!-- Dynamically populated -->
+                        </tbody>
+                    </table>
+
+                    <!-- Pagination Controls -->
+                    <div class="pagination-controls">
+                        <button id="prev-page-btn" class="btn-secondary" disabled>Previous</button>
+                        <span id="page-numbers"></span>
+                        <button id="next-page-btn" class="btn-secondary">Next</button>
                     </div>
                 </div>
             </div>
@@ -275,6 +527,275 @@
                 <p><strong>Language:</strong> Python (pytest)</p>
             </div>
             <pre><code id="script-content" class="language-python"></code></pre>
+        </div>
+    </div>
+
+    <!-- Test Case Edit Modal (Phase 3) -->
+    <div id="edit-test-modal" class="modal">
+        <div class="modal-content modal-medium">
+            <span class="modal-close" onclick="closeEditModal()">&times;</span>
+            <div class="modal-header">
+                <h2>Edit Test Case</h2>
+            </div>
+            <form id="edit-test-form">
+                <input type="hidden" id="edit-test-id" />
+                
+                <div class="form-group">
+                    <label for="edit-scenario">Scenario</label>
+                    <input type="text" id="edit-scenario" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-description">Description</label>
+                    <textarea id="edit-description" rows="3"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-method">HTTP Method</label>
+                        <select id="edit-method" required>
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                            <option value="PATCH">PATCH</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-status">Expected Status</label>
+                        <input type="number" id="edit-status" min="100" max="599" required />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-endpoint">Endpoint</label>
+                    <input type="text" id="edit-endpoint" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-complexity">Complexity</label>
+                    <select id="edit-complexity">
+                        <option value="BASIC">Basic</option>
+                        <option value="INTERMEDIATE">Intermediate</option>
+                        <option value="ADVANCED">Advanced</option>
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                    <button type="button" class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Enrichment Details Modal (Phase 3) -->
+    <div id="enrichment-modal" class="modal">
+        <div class="modal-content modal-small">
+            <span class="modal-close" onclick="closeEnrichmentModal()">&times;</span>
+            <div class="modal-header">
+                <h2>Test Case Enrichment Sources</h2>
+            </div>
+            <div id="enrichment-content" class="enrichment-details">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Selection Modal (Phase 3C) -->
+    <div id="section-selection-modal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="modal-close" onclick="closeSectionSelectionModal()">&times;</span>
+            <div class="modal-header">
+                <h2>Select Test Sections</h2>
+                <p class="modal-subtitle">Choose which sections to include in test catalog generation</p>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Selection Controls -->
+                <div class="selection-controls">
+                    <div class="selection-stats">
+                        <span id="selected-count">0</span> of <span id="total-count">0</span> sections selected
+                    </div>
+                    <div class="selection-actions">
+                        <button id="select-all-btn" class="btn-secondary-sm">Select All</button>
+                        <button id="deselect-all-btn" class="btn-secondary-sm">Deselect All</button>
+                        <button id="select-mvp-btn" class="btn-secondary-sm">Select MVP (2 per spec)</button>
+                    </div>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="section-filters">
+                    <input type="text" id="section-search" placeholder="Search by title or section number..." class="search-input">
+                    <select id="spec-filter" class="filter-select">
+                        <option value="">All Specifications</option>
+                        <option value="TS_103_989">TS 103 989</option>
+                        <option value="TS_103_987">TS 103 987</option>
+                        <option value="TS_103_988">TS 103 988</option>
+                        <option value="TS_103_983">TS 103 983</option>
+                    </select>
+                </div>
+
+                <!-- Sections Table -->
+                <div class="sections-table-container">
+                    <table class="sections-table">
+                        <thead>
+                            <tr>
+                                <th class="col-checkbox">
+                                    <input type="checkbox" id="select-all-checkbox">
+                                </th>
+                                <th class="col-spec">Spec</th>
+                                <th class="col-section">Section</th>
+                                <th class="col-title">Title</th>
+                                <th class="col-page">Page</th>
+                                <th class="col-complexity">Complexity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sections-table-body">
+                            <!-- Dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button id="cancel-selection-btn" class="btn-secondary">Cancel</button>
+                <button id="generate-from-selection-btn" class="btn-primary" disabled>
+                    Generate Catalog (<span id="generate-count">0</span> sections)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hierarchy Visualization Modal -->
+    <div id="hierarchy-modal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="modal-close" onclick="closeHierarchyModal()">&times;</span>
+            <div class="modal-header">
+                <h2>Document Hierarchy</h2>
+                <p class="modal-subtitle">Extracted structure from rule-based analysis</p>
+            </div>
+            
+            <div class="modal-body">
+                <div class="hierarchy-info">
+                    <div class="info-item">
+                        <strong>Document:</strong> <span id="hierarchy-doc-name">-</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Total Nodes:</strong> <span id="hierarchy-total-nodes">0</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Max Depth:</strong> <span id="hierarchy-max-depth">0</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Quality Score:</strong> <span id="hierarchy-quality-score" class="quality-badge">0%</span>
+                    </div>
+                </div>
+                
+                <div class="hierarchy-tree-container">
+                    <div id="hierarchy-tree" class="hierarchy-tree">
+                        <!-- Dynamically populated tree structure -->
+                    </div>
+                </div>
+                
+                <div id="node-details-panel" class="node-details-panel" style="display:none;">
+                    <h4>Node Details</h4>
+                    <div id="node-details-content">
+                        <!-- Dynamically populated when node is clicked -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeHierarchyModal()">Close</button>
+                <button id="export-hierarchy-btn" class="btn-primary">Export as JSON</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rule Management Modal -->
+    <div id="rule-management-modal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="modal-close" onclick="closeRuleManagementModal()">&times;</span>
+            <div class="modal-header">
+                <h2>Rule Pack Management</h2>
+                <p class="modal-subtitle">Manage extraction rule packs for document types</p>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Rule Packs List -->
+                <div class="rule-packs-section">
+                    <div class="section-header">
+                        <h3>Available Rule Packs</h3>
+                        <button id="refresh-rule-packs-btn" class="btn-secondary-sm">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M13.65 2.35C12.2 0.9 10.21 0 8 0 3.58 0 0.01 3.58 0.01 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z" fill="currentColor"/>
+                            </svg>
+                            Refresh
+                        </button>
+                    </div>
+                    
+                    <div id="rule-packs-list" class="rule-packs-list">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+                
+                <!-- Rule Pack Details -->
+                <div id="rule-pack-details" class="rule-pack-details" style="display:none;">
+                    <div class="details-header">
+                        <h3 id="rule-pack-detail-name">Rule Pack Name</h3>
+                        <div class="details-actions">
+                            <button id="apply-rule-pack-btn" class="btn-primary-sm">Apply to Current Document</button>
+                            <button id="delete-rule-pack-btn" class="btn-danger-sm">Delete</button>
+                        </div>
+                    </div>
+                    
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <label>Document Type:</label>
+                            <span id="rule-pack-doc-type">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Max Depth:</label>
+                            <span id="rule-pack-max-depth">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Success Count:</label>
+                            <span id="rule-pack-success-count">0</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Failure Count:</label>
+                            <span id="rule-pack-failure-count">0</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Avg Quality:</label>
+                            <span id="rule-pack-avg-quality" class="quality-badge">0%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="extraction-rules-section">
+                        <h4>Extraction Rules</h4>
+                        <table class="extraction-rules-table">
+                            <thead>
+                                <tr>
+                                    <th>Level</th>
+                                    <th>Name</th>
+                                    <th>Method</th>
+                                    <th>Patterns</th>
+                                </tr>
+                            </thead>
+                            <tbody id="extraction-rules-tbody">
+                                <!-- Dynamically populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeRuleManagementModal()">Close</button>
+            </div>
         </div>
     </div>
 </body>
