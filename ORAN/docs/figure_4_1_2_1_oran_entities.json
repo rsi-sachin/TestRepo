@@ -1,0 +1,181 @@
+{
+  "source": {
+    "document": "ts_103983v040000p.pdf",
+    "figure": "Figure 4.1.2-1",
+    "title": "Illustration of A1 and related interfaces in the O-RAN architecture",
+    "generated_on": "2026-06-14",
+    "purpose": "Base topology for ORAN A1 test architecture with mixed real and stubbed components"
+  },
+  "entities": [
+    {
+      "id": "smo",
+      "name": "Service Management and Orchestration (SMO)",
+      "domain": "management",
+      "implementation": "implement",
+      "notes": "Top-level management/orchestration domain"
+    },
+    {
+      "id": "non_rt_ric",
+      "name": "Non-RT RIC",
+      "domain": "ric",
+      "implementation": "implement",
+      "notes": "Primary control and policy function for A1"
+    },
+    {
+      "id": "rapps",
+      "name": "rApps",
+      "domain": "applications",
+      "implementation": "stub",
+      "notes": "Can be simulated with deterministic behavior for policy generation"
+    },
+    {
+      "id": "near_rt_ric",
+      "name": "Near-RT RIC",
+      "domain": "ric",
+      "implementation": "stub",
+      "notes": "A1 counterpart; policy enforcement and enrichment data endpoint"
+    },
+    {
+      "id": "xapps",
+      "name": "xApps",
+      "domain": "applications",
+      "implementation": "stub",
+      "notes": "Optional in MVP unless E2 behavior needs deeper realism"
+    },
+    {
+      "id": "o_cu_cp",
+      "name": "O-CU-CP",
+      "domain": "ran_nodes",
+      "implementation": "stub",
+      "notes": "RAN control plane element"
+    },
+    {
+      "id": "o_cu_up",
+      "name": "O-CU-UP",
+      "domain": "ran_nodes",
+      "implementation": "stub",
+      "notes": "RAN user plane element"
+    },
+    {
+      "id": "o_du",
+      "name": "O-DU",
+      "domain": "ran_nodes",
+      "implementation": "stub",
+      "notes": "Distributed unit"
+    },
+    {
+      "id": "o_ru",
+      "name": "O-RU",
+      "domain": "ran_nodes",
+      "implementation": "stub",
+      "notes": "Radio unit"
+    },
+    {
+      "id": "o_cloud",
+      "name": "O-Cloud",
+      "domain": "infrastructure",
+      "implementation": "stub",
+      "notes": "Cloud infrastructure managed/orchestrated via O2"
+    }
+  ],
+  "interfaces": [
+    {
+      "id": "a1",
+      "name": "A1",
+      "from": "non_rt_ric",
+      "to": "near_rt_ric",
+      "direction": "bidirectional",
+      "category": "service_and_policy",
+      "subinterfaces": ["A1-P", "A1-EI"],
+      "notes": "Core interface under test"
+    },
+    {
+      "id": "o1",
+      "name": "O1",
+      "from": "smo",
+      "to": "near_rt_ric",
+      "direction": "bidirectional",
+      "category": "management",
+      "notes": "FCAPS and management plane"
+    },
+    {
+      "id": "o1_ran",
+      "name": "O1",
+      "from": "smo",
+      "to": "o_cu_cp",
+      "direction": "bidirectional",
+      "category": "management"
+    },
+    {
+      "id": "o1_ran_up",
+      "name": "O1",
+      "from": "smo",
+      "to": "o_cu_up",
+      "direction": "bidirectional",
+      "category": "management"
+    },
+    {
+      "id": "o1_ran_du",
+      "name": "O1",
+      "from": "smo",
+      "to": "o_du",
+      "direction": "bidirectional",
+      "category": "management"
+    },
+    {
+      "id": "o1_ran_ru",
+      "name": "O1",
+      "from": "smo",
+      "to": "o_ru",
+      "direction": "bidirectional",
+      "category": "management"
+    },
+    {
+      "id": "o2",
+      "name": "O2",
+      "from": "smo",
+      "to": "o_cloud",
+      "direction": "bidirectional",
+      "category": "orchestration_and_infrastructure"
+    },
+    {
+      "id": "e2",
+      "name": "E2",
+      "from": "near_rt_ric",
+      "to": "o_cu_cp",
+      "direction": "bidirectional",
+      "category": "near_rt_control"
+    },
+    {
+      "id": "e2_up",
+      "name": "E2",
+      "from": "near_rt_ric",
+      "to": "o_cu_up",
+      "direction": "bidirectional",
+      "category": "near_rt_control"
+    },
+    {
+      "id": "e2_du",
+      "name": "E2",
+      "from": "near_rt_ric",
+      "to": "o_du",
+      "direction": "bidirectional",
+      "category": "near_rt_control"
+    }
+  ],
+  "mvp_execution_profile": {
+    "components_to_implement": ["smo", "non_rt_ric"],
+    "components_to_stub": [
+      "near_rt_ric",
+      "rapps",
+      "xapps",
+      "o_cu_cp",
+      "o_cu_up",
+      "o_du",
+      "o_ru",
+      "o_cloud"
+    ],
+    "primary_test_focus": ["a1", "a1_policy_lifecycle", "a1_enrichment_info"],
+    "secondary_mocked_paths": ["o1", "o2", "e2"]
+  }
+}
