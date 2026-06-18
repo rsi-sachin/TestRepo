@@ -3,7 +3,7 @@ ORAN API Endpoints
 Handles O-RAN test catalog management, test generation, and execution
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, UploadFile, File, Depends, Request
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, UploadFile, File, Depends, Request, Response
 from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 from pathlib import Path
@@ -88,6 +88,27 @@ class SimulatorA1PolicyRequest(BaseModel):
     policy_type: str = Field(default="generic", description="Policy type label")
     source_module: str = Field(default="NON_RT_RIC", description="Source module ID")
     target_module: str = Field(default="NEAR_RT_RIC", description="Target module ID")
+    policy_object: Dict = Field(default_factory=dict, description="A1 PolicyObject payload")
+    notification_destination: Optional[str] = Field(
+        default=None,
+        description="Callback URI for policy status/feedback notifications",
+    )
+
+
+class SimulatorA1PolicyTypeUpsertRequest(BaseModel):
+    """A1-P create/replace request mapped to /policytypes/{policyTypeId}/policies/{policyId}."""
+    source_module: str = Field(default="NON_RT_RIC", description="Source module ID")
+    target_module: str = Field(default="NEAR_RT_RIC", description="Target module ID")
+    policy_object: Dict = Field(default_factory=dict, description="A1 PolicyObject payload")
+    notification_destination: Optional[str] = Field(
+        default=None,
+        description="Callback URI for policy status/feedback notifications",
+    )
+
+
+class SimulatorA1PolicyStatusNotificationRequest(BaseModel):
+    """Policy feedback/status notification payload."""
+    feedback_message: str = Field(..., description="Policy feedback or status detail")
 
 
 class SimulatorO1AlarmRequest(BaseModel):
@@ -257,7 +278,7 @@ async def issue_simulator_orchestrator_command(command: SimulatorCommandRequest)
 
 @router.post("/simulator/interfaces/a1/policies")
 async def post_simulator_a1_policy(payload: SimulatorA1PolicyRequest):
-    """Record A1 policy handoff (NON_RT_RIC -> NEAR_RT_RIC)."""
+    """Legacy compatibility route for A1 policy upsert."""
     if payload.source_module not in SIMULATOR_MODULES:
         raise HTTPException(status_code=400, detail=f"Unknown source module: {payload.source_module}")
 
@@ -270,11 +291,19 @@ async def post_simulator_a1_policy(payload: SimulatorA1PolicyRequest):
             detail="A1-P role pair must be NON_RT_RIC -> NEAR_RT_RIC",
         )
 
+    if "internal_function" in payload.policy_object or "internalFunction" in payload.policy_object:
+        raise HTTPException(
+            status_code=400,
+            detail="PolicyObject must not include internal function mapping details",
+        )
+
     result = a1_policy_service.upsert_policy(
         policy_id=payload.policy_id,
-        policy_type=payload.policy_type,
+        policy_type_id=payload.policy_type,
+        policy_object=payload.policy_object,
         source_module=payload.source_module,
         target_module=payload.target_module,
+        notification_destination=payload.notification_destination,
     )
 
     return {
@@ -285,9 +314,181 @@ async def post_simulator_a1_policy(payload: SimulatorA1PolicyRequest):
         "source_module": payload.source_module,
         "target_module": payload.target_module,
         "operation": result["operation"],
+        "legacy_route": True,
         "record": result["record"],
         "status": "recorded",
     }
+
+
+@router.get("/simulator/interfaces/a1/policytypes")
+async def list_simulator_a1_policy_types():
+    """List supported policy types and schemas exposed by A1-P Producer."""
+    items = a1_policy_service.list_policy_types()
+    return {
+        "items": items,
+        "count": len(items),
+        "interface": "A1",
+        "resource": "/policytypes",
+        "placeholder": False,
+    }
+
+
+@router.get("/simulator/interfaces/a1/policytypes/{policy_type_id}")
+async def get_simulator_a1_policy_type(policy_type_id: str):
+    """Get one supported policy type and its schema descriptors."""
+    policy_type = a1_policy_service.get_policy_type(policy_type_id)
+    if policy_type is None:
+        raise HTTPException(status_code=404, detail=f"Unsupported policyTypeId: {policy_type_id}")
+
+    return {
+        "item": policy_type,
+        "interface": "A1",
+        "resource": f"/policytypes/{policy_type_id}",
+        "placeholder": False,
+    }
+
+
+@router.put("/simulator/interfaces/a1/policytypes/{policy_type_id}/policies/{policy_id}")
+async def put_simulator_a1_policy(
+    policy_type_id: str,
+    policy_id: str,
+    payload: SimulatorA1PolicyTypeUpsertRequest,
+):
+    """Create or replace PolicyObject in policy-type scoped URI."""
+    if not a1_policy_service.is_supported_policy_type(policy_type_id):
+        raise HTTPException(status_code=404, detail=f"Unsupported policyTypeId: {policy_type_id}")
+
+    if payload.source_module not in SIMULATOR_MODULES:
+        raise HTTPException(status_code=400, detail=f"Unknown source module: {payload.source_module}")
+
+    if payload.target_module not in SIMULATOR_MODULES:
+        raise HTTPException(status_code=400, detail=f"Unknown target module: {payload.target_module}")
+
+    if payload.source_module != "NON_RT_RIC" or payload.target_module != "NEAR_RT_RIC":
+        raise HTTPException(
+            status_code=400,
+            detail="A1-P role pair must be NON_RT_RIC -> NEAR_RT_RIC",
+        )
+
+    if "internal_function" in payload.policy_object or "internalFunction" in payload.policy_object:
+        raise HTTPException(
+            status_code=400,
+            detail="PolicyObject must not include internal function mapping details",
+        )
+
+    result = a1_policy_service.upsert_policy(
+        policy_id=policy_id,
+        policy_type_id=policy_type_id,
+        policy_object=payload.policy_object,
+        source_module=payload.source_module,
+        target_module=payload.target_module,
+        notification_destination=payload.notification_destination,
+    )
+
+    return {
+        "accepted": True,
+        "placeholder": False,
+        "interface": "A1",
+        "policy_type_id": policy_type_id,
+        "policy_id": policy_id,
+        "source_module": payload.source_module,
+        "target_module": payload.target_module,
+        "operation": result["operation"],
+        "record": result["record"],
+        "status": "recorded",
+        "resource": f"/policytypes/{policy_type_id}/policies/{policy_id}",
+    }
+
+
+@router.get("/simulator/interfaces/a1/policytypes/{policy_type_id}/policies")
+async def list_simulator_a1_policy_ids(policy_type_id: str):
+    """List policy identifiers under one policy type."""
+    if not a1_policy_service.is_supported_policy_type(policy_type_id):
+        raise HTTPException(status_code=404, detail=f"Unsupported policyTypeId: {policy_type_id}")
+
+    policy_ids = a1_policy_service.list_policy_ids(policy_type_id)
+    return {
+        "items": policy_ids,
+        "count": len(policy_ids),
+        "interface": "A1",
+        "resource": f"/policytypes/{policy_type_id}/policies",
+        "placeholder": False,
+    }
+
+
+@router.get("/simulator/interfaces/a1/policytypes/{policy_type_id}/policies/{policy_id}")
+async def get_simulator_a1_policy_by_type(policy_type_id: str, policy_id: str):
+    """Get one policy from policy-type scoped URI."""
+    if not a1_policy_service.is_supported_policy_type(policy_type_id):
+        raise HTTPException(status_code=404, detail=f"Unsupported policyTypeId: {policy_type_id}")
+
+    policy = a1_policy_service.get_policy(policy_type_id=policy_type_id, policy_id=policy_id)
+    if policy is None:
+        raise HTTPException(status_code=404, detail=f"Unknown policy: {policy_id}")
+
+    return {
+        "item": policy,
+        "interface": "A1",
+        "resource": f"/policytypes/{policy_type_id}/policies/{policy_id}",
+        "placeholder": False,
+    }
+
+
+@router.delete("/simulator/interfaces/a1/policytypes/{policy_type_id}/policies/{policy_id}")
+async def delete_simulator_a1_policy(policy_type_id: str, policy_id: str):
+    """Delete one policy object for a policy type."""
+    if not a1_policy_service.is_supported_policy_type(policy_type_id):
+        raise HTTPException(status_code=404, detail=f"Unsupported policyTypeId: {policy_type_id}")
+
+    deleted = a1_policy_service.delete_policy(policy_type_id=policy_type_id, policy_id=policy_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Unknown policy: {policy_id}")
+
+    return {
+        "deleted": True,
+        "interface": "A1",
+        "resource": f"/policytypes/{policy_type_id}/policies/{policy_id}",
+        "placeholder": False,
+    }
+
+
+@router.get("/simulator/interfaces/a1/policytypes/{policy_type_id}/policies/{policy_id}/status")
+async def get_simulator_a1_policy_status(policy_type_id: str, policy_id: str):
+    """Return PolicyStatusObject for a specific policy."""
+    if not a1_policy_service.is_supported_policy_type(policy_type_id):
+        raise HTTPException(status_code=404, detail=f"Unsupported policyTypeId: {policy_type_id}")
+
+    policy_status = a1_policy_service.get_policy_status(policy_type_id=policy_type_id, policy_id=policy_id)
+    if policy_status is None:
+        raise HTTPException(status_code=404, detail=f"Unknown policy: {policy_id}")
+
+    return {
+        "item": policy_status,
+        "interface": "A1",
+        "resource": f"/policytypes/{policy_type_id}/policies/{policy_id}/status",
+        "placeholder": False,
+    }
+
+
+@router.post("/simulator/interfaces/a1/policytypes/{policy_type_id}/policies/{policy_id}/status/notify", status_code=204)
+async def notify_simulator_a1_policy_status(
+    policy_type_id: str,
+    policy_id: str,
+    payload: SimulatorA1PolicyStatusNotificationRequest,
+):
+    """Accept policy status/feedback notification payloads."""
+    if not a1_policy_service.is_supported_policy_type(policy_type_id):
+        raise HTTPException(status_code=404, detail=f"Unsupported policyTypeId: {policy_type_id}")
+
+    updated_status = a1_policy_service.append_policy_feedback(
+        policy_type_id=policy_type_id,
+        policy_id=policy_id,
+        feedback_message=payload.feedback_message,
+    )
+    if updated_status is None:
+        raise HTTPException(status_code=404, detail=f"Unknown policy: {policy_id}")
+
+    return Response(status_code=204)
 
 
 @router.get("/simulator/interfaces/a1/policies")
@@ -305,7 +506,13 @@ async def list_simulator_a1_policies():
 @router.get("/simulator/interfaces/a1/policies/{policy_id}")
 async def get_simulator_a1_policy(policy_id: str):
     """Return one A1 policy record by policy ID."""
-    policy = a1_policy_service.get_policy(policy_id)
+    matching_policy = None
+    for policy in a1_policy_service.list_policies():
+        if policy["policy_id"] == policy_id:
+            matching_policy = policy
+            break
+
+    policy = matching_policy
     if policy is None:
         raise HTTPException(status_code=404, detail=f"Unknown policy: {policy_id}")
 

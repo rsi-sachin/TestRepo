@@ -23,3 +23,26 @@
 ### Next Validation Set
 - One section each for A1 policy lifecycle, O1 alarm lifecycle, and E2 event lifecycle.
 - Compare auto mapping manifest against manual expected mapping before promoting rules v2.
+
+## 2026-06-18 - A1 Policy Service Description (Section 5.2.2)
+
+### Input Set
+- ORAN/docs/ts_103987v040300p.pdf (Section 5.2.2.1-5.2.2.4)
+- ORAN/docs/List 1 Module Names.md
+- ORAN/TODO-F2-simulator-tdd.md
+
+### What Worked
+- URI/resource rules in 5.2.2.4 mapped directly to simulator route additions under /policytypes/{policyTypeId}/policies/{policyId}.
+- Representation-object statements in 5.2.2.3 mapped cleanly to service-level structures (PolicyObject, PolicyStatusObject).
+- Callback notificationDestination statement mapped to persisted callback subscription metadata.
+
+### Ambiguities
+- Producer-side notification callback endpoint path is implementation-specific in simulator context.
+- A1TD schema strictness is referenced but not fully encoded yet.
+
+### Rule Updates Planned
+- Add explicit rule: when section includes resource identifiers, prioritize route-layer expansion before service heuristics.
+- Add object-mapping rule for representation object lists to runtime/persistence fields.
+
+### Next Validation Set
+- Validate 5.2.4 service operation clauses against current status/notification route behavior and expected HTTP status codes.
