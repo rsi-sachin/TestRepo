@@ -1,0 +1,121 @@
+{
+  "mapping_id": "oran-a1-s5_1-20260618-001",
+  "test_id": null,
+  "source_documents": [
+    "ORAN/docs/Non_RT_RIC_A1_Interface_Design.md",
+    "ORAN/docs/List 1 Module Names.md",
+    "ORAN/TODO-F2-simulator-tdd.md"
+  ],
+  "section_refs": [
+    {
+      "source": "ORAN/docs/Non_RT_RIC_A1_Interface_Design.md",
+      "section": "Section 5.1 + Figure 5.1-1",
+      "key_statements": [
+        "A1-P: NON_RT_RIC consumer to NEAR_RT_RIC producer",
+        "Requests are sent from consumer to producer",
+        "Responses and notifications are sent from producer to consumer"
+      ]
+    }
+  ],
+  "required_modules": [
+    "NON_RT_RIC",
+    "NEAR_RT_RIC",
+    "SMO",
+    "ORAN_INT_INFO_SOURCE",
+    "O_CU_CP",
+    "O_CU_DP",
+    "O_DU",
+    "O_ENODEB"
+  ],
+  "function_plan": [
+    {
+      "interface": "A1-P",
+      "layer": "route",
+      "functions": [
+        "post_simulator_a1_policy"
+      ],
+      "action": "modify"
+    },
+    {
+      "interface": "A1-P",
+      "layer": "service",
+      "functions": [
+        "create_policy",
+        "update_policy",
+        "get_policy",
+        "delete_policy",
+        "notify_policy_status"
+      ],
+      "action": "create"
+    },
+    {
+      "interface": "O1",
+      "layer": "service",
+      "functions": [
+        "publish_alarm",
+        "acknowledge_alarm",
+        "clear_alarm",
+        "get_alarm_history"
+      ],
+      "action": "create"
+    },
+    {
+      "interface": "E2",
+      "layer": "service",
+      "functions": [
+        "ingest_e2_event",
+        "queue_e2_message",
+        "process_e2_message",
+        "send_e2_response"
+      ],
+      "action": "create"
+    },
+    {
+      "interface": "ORCHESTRATOR",
+      "layer": "service",
+      "functions": [
+        "execute_scenario",
+        "resolve_module_targets",
+        "dispatch_by_interface",
+        "set_execution_mode"
+      ],
+      "action": "create"
+    }
+  ],
+  "linkage_chain": [
+    {
+      "name": "same_module_route_to_service",
+      "steps": [
+        "api route accepts validated request",
+        "service resolves interface behavior",
+        "persistence records object lifecycle",
+        "runtime state is updated"
+      ]
+    },
+    {
+      "name": "cross_module_orchestrated_dispatch",
+      "steps": [
+        "orchestrator receives scenario command",
+        "module targets are resolved",
+        "interface service dispatch occurs",
+        "target module state transition is persisted"
+      ]
+    }
+  ],
+  "verification_checks": [
+    "A1-P mapping uses NON_RT_RIC -> NEAR_RT_RIC roles",
+    "O1 mapping includes flow to SMO",
+    "E2 mapping includes RAN-node sources to NEAR_RT_RIC",
+    "Function actions tagged create/modify/extend",
+    "Deferred scope explicitly listed"
+  ],
+  "manual_review_required": false,
+  "deferred_scope": [
+    "A1-EI",
+    "A1-ML API definition"
+  ],
+  "confidence": {
+    "level": "high",
+    "rationale": "Source section and figure provide explicit service role direction, and List-1 provides deterministic module naming."
+  }
+}

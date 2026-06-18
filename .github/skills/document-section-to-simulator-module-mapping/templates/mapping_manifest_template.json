@@ -1,0 +1,56 @@
+{
+  "mapping_id": "<mapping_id>",
+  "test_id": "<test_id_or_null>",
+  "source_documents": [
+    "<doc_1>",
+    "<doc_2>",
+    "<doc_3>"
+  ],
+  "section_refs": [
+    {
+      "source": "<source_doc>",
+      "section": "<section_name>",
+      "key_statements": [
+        "<statement_1>",
+        "<statement_2>"
+      ]
+    }
+  ],
+  "required_modules": [
+    "<module_1>",
+    "<module_2>"
+  ],
+  "function_plan": [
+    {
+      "interface": "<A1-P|O1|E2>",
+      "layer": "<route|service|runtime|persistence>",
+      "functions": [
+        "<function_name_1>",
+        "<function_name_2>"
+      ],
+      "action": "<create|modify|extend>"
+    }
+  ],
+  "linkage_chain": [
+    {
+      "name": "<chain_name>",
+      "steps": [
+        "<step_1>",
+        "<step_2>",
+        "<step_3>"
+      ]
+    }
+  ],
+  "verification_checks": [
+    "<check_1>",
+    "<check_2>"
+  ],
+  "manual_review_required": false,
+  "deferred_scope": [
+    "A1-EI"
+  ],
+  "confidence": {
+    "level": "<high|medium|low>",
+    "rationale": "<confidence_basis>"
+  }
+}

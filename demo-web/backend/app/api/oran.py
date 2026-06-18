@@ -10,6 +10,7 @@ from pathlib import Path
 import uuid
 import json
 from datetime import datetime
+from pydantic import BaseModel, Field
 
 from app.models.oran import (
     OranTestCatalog,
@@ -26,6 +27,7 @@ from app.services.oran_execution_service import OranExecutionService
 from app.services.spec_parser_service import SpecParserService
 from app.services.catalog_generator_service import CatalogGeneratorService
 from app.services.rule_learner_service import RuleLearnerService
+from app.services.simulator_a1_service import SimulatorA1PolicyService
 from app.repositories.rule_pack_repository import RulePackRepository
 from app.models.rule_pack import RulePack, RulePackSummary
 from app.models.hierarchy_tree import HierarchyTree
@@ -47,11 +49,61 @@ spec_parser = SpecParserService(specs_upload_dir)
 catalog_generator = CatalogGeneratorService(catalogs_dir)
 rule_learner = RuleLearnerService()
 rule_pack_repository = RulePackRepository()
+a1_policy_service = SimulatorA1PolicyService()
 from app.services.hierarchical_extractor_service import HierarchicalExtractorService
 hierarchical_extractor = HierarchicalExtractorService()
 sections_options_dir = Path("./data/oran_sections")
 sections_options_dir.mkdir(parents=True, exist_ok=True)
 sections_options_file = sections_options_dir / "sections_by_spec.json"
+
+# List-1 canonical simulator modules.
+SIMULATOR_MODULES = {
+    "RAN_INTENT_PROVIDER": {"parent": None, "kind": "module", "simulation_type": "stub"},
+    "SMO": {"parent": None, "kind": "module", "simulation_type": "stub"},
+    "NON_RT_RIC": {"parent": "SMO", "kind": "sub-module", "simulation_type": "stub"},
+    "NEAR_RT_RIC": {"parent": "ORAN_INT_INFO_SOURCE", "kind": "module", "simulation_type": "simulator"},
+    "ORAN_EXT_INFO_SOURCE": {"parent": "ORAN_INT_INFO_SOURCE", "kind": "module", "simulation_type": "stub"},
+    "O_CU_CP": {"parent": "ORAN_INT_INFO_SOURCE", "kind": "sub-module", "simulation_type": "stub"},
+    "O_CU_DP": {"parent": "ORAN_INT_INFO_SOURCE", "kind": "sub-module", "simulation_type": "stub"},
+    "O_DU": {"parent": "ORAN_INT_INFO_SOURCE", "kind": "sub-module", "simulation_type": "stub"},
+    "O_ENODEB": {"parent": "ORAN_INT_INFO_SOURCE", "kind": "sub-module", "simulation_type": "stub"},
+    "ORAN_INT_INFO_SOURCE": {"parent": None, "kind": "module", "simulation_type": "stub"},
+}
+
+SIMULATOR_VALID_STATES = ["INIT", "RUNNING", "DEGRADED", "STOPPED"]
+
+
+class SimulatorCommandRequest(BaseModel):
+    """Placeholder command contract for orchestrator control."""
+    action: str = Field(..., description="Command action, e.g. start, stop, step")
+    execution_mode: str = Field(default="sequential", description="sequential or parallel")
+    target_modules: List[str] = Field(default_factory=list, description="List-1 module IDs")
+    scenario_id: Optional[str] = Field(default=None, description="Feature-1 scenario/test identifier")
+    parameters: Dict[str, str] = Field(default_factory=dict, description="Optional command parameters")
+
+
+class SimulatorA1PolicyRequest(BaseModel):
+    """Placeholder A1 policy contract."""
+    policy_id: str = Field(..., description="Policy identifier")
+    policy_type: str = Field(default="generic", description="Policy type label")
+    source_module: str = Field(default="NON_RT_RIC", description="Source module ID")
+    target_module: str = Field(default="NEAR_RT_RIC", description="Target module ID")
+
+
+class SimulatorO1AlarmRequest(BaseModel):
+    """Placeholder O1 alarm contract."""
+    alarm_id: str = Field(..., description="Alarm identifier")
+    severity: str = Field(default="MAJOR", description="Alarm severity")
+    source_module: str = Field(default="ORAN_INT_INFO_SOURCE", description="Source module ID")
+    target_module: str = Field(default="SMO", description="Target module ID")
+
+
+class SimulatorE2EventRequest(BaseModel):
+    """Placeholder E2 interaction contract."""
+    event_id: str = Field(..., description="E2 event identifier")
+    source_module: str = Field(..., description="Source module ID")
+    target_module: str = Field(default="NEAR_RT_RIC", description="Target module ID")
+    message_type: str = Field(default="control_update", description="Logical message type")
 
 # TS spec metadata: canonical map used by resolve-specs endpoint
 SPEC_METADATA = {
@@ -126,6 +178,173 @@ def _save_sections_options(all_clauses: Dict[SpecType, List]) -> None:
 
     with open(sections_options_file, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
+
+
+# ==================== SIMULATOR BOOTSTRAP (CONTRACT-FIRST) ====================
+
+@router.get("/simulator/health")
+async def get_simulator_health():
+    """Contract-first simulator health endpoint."""
+    return {
+        "status": "ready",
+        "placeholder": True,
+        "module_count": len(SIMULATOR_MODULES),
+        "primary_target": "NEAR_RT_RIC",
+        "valid_states": SIMULATOR_VALID_STATES,
+    }
+
+
+@router.get("/simulator/modules")
+async def list_simulator_modules():
+    """Return List-1 modules with deterministic scaffold metadata."""
+    modules = []
+    for module_id, metadata in SIMULATOR_MODULES.items():
+        modules.append(
+            {
+                "module_id": module_id,
+                "parent": metadata["parent"],
+                "kind": metadata["kind"],
+                "simulation_type": metadata["simulation_type"],
+                "placeholder": True,
+            }
+        )
+
+    return {
+        "items": modules,
+        "placeholder": True,
+        "source": "List-1 Module Names",
+    }
+
+
+@router.get("/simulator/modules/{module_id}/state")
+async def get_simulator_module_state(module_id: str):
+    """Return deterministic scaffold state for a module."""
+    if module_id not in SIMULATOR_MODULES:
+        raise HTTPException(status_code=404, detail=f"Unknown simulator module: {module_id}")
+
+    return {
+        "module_id": module_id,
+        "state": "INIT",
+        "placeholder": True,
+        "timers": 0,
+        "counters": {},
+        "alerts": [],
+        "buffers": {},
+        "last_updated": datetime.utcnow().isoformat(),
+    }
+
+
+@router.post("/simulator/orchestrator/command")
+async def issue_simulator_orchestrator_command(command: SimulatorCommandRequest):
+    """Accept orchestrator command contract and return scaffold acknowledgement."""
+    invalid_targets = [m for m in command.target_modules if m not in SIMULATOR_MODULES]
+    if invalid_targets:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown target module(s): {', '.join(invalid_targets)}",
+        )
+
+    return {
+        "accepted": True,
+        "placeholder": True,
+        "action": command.action,
+        "execution_mode": command.execution_mode,
+        "target_modules": command.target_modules,
+        "scenario_id": command.scenario_id,
+        "status": "queued",
+    }
+
+
+@router.post("/simulator/interfaces/a1/policies")
+async def post_simulator_a1_policy(payload: SimulatorA1PolicyRequest):
+    """Record A1 policy handoff (NON_RT_RIC -> NEAR_RT_RIC)."""
+    if payload.source_module not in SIMULATOR_MODULES:
+        raise HTTPException(status_code=400, detail=f"Unknown source module: {payload.source_module}")
+
+    if payload.target_module not in SIMULATOR_MODULES:
+        raise HTTPException(status_code=400, detail=f"Unknown target module: {payload.target_module}")
+
+    if payload.source_module != "NON_RT_RIC" or payload.target_module != "NEAR_RT_RIC":
+        raise HTTPException(
+            status_code=400,
+            detail="A1-P role pair must be NON_RT_RIC -> NEAR_RT_RIC",
+        )
+
+    result = a1_policy_service.upsert_policy(
+        policy_id=payload.policy_id,
+        policy_type=payload.policy_type,
+        source_module=payload.source_module,
+        target_module=payload.target_module,
+    )
+
+    return {
+        "accepted": True,
+        "placeholder": False,
+        "interface": "A1",
+        "policy_id": payload.policy_id,
+        "source_module": payload.source_module,
+        "target_module": payload.target_module,
+        "operation": result["operation"],
+        "record": result["record"],
+        "status": "recorded",
+    }
+
+
+@router.get("/simulator/interfaces/a1/policies")
+async def list_simulator_a1_policies():
+    """List all A1 policies currently tracked in memory."""
+    policies = a1_policy_service.list_policies()
+    return {
+        "items": policies,
+        "count": len(policies),
+        "interface": "A1",
+        "placeholder": False,
+    }
+
+
+@router.get("/simulator/interfaces/a1/policies/{policy_id}")
+async def get_simulator_a1_policy(policy_id: str):
+    """Return one A1 policy record by policy ID."""
+    policy = a1_policy_service.get_policy(policy_id)
+    if policy is None:
+        raise HTTPException(status_code=404, detail=f"Unknown policy: {policy_id}")
+
+    return {
+        "item": policy,
+        "interface": "A1",
+        "placeholder": False,
+    }
+
+
+@router.post("/simulator/interfaces/o1/alarms")
+async def post_simulator_o1_alarm(payload: SimulatorO1AlarmRequest):
+    """Placeholder O1 alarm flow (ORAN_INT_INFO_SOURCE -> SMO)."""
+    return {
+        "accepted": True,
+        "placeholder": True,
+        "interface": "O1",
+        "alarm_id": payload.alarm_id,
+        "source_module": payload.source_module,
+        "target_module": payload.target_module,
+        "status": "recorded",
+    }
+
+
+@router.post("/simulator/interfaces/e2/events")
+async def post_simulator_e2_event(payload: SimulatorE2EventRequest):
+    """Placeholder E2 exchange endpoint for RAN nodes -> NEAR_RT_RIC."""
+    if payload.source_module not in SIMULATOR_MODULES:
+        raise HTTPException(status_code=400, detail=f"Unknown source module: {payload.source_module}")
+
+    return {
+        "accepted": True,
+        "placeholder": True,
+        "interface": "E2",
+        "event_id": payload.event_id,
+        "source_module": payload.source_module,
+        "target_module": payload.target_module,
+        "status": "recorded",
+    }
 
 
 @router.post("/extract-methodology", response_model=MethodologyAnalysisResult)
