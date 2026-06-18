@@ -1,0 +1,2 @@
+# Test packages installed in C:\TestRepo\.venv
+pytest==7.4.3
