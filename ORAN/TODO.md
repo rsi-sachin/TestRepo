@@ -8,6 +8,25 @@
 
 ## 📋 IMPLEMENTATION TASKS
 
+### 🔄 Post-UI Simplification Follow-up
+**Status:** Pending  
+**Priority:** Medium
+
+- [ ] Review backend usage of HTTP Method and Complexity attributes after ORAN UI simplification.
+  - Validate whether Complexity should remain in API, DB model, and services.
+  - Reassess HTTP Method filtering scope and retention across ORAN test management endpoints.
+  - Remove obsolete backend fields/filters only after compatibility check with existing catalogs and execution flow.
+- [x] Add catalog deletion support in UI and backend.
+  - Add a Delete button beside each catalog name on the Test Catalog card.
+  - Implement catalog deletion endpoint to remove catalog JSON and associated test cases.
+  - Confirm UI refresh removes deleted catalog from the list immediately after success.
+- [ ] Investigate View Script modal failure when catalog contains generated tests (observed with 2-test catalog).
+  - Reproduce by generating a catalog, opening Test Catalog, and clicking View Script on each test row.
+  - Confirm reproducible case: catalog name `TS_103_989_1` renders tests, but View Script click does not open modal.
+  - Verify frontend handler wiring in ORAN catalog table and script modal open path.
+  - Validate backend script retrieval endpoint and test-id to script-file mapping.
+  - Add regression check so View Script works for both MVP-sized catalogs and larger catalogs.
+
 ### ✅ Phase 1: ORAN Foundation (Backend + Frontend)
 **Status:** ✅ COMPLETE (100%)  
 **Estimated:** 5-6 days  
@@ -256,7 +275,140 @@
 
 ---
 
-## 🔮 FUTURE ENHANCEMENTS (Post-MVP)
+## � ENHANCEMENTS
+
+### [P1-ENH] Simplify Upload Specs Tab — Dedicated Document Management
+**Priority:** P1 (High)  
+**Type:** Enhancement  
+**Status:** 📋 Planned  
+**Estimated:** 1-2 days  
+**Added:** June 2026
+
+#### Context
+The current "Upload Specs" tab mixes two distinct concerns: (1) uploading/managing specification documents and (2) configuring and generating test catalogs. This makes the tab cluttered and confusing. The tab should do one thing well: manage specification documents.
+
+#### Goal
+Restrict the **Upload Specs** tab to document management only — uploading new specification PDFs or replacing an existing spec with a newer version. All catalog generation, methodology analysis, and extraction configuration moves to the **Test Catalog** tab.
+
+#### Plan
+
+**Step 1 — Redesign Upload Specs tab (frontend/templates/index.html + oran.js + oran.css)**
+- [ ] Remove from Upload Specs tab:
+  - Catalog Name / Description fields
+  - MVP Demo Mode notice
+  - Methodology Analysis panel
+  - Rule-Based Extraction Settings panel
+  - "Preview & Select Sections" button
+  - "Generate Test Catalog (Auto)" button
+- [ ] Redesign Upload Specs tab layout:
+  - **Uploaded Specs Library** — table/card list showing all previously uploaded specs with: spec ID, title, version, upload date, file size, status (indexed / pending)
+  - **Upload New Spec** — drag-and-drop zone or file-picker; user selects spec type (A1 / Diameter / etc.) before uploading
+  - **Replace Existing Version** — if a spec with matching ID already exists, show a "Replace / Update Version" prompt instead of silently overwriting
+  - Upload progress bar (keep existing)
+  - Post-upload confirmation showing extracted metadata (page count, detected spec version)
+
+**Step 2 — Move generation controls to Test Catalog tab (frontend/templates/index.html + oran.js)**
+- [ ] Add a "Generate New Catalog" panel at the top of the Test Catalog tab:
+  - Spec selection checkboxes (move from Upload Specs)
+  - Protocol / Interface selector (move from Upload Specs)
+  - Catalog Name + Description inputs
+  - Methodology Analysis panel
+  - Rule-Based Extraction toggle + rule pack status
+  - "Generate Test Catalog (Auto)" button
+  - "Preview & Select Sections" button
+
+**Step 3 — Backend: add spec library endpoint**
+- [ ] Add `GET /api/oran/specs` — returns list of all uploaded specs with metadata (id, title, version, upload_date, page_count, file_size_kb, status)
+- [ ] Add `DELETE /api/oran/specs/{spec_id}` — removes a spec from the library
+- [ ] Update `POST /api/oran/upload-specs` — detect duplicate spec ID and return `version_conflict: true` flag so frontend can prompt user to confirm replacement
+
+**Step 4 — UX polish**
+- [ ] Show a badge on the Upload Specs nav button indicating how many specs are currently in the library (e.g., "Upload Specs  4")
+- [ ] Empty state: when no specs are uploaded, show a clear call-to-action card with drag-and-drop
+- [ ] Warn user if they navigate to Test Catalog tab without any specs uploaded
+
+#### Acceptance Criteria
+- Upload Specs tab contains ONLY: spec library list, upload new spec, replace version, upload progress
+- Test Catalog tab contains the full catalog generation workflow
+- No functionality is lost — everything is preserved, just reorganised
+- Existing uploaded specs remain accessible after the change
+
+---
+### [P1-ENH] Replace Checkbox Layout with Dropdown + Local File Upload
+**Priority:** P1 (High)  
+**Type:** Enhancement (Space Optimization)  
+**Status:** 📋 Planned  
+**Estimated:** 1-2 days  
+**Added:** June 2026
+
+#### Context
+The current "Upload Specs" tab uses 4 visible checkboxes (one per spec: TS 103 989, 987, 988, 983) that consume significant vertical space. In the context of moving all catalog generation to the "Test Catalog" tab, the Upload Specs tab becomes compact—but the checkbox layout is still inefficient. Additionally, users should be able to upload any PDF/DOCX file from their machine into the tool's workspace.
+
+#### Goal
+Replace checkbox-based spec selection with a **dropdown selector** to minimize vertical space, and add an **"Upload New Spec"** button allowing users to upload arbitrary PDFs/DOCx files from any location on their machine, saving them to `C:\TestRepo\ORAN\Docs\` (auto-create if needed).
+
+#### Current State
+- 4 checkboxes visible for specs TS 103 989, 987, 988, 983
+- Hidden file inputs with hardcoded spec IDs
+- Upload triggered after spec selection
+
+#### Plan
+
+**Step 1 — Frontend: Replace checkboxes with dropdown (frontend/templates/index.html + oran.js + oran.css)**
+- [ ] Remove the "Specification Selection" checkbox group from HTML
+- [ ] Add a new single dropdown `<select id="spec-select-dropdown">`:
+  - Options: TS 103 989, TS 103 987, TS 103 988, TS 103 983
+  - Can select only ONE spec at a time (MVP constraint to match new simplicity goal)
+  - Default selection: TS 103 989
+- [ ] Add an "Upload New Spec" button beside the dropdown:
+  - Opens a file picker dialog (accept `.pdf`, `.docx`)
+  - User selects file from anywhere on machine
+  - File is copied to `C:\TestRepo\ORAN\Docs\` with original filename preserved
+  - UI shows upload progress (keep existing progress bar)
+  - Post-upload: show success confirmation with file location and extracted metadata
+- [ ] Update CSS: Dropdown should be compact, horizontally aligned with button on same line to save space
+- [ ] Remove hidden file inputs for pre-defined specs (no longer needed; upload is triggered by button click)
+
+**Step 2 — Backend: Add file upload and workspace management endpoints**
+- [ ] Create directory helper:
+  - Ensure `C:\TestRepo\ORAN\Docs\` exists (create if missing on startup)
+  - Validate write permissions
+- [ ] Add `POST /api/oran/upload-spec-file` — accepts multipart file upload:
+  - Input: file (PDF or DOCX), optional spec_type (A1 / Diameter / etc., default="A1")
+  - Validation: max 50 MB, only .pdf or .docx
+  - Action: Save file to `C:\TestRepo\ORAN\Docs\{original_filename}`
+  - Handle duplicates: if file already exists, prompt user to overwrite or rename (return `file_exists: true` flag)
+  - Extract metadata: file size, page count (for PDFs), detected spec version/title if possible
+  - Response: `{ "status": "success", "file_path": "...", "file_size_kb": ..., "page_count": ..., "metadata": {...} }`
+- [ ] Add `GET /api/oran/workspace-specs` — lists all PDFs/DOCx files in `C:\TestRepo\ORAN\Docs\`:
+  - Returns: filename, file_type, file_size_kb, upload_date, page_count (if PDF)
+  - Used to populate dropdown or library display on Upload Specs tab
+
+**Step 3 — Integration: Update spec selection flow**
+- [ ] Dropdown selects which pre-defined spec mapping to use (TS 103 989 → A1 Test Specification, etc.)
+- [ ] "Upload New Spec" adds a new arbitrary spec file to the workspace
+- [ ] Spec library list on Upload Specs tab shows both pre-defined specs AND user-uploaded files
+- [ ] JavaScript: Listen to dropdown change and file upload button; trigger appropriate backend calls
+
+**Step 4 — UX polish**
+- [ ] Empty state: if no specs in workspace, show message: "No specs uploaded yet. Use 'Upload New Spec' to add a PDF or Word document."
+- [ ] Drag-and-drop alternative: allow drag-and-drop of files onto the upload area (in addition to file picker button)
+- [ ] File list display: show uploaded files as a compact list with delete icons (right of each file)
+- [ ] Validation feedback: show error messages for invalid file types, max size exceeded, etc.
+- [ ] Success toast: on successful upload, show "✓ Spec uploaded: {filename}"
+
+#### Acceptance Criteria
+- Checkbox layout completely removed
+- Single dropdown selector visible with 4 ETSI spec options
+- "Upload New Spec" button next to dropdown (horizontal alignment)
+- Users can upload arbitrary PDF/DOCX files from any machine location → saves to `C:\TestRepo\ORAN\Docs\`
+- File list shows all uploaded files with delete option
+- Vertical space saved: ~150px (4 checkboxes + labels removed)
+- No functionality lost; catalog generation workflow unchanged
+- Pre-defined specs and user-uploaded specs coexist in the system
+
+---
+## �🔮 FUTURE ENHANCEMENTS (Post-MVP)
 
 ### 📌 TODO: ML-Based Spec Parsing (Option B Review)
 **Priority:** MEDIUM  
@@ -378,13 +530,7 @@
 ## ✅ COMPLETION CRITERIA
 
 ### ✅ Phase 1 Complete When: (ALL DONE ✅)
-- [x] OranExecutionService executes pytest subprocess successfully ✅
-- [x] OranParser extracts statistics from pytest JSON output ✅
-- [x] ORAN API endpoints respond correctly ✅
-- [x] WebSocket streams ORAN execution output ✅
-- [x] Frontend UI displays ORAN tabs (Upload Specs, Test Catalog) ✅
-- [x] Old TTS features hidden on feature branch ✅
-- [x] Script viewer modal with syntax highlighting works ✅
+ [x] Update regression test docs
 - [x] API integration complete in frontend ✅
 
 ### Phase 2 Complete When:
