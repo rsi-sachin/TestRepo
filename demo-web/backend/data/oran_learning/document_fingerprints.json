@@ -1,0 +1,65 @@
+{
+  "fecd048e845e41b7": {
+    "spec_type": "TS_103_989",
+    "file_name": "ts_103989v040200p.pdf",
+    "file_extension": ".pdf",
+    "text_hash": "fecd048e845e41b7",
+    "section_numbering_style": "dotted_numeric",
+    "depth_histogram": {
+      "1": 2,
+      "2": 13,
+      "3": 12,
+      "5": 166,
+      "4": 5,
+      "6": 9
+    },
+    "sample_headings": [
+      {
+        "section_number": "4",
+        "title": "Test methodology"
+      },
+      {
+        "section_number": "4.2",
+        "title": "Conformance testing Non-RT RIC"
+      },
+      {
+        "section_number": "4.2.2",
+        "title": "Test configuration"
+      },
+      {
+        "section_number": "4.3",
+        "title": "Conformance testing Near-RT RIC"
+      },
+      {
+        "section_number": "4.3.2",
+        "title": "Test configuration"
+      },
+      {
+        "section_number": "4.4.2",
+        "title": "Test configuration"
+      },
+      {
+        "section_number": "5.2",
+        "title": "Conformance test cases for A1-P Consumer"
+      },
+      {
+        "section_number": "5.2.1.1.3",
+        "title": "Test methodology"
+      }
+    ],
+    "document_type": "TEST_SPECIFICATION",
+    "document_type_confidence": 0.25,
+    "heading_patterns": [
+      {
+        "position": 0,
+        "section_number": "4",
+        "title": "Test methodology",
+        "level": 1
+      }
+    ],
+    "avg_section_length": 0,
+    "has_numbered_subsections": true,
+    "total_sections": 207,
+    "indexed_at": "2026-06-11T14:34:09.128315"
+  }
+}

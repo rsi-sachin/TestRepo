@@ -16,8 +16,12 @@ from pathlib import Path
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-from app.api import demos, execution, history, oran
+from app.api import demos, execution, history, oran, test_cases
 from app.websockets import demo_output
+from app.database import init_db
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
@@ -46,6 +50,7 @@ app.include_router(demos.router, prefix="/api", tags=["Demos"])
 app.include_router(execution.router, prefix="/api", tags=["Execution"])
 app.include_router(history.router, prefix="/api", tags=["History"])
 app.include_router(oran.router, prefix="/api/oran", tags=["ORAN"])
+app.include_router(test_cases.router, prefix="/api/oran", tags=["Test Cases"])
 
 # Include WebSocket router
 app.include_router(demo_output.router, prefix="/ws", tags=["WebSocket"])
@@ -81,15 +86,22 @@ async def health_check():
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup"""
-    print("TTS Demo Tool Web Backend starting...")
-    # Initialize demo catalog, validate JMeter installation, etc.
-    # These will be implemented in service layer
+    logger.info("TTS Demo Tool Web Backend starting...")
+    
+    # Initialize database (create tables if they don't exist)
+    try:
+        init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+    
+    logger.info("Startup complete")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
-    print("TTS Demo Tool Web Backend shutting down...")
+    logger.info("TTS Demo Tool Web Backend shutting down...")
     # Cleanup any running processes, close connections
 
 

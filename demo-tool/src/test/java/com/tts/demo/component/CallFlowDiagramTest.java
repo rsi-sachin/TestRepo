@@ -560,4 +560,85 @@ public class CallFlowDiagramTest {
         
         return result[0];
     }
+    
+    /**
+     * Test that real-time observer pattern callbacks trigger diagram refresh.
+     * Verifies that CallFlowDiagram properly responds to CallFlow.addMessage() events.
+     */
+    @Test
+    public void testRealTimeCallbackTriggersRefresh() throws Exception {
+        // Create a fresh CallFlow for this test
+        CallFlow liveFlow = new CallFlow();
+        
+        // Create diagram and register as listener on JavaFX thread
+        final CallFlowDiagram[] diagramRef = new CallFlowDiagram[1];
+        final java.util.concurrent.CountDownLatch createLatch = new java.util.concurrent.CountDownLatch(1);
+        
+        Platform.runLater(() -> {
+            CallFlowDiagram testDiagram = new CallFlowDiagram(liveFlow);
+            liveFlow.addListener(testDiagram);
+            diagramRef[0] = testDiagram;
+            createLatch.countDown();
+        });
+        
+        assertTrue(createLatch.await(2, java.util.concurrent.TimeUnit.SECONDS), 
+            "Diagram should be created within 2 seconds");
+        
+        CallFlowDiagram testDiagram = diagramRef[0];
+        assertNotNull(testDiagram, "Diagram should be created");
+        
+        // Get initial refresh time via reflection
+        java.lang.reflect.Field lastRefreshField = CallFlowDiagram.class.getDeclaredField("lastRefreshTime");
+        lastRefreshField.setAccessible(true);
+        
+        final long[] initialRefreshTime = new long[1];
+        Platform.runLater(() -> {
+            try {
+                initialRefreshTime[0] = lastRefreshField.getLong(testDiagram);
+            } catch (Exception e) {
+                fail("Failed to read lastRefreshTime: " + e.getMessage());
+            }
+        });
+        Thread.sleep(100);
+        
+        // Add a message to trigger callback
+        SipMessage newMessage = new SipMessage(
+            SipMessage.MessageType.INVITE,
+            SipMessage.Direction.CLIENT_TO_SERVER,
+            "Thread Group 2-1",
+            System.currentTimeMillis(),
+            54,
+            true,
+            "200",
+            "Send INVITE"
+        );
+        
+        liveFlow.addMessage(newMessage);
+        
+        // Wait for throttling (200ms) + processing time
+        Thread.sleep(350);
+        
+        // Verify refresh was called by checking lastRefreshTime changed
+        final long[] finalRefreshTime = new long[1];
+        final java.util.concurrent.CountDownLatch checkLatch = new java.util.concurrent.CountDownLatch(1);
+        
+        Platform.runLater(() -> {
+            try {
+                finalRefreshTime[0] = lastRefreshField.getLong(testDiagram);
+                checkLatch.countDown();
+            } catch (Exception e) {
+                fail("Failed to read lastRefreshTime: " + e.getMessage());
+            }
+        });
+        
+        assertTrue(checkLatch.await(2, java.util.concurrent.TimeUnit.SECONDS),
+            "Should be able to check refresh time");
+        
+        assertTrue(finalRefreshTime[0] > initialRefreshTime[0],
+            "Diagram should have refreshed after message added (initial: " + 
+            initialRefreshTime[0] + ", final: " + finalRefreshTime[0] + ")");
+        
+        // Verify the message was added to the call flow
+        assertEquals(1, liveFlow.getTotalMessages(), "CallFlow should contain 1 message");
+    }
 }

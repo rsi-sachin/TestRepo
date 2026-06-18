@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     
     # TTS Installation (read-only reference)
     tts_path: Path = Path("C:/TTS")
+    jmeter_command: Path = Path("C:/TTS/bin/jmeter.bat")
     jmeter_jar: Path = Path("C:/TTS/bin/ApacheJMeter.jar")
     java_home: Path = Path("C:/jdk-11.0.30")  # Java for JMeter
     
@@ -51,6 +52,13 @@ class Settings(BaseSettings):
     oran_catalogs_path: Optional[Path] = None  # Defaults to runs_directory/oran_catalogs
     oran_generated_tests_path: Optional[Path] = None  # Defaults to tts_path/generated_tests
     oran_history_path: Optional[Path] = None  # Defaults to runs_directory/oran_history
+    
+    # ORAN test extraction limits (MVP constraint)
+    max_tests_per_spec: int = 2  # Maximum tests to extract per specification (MVP: 2 tests x 4 docs = 8 total)
+
+    # ORAN docs folder — searched first before requiring manual upload
+    # Defaults to ORAN/docs relative to the repo root (3 levels up from backend/)
+    oran_docs_path: Optional[Path] = None  # Falls back to Path('../../ORAN/docs') at runtime
     
     class Config:
         env_file = ".env"

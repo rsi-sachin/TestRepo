@@ -18,6 +18,10 @@ from app.parsers.pdf_parser import PdfParser
 from app.parsers.docx_parser import DocxParser
 from app.parsers.methodology_extractor import MethodologyExtractor
 from app.parsers.test_clause_extractor import TestClauseExtractor
+from app.services.document_classifier_service import DocumentClassifier, DocumentType
+from app.services.rule_matcher_service import RuleMatcherService
+from app.services.hierarchical_extractor_service import HierarchicalExtractorService
+from app.repositories.rule_pack_repository import RulePackRepository
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +55,12 @@ class SpecParserService:
         self.learning_metadata_file = self.learning_metadata_dir / "learning_metadata.jsonl"
         self.learning_metadata_latest_dir = self.learning_metadata_dir / "latest"
         self.learning_metadata_latest_dir.mkdir(parents=True, exist_ok=True)
+        self.fingerprints_file = self.learning_metadata_dir / "document_fingerprints.json"
+        
+        # Rule-based extraction services
+        self.rule_matcher = RuleMatcherService()
+        self.hierarchical_extractor = HierarchicalExtractorService()
+        self.rule_pack_repository = RulePackRepository()
     
     def parse_specification(
         self, file_path: Path, spec_type: SpecType, max_tests: Optional[int] = None
@@ -187,6 +197,39 @@ class SpecParserService:
             )[:12]
         ]
 
+        # Enhanced fingerprinting for similarity matching
+        # Extract Level 1 heading patterns (section titles with positions)
+        heading_patterns = []
+        for i, section in enumerate(sections[:20]):  # First 20 sections
+            section_num = getattr(section, "section_number", "")
+            title = getattr(section, "title", "")
+            # Estimate level from section numbering (e.g., "4" = level 1, "4.2" = level 2)
+            level = len(section_num.split('.')) if '.' in section_num else (1 if section_num else 0)
+            if level == 1:  # Level 1 headings only
+                heading_patterns.append({
+                    "position": i,
+                    "section_number": section_num,
+                    "title": title[:100],  # Truncate long titles
+                    "level": level
+                })
+        
+        # Calculate average section length
+        section_lengths = []
+        for section in sections:
+            content = getattr(section, "content", "")
+            if content:
+                section_lengths.append(len(content))
+        avg_section_length = int(sum(section_lengths) / len(section_lengths)) if section_lengths else 0
+        
+        # Check for numbered subsections (e.g., 4.2.1, 5.3.2)
+        has_numbered_subsections = any(
+            len(getattr(section, "section_number", "").split('.')) >= 3
+            for section in sections
+        )
+        
+        # Classify document type
+        doc_type, doc_type_confidence = DocumentClassifier.classify_from_text(text)
+
         fingerprint = {
             "spec_type": spec_type.value,
             "file_name": file_path.name,
@@ -201,6 +244,13 @@ class SpecParserService:
                 }
                 for section in sections[:8]
             ],
+            # Enhanced fingerprinting fields
+            "document_type": doc_type.value,
+            "document_type_confidence": round(doc_type_confidence, 2),
+            "heading_patterns": heading_patterns,
+            "avg_section_length": avg_section_length,
+            "has_numbered_subsections": has_numbered_subsections,
+            "total_sections": len(sections),
         }
 
         quality_signals = {
@@ -259,6 +309,246 @@ class SpecParserService:
         latest_file = self.learning_metadata_latest_dir / f"{spec_type}.json"
         with open(latest_file, "w", encoding="utf-8") as file_handle:
             json.dump(metadata, file_handle, indent=2, ensure_ascii=True)
+        
+        # Also persist fingerprint for similarity matching
+        self._persist_fingerprint(metadata.get("document_fingerprint", {}))
+    
+    def _persist_fingerprint(self, fingerprint: Dict[str, object]) -> None:
+        """Persist document fingerprint to the fingerprints index file."""
+        # Load existing fingerprints
+        fingerprints = self._load_fingerprints()
+        
+        # Add or update fingerprint (keyed by text_hash for deduplication)
+        text_hash = fingerprint.get("text_hash", "")
+        if text_hash:
+            fingerprints[text_hash] = {
+                **fingerprint,
+                "indexed_at": datetime.now().isoformat()
+            }
+            
+            # Save back to file
+            with open(self.fingerprints_file, "w", encoding="utf-8") as f:
+                json.dump(fingerprints, f, indent=2, ensure_ascii=True)
+            
+            logger.info(f"Persisted fingerprint for {fingerprint.get('file_name', 'unknown')}")
+    
+    def _load_fingerprints(self) -> Dict[str, Dict]:
+        """Load all document fingerprints from the index file."""
+        if not self.fingerprints_file.exists():
+            return {}
+        
+        try:
+            with open(self.fingerprints_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Failed to load fingerprints: {e}")
+            return {}
+    
+    def get_all_fingerprints(self) -> List[Dict]:
+        """Get all document fingerprints as a list."""
+        fingerprints_dict = self._load_fingerprints()
+        return list(fingerprints_dict.values())
+    
+    def extract_hierarchy_with_rules(
+        self,
+        file_path: Path,
+        spec_type: Optional[SpecType] = None,
+        force_heuristic: bool = False
+    ) -> Dict[str, object]:
+        """
+        Extract hierarchical structure using rule-based extraction with fallback
+        
+        Args:
+            file_path: Path to specification file
+            spec_type: Optional specification type
+            force_heuristic: If True, skip rule-based extraction and use heuristic
+            
+        Returns:
+            Dictionary containing extraction results and metadata
+        """
+        logger.info(f"Extracting hierarchy from {file_path.name} (rule-based: {not force_heuristic})")
+        
+        # Parse document
+        if file_path.suffix.lower() == '.pdf':
+            text = self.pdf_parser.parse_file(file_path)
+        elif file_path.suffix.lower() in ['.docx', '.doc']:
+            text = self.docx_parser.parse_file(file_path)
+        else:
+            raise ValueError(f"Unsupported file type: {file_path.suffix}")
+        
+        # Classify document
+        doc_type, doc_confidence = DocumentClassifier.classify_from_text(text)
+        logger.info(f"Document classified as {doc_type.value} (confidence: {doc_confidence:.2f})")
+        
+        result = {
+            'file_name': file_path.name,
+            'document_type': doc_type.value,
+            'document_type_confidence': round(doc_confidence, 2),
+            'extraction_method': None,
+            'rule_pack_id': None,
+            'hierarchy_tree': None,
+            'quality_score': 0.0,
+            'fallback_used': False,
+            'error': None
+        }
+        
+        # Try rule-based extraction first (unless forced to use heuristic)
+        if not force_heuristic:
+            try:
+                # Generate fingerprint for this document
+                sections = self.methodology_extractor.extract_methodology_sections(text)
+                learning_metadata = self._build_learning_metadata(
+                    spec_type=spec_type or SpecType.TS_103_989,
+                    file_path=file_path,
+                    text=text,
+                    sections=sections,
+                    modules=[],
+                    titles=[]
+                )
+                fingerprint = learning_metadata.get('document_fingerprint', {})
+                
+                # Find matching rule pack
+                existing_fingerprints = self.get_all_fingerprints()
+                rule_pack_id = self.rule_matcher.get_best_rule_pack(
+                    fingerprint,
+                    existing_fingerprints
+                )
+                
+                if rule_pack_id:
+                    logger.info(f"Found matching rule pack: {rule_pack_id}")
+                    
+                    # Load rule pack
+                    rule_pack = self.rule_pack_repository.load_rule_pack(rule_pack_id)
+                    
+                    if rule_pack:
+                        # Extract hierarchy using rule pack
+                        logger.info(f"Applying rule pack: {rule_pack.name}")
+                        hierarchy_tree = self.hierarchical_extractor.extract_hierarchy(
+                            pdf_path=file_path,
+                            rule_pack=rule_pack
+                        )
+                        
+                        # Calculate quality score
+                        quality_score = self._calculate_extraction_quality(hierarchy_tree)
+                        
+                        result['extraction_method'] = 'rule-based'
+                        result['rule_pack_id'] = rule_pack_id
+                        result['hierarchy_tree'] = hierarchy_tree
+                        result['quality_score'] = quality_score
+                        
+                        logger.info(
+                            f"Rule-based extraction complete: {hierarchy_tree.total_nodes} nodes, "
+                            f"quality: {quality_score:.2f}"
+                        )
+                        
+                        # If quality is acceptable, return
+                        if quality_score >= 0.7:
+                            # Update rule pack statistics
+                            rule_pack.update_statistics(success=True, quality_score=quality_score)
+                            self.rule_pack_repository.update_rule_pack(rule_pack)
+                            return result
+                        else:
+                            logger.warning(
+                                f"Quality score {quality_score:.2f} below threshold 0.7, "
+                                "will try heuristic fallback"
+                            )
+                            # Update statistics as failure
+                            rule_pack.update_statistics(success=False, quality_score=quality_score)
+                            self.rule_pack_repository.update_rule_pack(rule_pack)
+                    else:
+                        logger.warning(f"Failed to load rule pack {rule_pack_id}")
+                else:
+                    logger.info("No matching rule pack found, will use heuristic extraction")
+                    
+            except Exception as e:
+                logger.error(f"Rule-based extraction failed: {e}")
+                logger.exception("Full traceback:")
+                result['error'] = str(e)
+        
+        # Fallback to heuristic extraction
+        logger.info("Using heuristic extraction (fallback)")
+        try:
+            sections = self.methodology_extractor.extract_methodology_sections(text)
+            modules = self.methodology_extractor.generate_module_candidates(
+                sections, text, max_modules=12
+            )
+            titles = self.methodology_extractor.generate_test_title_candidates(
+                modules, sections
+            )
+            
+            result['extraction_method'] = 'heuristic'
+            result['fallback_used'] = True
+            result['methodology_sections'] = sections
+            result['modules'] = modules
+            result['titles'] = titles
+            result['quality_score'] = self._calculate_heuristic_quality(sections, modules)
+            
+            logger.info(
+                f"Heuristic extraction complete: {len(sections)} sections, "
+                f"{len(modules)} modules"
+            )
+            
+        except Exception as e:
+            logger.error(f"Heuristic extraction also failed: {e}")
+            result['error'] = str(e)
+        
+        return result
+    
+    def _calculate_extraction_quality(self, hierarchy_tree) -> float:
+        """
+        Calculate quality score for rule-based extraction
+        
+        Args:
+            hierarchy_tree: Extracted HierarchyTree
+            
+        Returns:
+            Quality score (0.0-1.0)
+        """
+        if not hierarchy_tree:
+            return 0.0
+        
+        # Base score from average confidence
+        base_score = hierarchy_tree.avg_confidence
+        
+        # Bonus for having nodes at all levels
+        nodes_by_level = {}
+        for node in hierarchy_tree.get_all_nodes():
+            level = node.level
+            nodes_by_level[level] = nodes_by_level.get(level, 0) + 1
+        
+        level_coverage = len(nodes_by_level) / hierarchy_tree.max_depth if hierarchy_tree.max_depth > 0 else 0
+        
+        # Bonus for reasonable node count (not too few, not too many)
+        node_count_score = 0.0
+        if 5 <= hierarchy_tree.total_nodes <= 500:
+            node_count_score = 0.1
+        elif hierarchy_tree.total_nodes > 0:
+            node_count_score = 0.05
+        
+        # Combined quality score
+        quality = base_score * 0.6 + level_coverage * 0.3 + node_count_score
+        
+        return min(quality, 1.0)
+    
+    def _calculate_heuristic_quality(self, sections: List, modules: List) -> float:
+        """
+        Calculate quality score for heuristic extraction
+        
+        Args:
+            sections: Methodology sections
+            modules: Module candidates
+            
+        Returns:
+            Quality score (0.0-1.0)
+        """
+        if not sections:
+            return 0.0
+        
+        # Calculate based on number of sections and modules found
+        section_score = min(len(sections) / 10.0, 1.0) * 0.5
+        module_score = min(len(modules) / 8.0, 1.0) * 0.5
+        
+        return section_score + module_score
     
     def cross_reference_specs(
         self, all_clauses: Dict[SpecType, List[TestClause]]

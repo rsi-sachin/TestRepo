@@ -3,8 +3,10 @@
  * Main Application Script (ORAN MVP Branch)
  */
 
-// Import ORAN module
-import { initOranUI } from './oran.js';
+// Import ORAN modules with cache-busting query strings so browser reloads pick up edits
+import { initOranUI } from './oran.js?v=6';
+import { initTestManagement } from './test_management.js?v=6';
+import { initSectionSelector } from './section_selector.js?v=6';
 
 // Configuration
 const API_BASE = window.location.origin + '/api';
@@ -35,6 +37,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize ORAN UI
     initOranUI();
+    
+    // Initialize Test Management UI (Phase 3)
+    initTestManagement();
+    
+    // Initialize Section Selector UI (Phase 3C)
+    initSectionSelector();
     
     // Load initial data
     // await loadDemos(); // Disabled for ORAN MVP

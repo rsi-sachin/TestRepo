@@ -5,6 +5,7 @@ import java.util.Objects;
 /**
  * Represents a single SIP message in a VoLTE call flow.
  * Extracted from JTL test results for visualization.
+ * Enhanced with actor and protocol information for multi-node visualization (Phase 1, Phase 2).
  */
 public class SipMessage {
     
@@ -16,8 +17,18 @@ public class SipMessage {
     private boolean success;
     private String responseCode;
     private String label;
+    
+    // Phase 1: Multi-actor support
+    private ActorType sourceActor;
+    private ActorType targetActor;
+    
+    // Phase 2: Protocol annotation
+    private ProtocolType protocolType;
 
     public SipMessage() {
+        this.sourceActor = ActorType.UNKNOWN;
+        this.targetActor = ActorType.UNKNOWN;
+        this.protocolType = ProtocolType.SIP;  // Default to SIP
     }
 
     public SipMessage(MessageType messageType, Direction direction, String threadName,
@@ -30,6 +41,72 @@ public class SipMessage {
         this.success = success;
         this.responseCode = responseCode;
         this.label = label;
+        
+        // Auto-detect actor and protocol from label (more reliable than thread name)
+        this.sourceActor = extractSourceFromLabel(label, threadName);
+        this.targetActor = extractTargetFromLabel(label, direction, sourceActor);
+        this.protocolType = ProtocolType.fromLabel(label);
+    }
+    
+    /**
+     * Extract source actor from label with fallback to thread name
+     */
+    private ActorType extractSourceFromLabel(String label, String threadName) {
+        if (label == null) return ActorType.UNKNOWN;
+        
+        String upper = label.toUpperCase();
+        
+        // Pattern: "Send X from SOURCE to TARGET"
+        if (upper.contains(" FROM ")) {
+            String afterFrom = upper.substring(upper.indexOf(" FROM ") + 6);
+            String source = afterFrom.contains(" TO ") ? 
+                afterFrom.substring(0, afterFrom.indexOf(" TO ")).trim() : 
+                afterFrom.trim();
+            ActorType actor = ActorType.fromLabel("from " + source);
+            if (actor != ActorType.UNKNOWN) return actor;
+        }
+        
+        // Pattern: "Listen for X from SOURCE"
+        if (upper.contains("LISTEN") && upper.contains(" FROM ")) {
+            String afterFrom = upper.substring(upper.indexOf(" FROM ") + 6).trim();
+            ActorType actor = ActorType.fromLabel("from " + afterFrom);
+            if (actor != ActorType.UNKNOWN) return actor;
+        }
+        
+        // Fallback to thread name (might be UNKNOWN for generic thread groups)
+        return ActorType.fromThreadName(threadName);
+    }
+    
+    /**
+     * Extract target actor from label with fallback to direction inference
+     */
+    private ActorType extractTargetFromLabel(String label, Direction direction, ActorType source) {
+        if (label == null) return inferTargetActor(direction, source);
+        
+        String upper = label.toUpperCase();
+        
+        // Pattern: "Send X from SOURCE to TARGET"
+        if (upper.contains(" TO ")) {
+            String afterTo = upper.substring(upper.indexOf(" TO ") + 4).trim();
+            ActorType actor = ActorType.fromLabel("to " + afterTo);
+            if (actor != ActorType.UNKNOWN) return actor;
+        }
+        
+        // Fallback to direction-based inference
+        return inferTargetActor(direction, source);
+    }
+    
+    /**
+     * Infer target actor based on source actor and direction
+     */
+    private ActorType inferTargetActor(Direction direction, ActorType source) {
+        // Simple bidirectional mapping for basic tests
+        if (direction == Direction.CLIENT_TO_SERVER) {
+            return source == ActorType.CLIENT ? ActorType.SERVER : ActorType.UE_SERVER;
+        } else if (direction == Direction.SERVER_TO_CLIENT) {
+            return source == ActorType.SERVER ? ActorType.CLIENT : ActorType.UE_CLIENT;
+        }
+        return ActorType.UNKNOWN;
     }
 
     // Getters and Setters
@@ -97,6 +174,30 @@ public class SipMessage {
         this.label = label;
     }
 
+    public ActorType getSourceActor() {
+        return sourceActor;
+    }
+
+    public void setSourceActor(ActorType sourceActor) {
+        this.sourceActor = sourceActor;
+    }
+
+    public ActorType getTargetActor() {
+        return targetActor;
+    }
+
+    public void setTargetActor(ActorType targetActor) {
+        this.targetActor = targetActor;
+    }
+
+    public ProtocolType getProtocolType() {
+        return protocolType;
+    }
+
+    public void setProtocolType(ProtocolType protocolType) {
+        this.protocolType = protocolType;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -107,6 +208,9 @@ public class SipMessage {
                success == that.success &&
                messageType == that.messageType &&
                direction == that.direction &&
+               sourceActor == that.sourceActor &&
+               targetActor == that.targetActor &&
+               protocolType == that.protocolType &&
                Objects.equals(threadName, that.threadName) &&
                Objects.equals(responseCode, that.responseCode) &&
                Objects.equals(label, that.label);
@@ -114,7 +218,8 @@ public class SipMessage {
 
     @Override
     public int hashCode() {
-        return Objects.hash(messageType, direction, threadName, timestamp, elapsed, success, responseCode, label);
+        return Objects.hash(messageType, direction, threadName, timestamp, elapsed, success, 
+                           responseCode, label, sourceActor, targetActor, protocolType);
     }
 
     @Override
@@ -128,6 +233,9 @@ public class SipMessage {
                 ", success=" + success +
                 ", responseCode='" + responseCode + '\'' +
                 ", label='" + label + '\'' +
+                ", sourceActor=" + sourceActor +
+                ", targetActor=" + targetActor +
+                ", protocolType=" + protocolType +
                 '}';
     }
 

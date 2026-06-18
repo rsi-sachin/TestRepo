@@ -301,3 +301,42 @@ class SpecConflict(BaseModel):
                 "reviewed": False
             }
         }
+
+
+class MethodologySectionResult(BaseModel):
+    """Methodology section identified in a spec."""
+    section_number: str = Field(..., description="Section number")
+    title: str = Field(..., description="Section title")
+    page_number: Optional[int] = Field(None, description="Page number in source spec")
+    depth: int = Field(..., description="Heading depth")
+    evidence: List[str] = Field(default_factory=list, description="Evidence snippets")
+
+
+class TestModuleCandidate(BaseModel):
+    """Machine-assisted module candidate derived from methodology text."""
+    module_name: str = Field(..., description="Distinct test module name")
+    module_id: str = Field(..., description="Stable module identifier")
+    source_section: str = Field(default="", description="Source section number")
+    source_title: str = Field(default="", description="Source section title")
+    confidence: float = Field(default=0.0, description="Confidence score 0..1")
+    evidence: List[str] = Field(default_factory=list, description="Evidence snippets")
+    keywords: List[str] = Field(default_factory=list, description="Keywords used for extraction")
+
+
+class TestTitleCandidate(BaseModel):
+    """Machine-assisted test title candidate derived from methodology text."""
+    title: str = Field(..., description="Suggested test title")
+    module_id: str = Field(..., description="Owning module identifier")
+    source_section: str = Field(default="", description="Source section number")
+    confidence: float = Field(default=0.0, description="Confidence score 0..1")
+    evidence: List[str] = Field(default_factory=list, description="Evidence snippets")
+
+
+class MethodologyAnalysisResult(BaseModel):
+    """Result payload for methodology extraction and module naming."""
+    spec_type: SpecType = Field(..., description="Source specification")
+    spec_file: str = Field(..., description="Source file name")
+    methodology_sections: List[MethodologySectionResult] = Field(default_factory=list)
+    test_modules: List[TestModuleCandidate] = Field(default_factory=list)
+    test_titles: List[TestTitleCandidate] = Field(default_factory=list)
+    summary: Dict[str, int] = Field(default_factory=dict, description="Counts and summary metrics")

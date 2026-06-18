@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="VoLTE Traffic Generation with Failure Injection" enabled="true">
+      <stringProp name="TestPlan.comments">Traffic generation test plan with 3GPP conformance failure injection</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <!-- Traffic Volume Parameters -->
+          <elementProp name="threads" elementType="Argument">
+            <stringProp name="Argument.name">threads</stringProp>
+            <stringProp name="Argument.value">${__P(threads,10)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">Number of concurrent calls</stringProp>
+          </elementProp>
+          <elementProp name="loops" elementType="Argument">
+            <stringProp name="Argument.name">loops</stringProp>
+            <stringProp name="Argument.value">${__P(loops,100)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">Number of calls per thread</stringProp>
+          </elementProp>
+          <elementProp name="rampup" elementType="Argument">
+            <stringProp name="Argument.name">rampup</stringProp>
+            <stringProp name="Argument.value">${__P(rampup,10)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">Ramp-up time in seconds</stringProp>
+          </elementProp>
+          
+          <!-- Failure Injection Parameters -->
+          <elementProp name="failure_rate" elementType="Argument">
+            <stringProp name="Argument.name">failure_rate</stringProp>
+            <stringProp name="Argument.value">${__P(failure_rate,0)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">Failure rate percentage (0-100)</stringProp>
+          </elementProp>
+          <elementProp name="failure_node" elementType="Argument">
+            <stringProp name="Argument.name">failure_node</stringProp>
+            <stringProp name="Argument.value">${__P(failure_node,HSS)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">Network node where failures occur</stringProp>
+          </elementProp>
+          <elementProp name="failure_scenario" elementType="Argument">
+            <stringProp name="Argument.name">failure_scenario</stringProp>
+            <stringProp name="Argument.value">${__P(failure_scenario,NONE)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">3GPP conformance scenario ID</stringProp>
+          </elementProp>
+          <elementProp name="failure_response_code" elementType="Argument">
+            <stringProp name="Argument.name">failure_response_code</stringProp>
+            <stringProp name="Argument.value">${__P(failure_response_code,)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">SIP response code for failures (e.g., 403)</stringProp>
+          </elementProp>
+          
+          <!-- Call Timing Parameters -->
+          <elementProp name="call_hold_time" elementType="Argument">
+            <stringProp name="Argument.name">call_hold_time</stringProp>
+            <stringProp name="Argument.value">${__P(call_hold_time,5000)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">Call duration in milliseconds</stringProp>
+          </elementProp>
+          <elementProp name="inter_call_delay" elementType="Argument">
+            <stringProp name="Argument.name">inter_call_delay</stringProp>
+            <stringProp name="Argument.value">${__P(inter_call_delay,100)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.desc">Delay between calls in milliseconds</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+      <!-- Result Collector for JTL Output -->
+      <ResultCollector guiclass="StatVisualizer" testclass="ResultCollector" testname="Aggregate Report" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>false</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>false</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>false</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <url>false</url>
+            <threadCounts>true</threadCounts>
+            <idleTime>false</idleTime>
+            <connectTime>false</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+      
+      <!-- Main Thread Group for Call Generation -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="VoLTE Call Generator" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">${loops}</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${threads}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${rampup}</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration">${__P(duration,0)}</stringProp>
+        <stringProp name="ThreadGroup.delay">0</stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <!-- Pre-Call Delay -->
+        <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Inter-Call Delay" enabled="true">
+          <stringProp name="ConstantTimer.delay">${inter_call_delay}</stringProp>
+        </ConstantTimer>
+        <hashTree/>
+        
+        <!-- Generate Random Number for Failure Decision -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Generate Failure Decision" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">// Generate random number 0-99
+int randomValue = new Random().nextInt(100)
+vars.put(&quot;random_value&quot;, randomValue.toString())
+
+// Get failure rate threshold
+def failureRate = vars.get(&quot;failure_rate&quot;) as Double
+vars.put(&quot;failure_threshold&quot;, failureRate.toString())
+
+// Determine if this call should fail
+boolean shouldFail = (randomValue &lt; failureRate)
+vars.put(&quot;should_fail&quot;, shouldFail.toString())
+
+// Log decision
+log.debug(&quot;Random: ${randomValue}, Threshold: ${failureRate}, Should Fail: ${shouldFail}&quot;)
+
+// Determine response code based on failure scenario
+def failureScenario = vars.get(&quot;failure_scenario&quot;)
+def responseCode = &quot;200&quot;  // Default success
+def failureLabel = &quot;SUCCESS&quot;
+
+if (shouldFail) {
+    // Map conformance scenarios to response codes
+    switch(failureScenario) {
+        case &quot;CONF-SIP-001&quot;:  // Invalid SIP URI
+        case &quot;CONF-SIP-002&quot;:  // Missing Mandatory Header
+        case &quot;CONF-SIP-003&quot;:  // Invalid CSeq
+            responseCode = &quot;400&quot;
+            failureLabel = &quot;BAD_REQUEST&quot;
+            break
+        case &quot;CONF-SIP-004&quot;:  // Malformed SDP
+            responseCode = &quot;488&quot;
+            failureLabel = &quot;NOT_ACCEPTABLE&quot;
+            break
+        case &quot;CONF-AUTH-001&quot;:  // Invalid Auth Header
+        case &quot;CONF-AUTH-002&quot;:  // Expired Nonce
+            responseCode = &quot;401&quot;
+            failureLabel = &quot;UNAUTHORIZED&quot;
+            break
+        case &quot;CONF-AUTH-003&quot;:  // Wrong Credentials
+        case &quot;CONF-REG-003&quot;:  // User Not Provisioned
+            responseCode = &quot;403&quot;
+            failureLabel = &quot;FORBIDDEN&quot;
+            break
+        case &quot;CONF-REG-001&quot;:  // Registration Timeout
+        case &quot;CONF-CALL-001&quot;:  // INVITE Timeout
+            responseCode = &quot;408&quot;
+            failureLabel = &quot;TIMEOUT&quot;
+            break
+        case &quot;CONF-REG-002&quot;:  // Invalid Contact Header
+            responseCode = &quot;400&quot;
+            failureLabel = &quot;BAD_REQUEST&quot;
+            break
+        case &quot;CONF-CALL-002&quot;:  // QoS Precondition Failure
+            responseCode = &quot;580&quot;
+            failureLabel = &quot;PRECONDITION_FAILURE&quot;
+            break
+        case &quot;CONF-CALL-003&quot;:  // Call Busy
+            responseCode = &quot;486&quot;
+            failureLabel = &quot;BUSY_HERE&quot;
+            break
+        case &quot;CONF-ROUTE-001&quot;:  // User Not Found
+        case &quot;CONF-ROUTE-002&quot;:  // Route Not Found
+            responseCode = &quot;404&quot;
+            failureLabel = &quot;NOT_FOUND&quot;
+            break
+        case &quot;CONF-ROUTE-003&quot;:  // HSS Query Failure
+        case &quot;CONF-CALL-005&quot;:  // Media Negotiation Failure
+            responseCode = &quot;500&quot;
+            failureLabel = &quot;SERVER_ERROR&quot;
+            break
+        case &quot;CONF-CALL-004&quot;:  // No Answer
+            responseCode = &quot;480&quot;
+            failureLabel = &quot;TEMPORARILY_UNAVAILABLE&quot;
+            break
+        case &quot;CONF-EMERGENCY-001&quot;:  // Emergency Routing Failure
+            responseCode = &quot;500&quot;
+            failureLabel = &quot;SERVER_ERROR&quot;
+            break
+        default:
+            // Use custom response code if provided
+            def customCode = vars.get(&quot;failure_response_code&quot;)
+            if (customCode != null &amp;&amp; !customCode.isEmpty()) {
+                responseCode = customCode
+            } else {
+                responseCode = &quot;500&quot;
+            }
+            failureLabel = &quot;GENERIC_FAILURE&quot;
+    }
+}
+
+vars.put(&quot;response_code&quot;, responseCode)
+vars.put(&quot;failure_label&quot;, failureLabel)
+
+log.info(&quot;Call Decision - Should Fail: ${shouldFail}, Response: ${responseCode}, Scenario: ${failureScenario}&quot;)
+
+// Mark sampler as successful (this is just the decision logic)
+SampleResult.setSuccessful(true)
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        
+        <!-- If Controller for Success Path -->
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="Success Path (No Failure Injection)" enabled="true">
+          <stringProp name="IfController.condition">${__groovy(&quot;${should_fail}&quot; == &quot;false&quot;)}</stringProp>
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">true</boolProp>
+        </IfController>
+        <hashTree>
+          <!-- Simulate Successful VoLTE Call -->
+          <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="VoLTE Call - SUCCESS from ${failure_node}" enabled="true">
+            <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" enabled="true">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="Sleep_Time" elementType="Argument">
+                  <stringProp name="Argument.name">Sleep_Time</stringProp>
+                  <stringProp name="Argument.value">${call_hold_time}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+                <elementProp name="Sleep_Mask" elementType="Argument">
+                  <stringProp name="Argument.name">Sleep_Mask</stringProp>
+                  <stringProp name="Argument.value">0xFF</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+                <elementProp name="Label" elementType="Argument">
+                  <stringProp name="Argument.name">Label</stringProp>
+                  <stringProp name="Argument.value">VoLTE Call Setup from ${failure_node} to P-CSCF</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+                <elementProp name="ResponseCode" elementType="Argument">
+                  <stringProp name="Argument.name">ResponseCode</stringProp>
+                  <stringProp name="Argument.value">200</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+                <elementProp name="ResponseMessage" elementType="Argument">
+                  <stringProp name="Argument.name">ResponseMessage</stringProp>
+                  <stringProp name="Argument.value">OK</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+                <elementProp name="Status" elementType="Argument">
+                  <stringProp name="Argument.name">Status</stringProp>
+                  <stringProp name="Argument.value">OK</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <stringProp name="classname">org.apache.jmeter.protocol.java.test.SleepTest</stringProp>
+          </JavaSampler>
+          <hashTree/>
+        </hashTree>
+        
+        <!-- If Controller for Failure Path -->
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="Failure Path (Inject 3GPP Conformance Error)" enabled="true">
+          <stringProp name="IfController.condition">${__groovy(&quot;${should_fail}&quot; == &quot;true&quot;)}</stringProp>
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">true</boolProp>
+        </IfController>
+        <hashTree>
+          <!-- Simulate Failed VoLTE Call -->
+          <JavaSampler guiclass="JavaTestSamplerGui" testclass="JavaSampler" testname="VoLTE Call - ${failure_label} from ${failure_node} [${failure_scenario}]" enabled="true">
+            <elementProp name="arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" enabled="true">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="Sleep_Time" elementType="Argument">
+                  <stringProp name="Argument.name">Sleep_Time</stringProp>
+                  <stringProp name="Argument.value">${__Random(50,200)}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+                <elementProp name="Sleep_Mask" elementType="Argument">
+                  <stringProp name="Argument.name">Sleep_Mask</stringProp>
+                  <stringProp name="Argument.value">0xFF</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+                <elementProp name="Label" elementType="Argument">
+                  <stringProp name="Argument.name">Label</stringProp>
+                  <stringProp name="Argument.value">ERROR from ${failure_node} to P-CSCF - ${failure_scenario}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+                <elementProp name="ResponseCode" elementType="Argument">
+                  <stringProp name="Argument.name">ResponseCode</stringProp>
+                  <stringProp name="Argument.value">${response_code}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+                <elementProp name="ResponseMessage" elementType="Argument">
+                  <stringProp name="Argument.name">ResponseMessage</stringProp>
+                  <stringProp name="Argument.value">${failure_label}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+                <elementProp name="Status" elementType="Argument">
+                  <stringProp name="Argument.name">Status</stringProp>
+                  <stringProp name="Argument.value">FAIL</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <stringProp name="classname">org.apache.jmeter.protocol.java.test.SleepTest</stringProp>
+          </JavaSampler>
+          <hashTree>
+            <!-- Force Failure in JTL -->
+            <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Mark as Failed" enabled="true">
+              <collectionProp name="Asserion.test_strings">
+                <stringProp name="51">3</stringProp>
+              </collectionProp>
+              <stringProp name="Assertion.custom_message">3GPP Conformance Failure: ${failure_scenario} - Response ${response_code}</stringProp>
+              <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+              <boolProp name="Assertion.assume_success">false</boolProp>
+              <intProp name="Assertion.test_type">2</intProp>
+            </ResponseAssertion>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

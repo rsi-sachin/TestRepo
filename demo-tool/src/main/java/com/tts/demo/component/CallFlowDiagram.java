@@ -1,7 +1,9 @@
 package com.tts.demo.component;
 
+import com.tts.demo.model.ActorType;
 import com.tts.demo.model.CallFlow;
 import com.tts.demo.model.CallFlowUpdateListener;
+import com.tts.demo.model.ProtocolType;
 import com.tts.demo.model.SipMessage;
 import javafx.application.Platform;
 import javafx.scene.canvas.Canvas;
@@ -14,28 +16,36 @@ import javafx.scene.text.TextAlignment;
 import javafx.geometry.VPos;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.control.Tooltip;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Custom JavaFX Canvas control for rendering SIP call flow sequence diagrams.
- * Displays client-server message exchanges with timing and status information.
- * Supports real-time updates via CallFlowUpdateListener (Phase 2.2).
+ * Displays multi-actor message exchanges with protocol annotations (Phase 1, Phase 2).
+ * Supports real-time updates via CallFlowUpdateListener and 3GPP architecture mapping (Phase 3).
  */
 public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
     
+    private static final Logger logger = LoggerFactory.getLogger(CallFlowDiagram.class);
+    
     // Layout constants for UML sequence diagram
     private static final double MARGIN = 40;
-    private static final double ACTOR_WIDTH = 80;      // Width of actor boxes
-    private static final double ACTOR_HEIGHT = 40;     // Height of actor boxes
-    private static final double LIFELINE_SPACING = 200; // Horizontal space between lifelines
-    private static final double MESSAGE_HEIGHT = 50;    // Vertical space per message
+    private static final double ACTOR_WIDTH = 90;      // Increased for longer names (P-CSCF, etc.)
+    private static final double ACTOR_HEIGHT = 50;     // Increased for better visibility
+    private static final double LIFELINE_SPACING = 180; // Spacing between lifelines
+    private static final double MESSAGE_HEIGHT = 55;    // Increased for protocol labels
     private static final double TOP_MARGIN = 80;        // Space for actors at top
-    private static final double LEGEND_HEIGHT = 60;     // Reduced - no stats in legend now
+    private static final double LEGEND_HEIGHT = 80;     // Increased for protocol legend
     private static final double ARROW_HEAD_SIZE = 8;
     private static final double LIFELINE_DASH = 5;      // Dash pattern for lifelines
-    private static final double STATS_WIDTH = 150;      // Width for statistics panel
-    private static final double DIAGRAM_WIDTH = 550;    // Increased to accommodate stats (40+200+80+150+80)
+    private static final double STATS_WIDTH = 160;      // Width for statistics panel
+    private static final double MIN_DIAGRAM_WIDTH = 600; // Minimum width
     
     // Throttling for real-time updates (Phase 2.2)
     private static final long THROTTLE_MS = 200; // Max 1 refresh per 200ms
@@ -53,8 +63,15 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
     private static final Color COLOR_BORDER = Color.rgb(189, 195, 199);     // Border gray
     
     private final CallFlow callFlow;
-    private final List<SipMessage> messages;
     private Tooltip messageTooltip;
+    
+    // Phase 1: Dynamic actor support
+    private List<ActorType> actors;  // Ordered list of unique actors in the call flow
+    private double diagramWidth;     // Calculated width based on number of actors
+    
+    // RCA: Failure highlighting support
+    private int failureMessageIndex = -1;  // Index of failed message to highlight (-1 = none)
+    private String failureReason = null;    // Root cause description for tooltip
     
     /**
      * Create a CallFlowDiagram for visualizing the given call flow
@@ -63,13 +80,15 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
      */
     public CallFlowDiagram(CallFlow callFlow) {
         this.callFlow = callFlow;
-        this.messages = callFlow.getMessages();
         
-        // Calculate required canvas size based on UML layout
-        double requiredWidth = DIAGRAM_WIDTH;
-        double requiredHeight = MARGIN * 2 + TOP_MARGIN + (messages.size() * MESSAGE_HEIGHT) + LEGEND_HEIGHT;
+        // Phase 1: Extract unique actors from messages
+        this.actors = extractActors(callFlow.getMessages());
         
-        setWidth(requiredWidth);
+        // Calculate required canvas size based on UML layout and number of actors
+        this.diagramWidth = calculateDiagramWidth(actors.size());
+        double requiredHeight = MARGIN * 2 + TOP_MARGIN + (callFlow.getMessages().size() * MESSAGE_HEIGHT) + LEGEND_HEIGHT;
+        
+        setWidth(diagramWidth);
         setHeight(Math.max(600, requiredHeight));
         
         // Setup tooltip for hover interactions
@@ -80,6 +99,63 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
         
         // Render the diagram
         render();
+    }
+    
+    /**
+     * Extract unique actors from messages in order of first appearance (Phase 1).
+     * Falls back to Client/Server if no actor information available.
+     */
+    private List<ActorType> extractActors(List<SipMessage> messages) {
+        Set<ActorType> actorSet = new LinkedHashSet<>();
+        
+        for (SipMessage message : messages) {
+            if (message.getSourceActor() != null && message.getSourceActor() != ActorType.UNKNOWN) {
+                actorSet.add(message.getSourceActor());
+            }
+            if (message.getTargetActor() != null && message.getTargetActor() != ActorType.UNKNOWN) {
+                actorSet.add(message.getTargetActor());
+            }
+        }
+        
+        // If no actors found, use default Client/Server
+        if (actorSet.isEmpty()) {
+            actorSet.add(ActorType.CLIENT);
+            actorSet.add(ActorType.SERVER);
+        }
+        
+        return new ArrayList<>(actorSet);
+    }
+    
+    /**
+     * Calculate diagram width based on number of actors
+     */
+    private double calculateDiagramWidth(int actorCount) {
+        // Width = left margin + actors + spacing + stats panel + right margin
+        double actorsWidth = actorCount * ACTOR_WIDTH + (actorCount - 1) * (LIFELINE_SPACING - ACTOR_WIDTH);
+        double totalWidth = MARGIN + actorsWidth + STATS_WIDTH + MARGIN;
+        return Math.max(MIN_DIAGRAM_WIDTH, totalWidth);
+    }
+    
+    /**
+     * Set failure highlighting for RCA visualization
+     * 
+     * @param messageIndex Index of the failed message in the call flow
+     * @param reason Root cause description for tooltip
+     */
+    public void setFailureHighlight(int messageIndex, String reason) {
+        this.failureMessageIndex = messageIndex;
+        this.failureReason = reason;
+        refresh();
+        logger.info("Set failure highlight at message index {} with reason: {}", messageIndex, reason);
+    }
+    
+    /**
+     * Clear failure highlighting
+     */
+    public void clearFailureHighlight() {
+        this.failureMessageIndex = -1;
+        this.failureReason = null;
+        refresh();
     }
     
     /**
@@ -97,10 +173,14 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
      * Allows diagram to grow dynamically as messages are added in real-time.
      */
     private void updateCanvasSize() {
-        double requiredWidth = DIAGRAM_WIDTH;
+        // Recalculate actors in case new ones were added
+        List<SipMessage> messages = callFlow.getMessages();
+        this.actors = extractActors(messages);
+        this.diagramWidth = calculateDiagramWidth(actors.size());
+        
         double requiredHeight = MARGIN * 2 + TOP_MARGIN + (messages.size() * MESSAGE_HEIGHT) + LEGEND_HEIGHT;
         
-        setWidth(requiredWidth);
+        setWidth(diagramWidth);
         setHeight(Math.max(600, requiredHeight));
     }
     
@@ -116,17 +196,23 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
     public void onMessageAdded(SipMessage message, CallFlow callFlow) {
         long now = System.currentTimeMillis();
         
+        logger.debug("[DIAGRAM-REFRESH] onMessageAdded called for message #{} (type: {})", 
+            callFlow.getTotalMessages(), message.getMessageType().getDisplayName());
+        
         // Check if throttle period has passed
         if (now - lastRefreshTime >= THROTTLE_MS) {
             // Immediate refresh
             lastRefreshTime = now;
             refreshPending = false;
+            logger.debug("[DIAGRAM-REFRESH] Triggering immediate refresh (last refresh {}ms ago)", 
+                now - lastRefreshTime);
             Platform.runLater(this::refresh);
         } else {
             // Schedule a delayed refresh if not already pending
             if (!refreshPending) {
                 refreshPending = true;
                 long delay = THROTTLE_MS - (now - lastRefreshTime);
+                logger.debug("[DIAGRAM-REFRESH] Scheduling delayed refresh in {}ms", delay);
                 
                 // Schedule refresh after throttle period
                 new Thread(() -> {
@@ -139,6 +225,8 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
                         Thread.currentThread().interrupt();
                     }
                 }).start();
+            } else {
+                logger.debug("[DIAGRAM-REFRESH] Refresh already pending, skipping");
             }
         }
     }
@@ -148,127 +236,210 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
      * Changed to public for incremental rendering support (Phase 2.1).
      */
     public void render() {
-        GraphicsContext gc = getGraphicsContext2D();
-        
-        // Clear canvas
-        gc.setFill(COLOR_BACKGROUND);
-        gc.fillRect(0, 0, getWidth(), getHeight());
-        
-        // Draw UML components in order
-        drawActors(gc);
-        drawLifelines(gc);
-        drawMessages(gc);
-        drawStatistics(gc);  // Statistics beside Server lifeline
-        drawLegend(gc);      // Compact legend at bottom
+        try {
+            List<SipMessage> messages = callFlow.getMessages();
+            logger.debug("[DIAGRAM-REFRESH] render() called - drawing {} messages with {} actors", 
+                messages.size(), actors.size());
+            
+            GraphicsContext gc = getGraphicsContext2D();
+            
+            // Clear canvas
+            gc.setFill(COLOR_BACKGROUND);
+            gc.fillRect(0, 0, getWidth(), getHeight());
+            
+            // Draw UML components in order
+            drawActors(gc);
+            drawLifelines(gc);
+            drawMessages(gc, messages);
+            drawStatistics(gc, messages);  // Statistics beside Server lifeline
+            drawLegend(gc);      // Compact legend at bottom
+            
+            logger.debug("[DIAGRAM-REFRESH] render() completed successfully");
+        } catch (Exception e) {
+            logger.error("[DIAGRAM-REFRESH] Error during render()", e);
+        }
     }
     
     /**
-     * Draw the actor boxes at the top (Client and Server)
+     * Draw the actor boxes at the top (dynamic number of actors - Phase 1)
      */
     private void drawActors(GraphicsContext gc) {
-        double clientX = MARGIN;
-        double serverX = MARGIN + LIFELINE_SPACING;
         double actorY = MARGIN;
         
-        // Draw actor boxes
-        gc.setFill(Color.rgb(52, 73, 94)); // Dark blue-gray header
-        gc.fillRect(clientX, actorY, ACTOR_WIDTH, ACTOR_HEIGHT);
-        gc.fillRect(serverX, actorY, ACTOR_WIDTH, ACTOR_HEIGHT);
-        
-        // Draw actor borders
-        gc.setStroke(COLOR_BORDER);
-        gc.setLineWidth(2);
-        gc.strokeRect(clientX, actorY, ACTOR_WIDTH, ACTOR_HEIGHT);
-        gc.strokeRect(serverX, actorY, ACTOR_WIDTH, ACTOR_HEIGHT);
-        
-        // Draw actor labels
-        gc.setFill(Color.WHITE);
-        gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        gc.setTextAlign(TextAlignment.CENTER);
-        gc.setTextBaseline(VPos.CENTER);
-        
-        gc.fillText("Client", clientX + ACTOR_WIDTH / 2, actorY + ACTOR_HEIGHT / 2);
-        gc.fillText("Server", serverX + ACTOR_WIDTH / 2, actorY + ACTOR_HEIGHT / 2);
+        for (int i = 0; i < actors.size(); i++) {
+            ActorType actor = actors.get(i);
+            double actorX = getActorX(i);
+            
+            // Draw actor box with role-based color
+            gc.setFill(getActorRoleColor(actor));
+            gc.fillRect(actorX, actorY, ACTOR_WIDTH, ACTOR_HEIGHT);
+            
+            // Draw actor border
+            gc.setStroke(COLOR_BORDER);
+            gc.setLineWidth(2);
+            gc.strokeRect(actorX, actorY, ACTOR_WIDTH, ACTOR_HEIGHT);
+            
+            // Draw actor label
+            gc.setFill(Color.WHITE);
+            gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+            gc.setTextAlign(TextAlignment.CENTER);
+            gc.setTextBaseline(VPos.CENTER);
+            
+            String displayName = actor.getDisplayName();
+            gc.fillText(displayName, actorX + ACTOR_WIDTH / 2, actorY + ACTOR_HEIGHT / 2);
+        }
     }
     
     /**
-     * Draw the vertical lifelines extending down from actors
+     * Get X coordinate for actor at given index
+     */
+    private double getActorX(int actorIndex) {
+        return MARGIN + (actorIndex * LIFELINE_SPACING);
+    }
+    
+    /**
+     * Get X coordinate for actor's lifeline center
+     */
+    private double getLifelineX(int actorIndex) {
+        return getActorX(actorIndex) + ACTOR_WIDTH / 2;
+    }
+    
+    /**
+     * Get color based on actor role (Phase 1, Phase 3)
+     */
+    private Color getActorRoleColor(ActorType actor) {
+        switch (actor.getRole()) {
+            case ENDPOINT:
+                return Color.rgb(52, 152, 219);  // Blue - UE
+            case IMS_CORE:
+                return Color.rgb(142, 68, 173);  // Purple - CSCF nodes
+            case APPLICATION_SERVER:
+                return Color.rgb(230, 126, 34);  // Orange - TAS/AS
+            case DATABASE:
+                return Color.rgb(231, 76, 60);   // Red - HSS
+            case POLICY:
+                return Color.rgb(26, 188, 156);  // Teal - PCRF
+            case CHARGING:
+                return Color.rgb(241, 196, 15);  // Yellow - OCS
+            case EPC_CORE:
+                return Color.rgb(155, 89, 182);  // Light purple - MME
+            case EPC_GATEWAY:
+                return Color.rgb(52, 73, 94);    // Dark blue - gateways
+            case ACCESS:
+                return Color.rgb(149, 165, 166); // Gray - eNodeB
+            default:
+                return Color.rgb(52, 73, 94);    // Default dark blue-gray
+        }
+    }
+    
+    /**
+     * Draw the vertical lifelines extending down from actors (Phase 1)
      */
     private void drawLifelines(GraphicsContext gc) {
-        double clientX = MARGIN + ACTOR_WIDTH / 2;
-        double serverX = MARGIN + LIFELINE_SPACING + ACTOR_WIDTH / 2;
         double startY = MARGIN + ACTOR_HEIGHT;
-        double endY = MARGIN + TOP_MARGIN + (messages.size() * MESSAGE_HEIGHT);
+        double endY = MARGIN + TOP_MARGIN + (callFlow.getMessages().size() * MESSAGE_HEIGHT);
         
-        // Draw dashed lifelines
+        // Draw dashed lifelines for each actor
         gc.setStroke(COLOR_BORDER);
         gc.setLineWidth(1);
         gc.setLineDashes(LIFELINE_DASH, LIFELINE_DASH);
         
-        gc.strokeLine(clientX, startY, clientX, endY);
-        gc.strokeLine(serverX, startY, serverX, endY);
+        for (int i = 0; i < actors.size(); i++) {
+            double lifelineX = getLifelineX(i);
+            gc.strokeLine(lifelineX, startY, lifelineX, endY);
+        }
         
         // Reset line dashes for other drawing
         gc.setLineDashes(0);
     }
     
     /**
-     * Draw all SIP messages as horizontal arrows between lifelines
+     * Draw all SIP messages as horizontal arrows between lifelines (Phase 1, Phase 2)
      */
-    private void drawMessages(GraphicsContext gc) {
-        double clientX = MARGIN + ACTOR_WIDTH / 2;
-        double serverX = MARGIN + LIFELINE_SPACING + ACTOR_WIDTH / 2;
+    private void drawMessages(GraphicsContext gc, List<SipMessage> messages) {
         double startY = MARGIN + TOP_MARGIN;
         
         for (int i = 0; i < messages.size(); i++) {
             SipMessage message = messages.get(i);
             double y = startY + (i * MESSAGE_HEIGHT);
             
-            drawMessage(gc, message, clientX, serverX, y);
+            // RCA: Highlight failed message if this is the failure point
+            boolean isFailureMessage = (i == failureMessageIndex);
+            
+            if (isFailureMessage) {
+                // Draw red highlight background
+                drawFailureHighlight(gc, y, message);
+            }
+            
+            drawMessage(gc, message, y, isFailureMessage);
         }
     }
     
     /**
-     * Draw a single message arrow in UML style
+     * Draw a single message arrow in UML style with protocol annotation (Phase 2)
+     * Enhanced with RCA failure highlighting
      */
-    private void drawMessage(GraphicsContext gc, SipMessage message, double clientX, double serverX, double y) {
-        // Determine arrow direction and color
-        boolean isClientToServer = message.getDirection() == SipMessage.Direction.CLIENT_TO_SERVER;
-        double startX = isClientToServer ? clientX : serverX;
-        double endX = isClientToServer ? serverX : clientX;
+    private void drawMessage(GraphicsContext gc, SipMessage message, double y, boolean isFailureMessage) {
+        // Find actor indices
+        int sourceIndex = actors.indexOf(message.getSourceActor());
+        int targetIndex = actors.indexOf(message.getTargetActor());
         
-        Color arrowColor = message.isSuccess() ? COLOR_SUCCESS : COLOR_FAILURE;
+        // Fallback to client-server if actors not found
+        if (sourceIndex == -1) sourceIndex = 0;
+        if (targetIndex == -1) targetIndex = actors.size() > 1 ? 1 : 0;
         
-        // Draw arrow line
+        double startX = getLifelineX(sourceIndex);
+        double endX = getLifelineX(targetIndex);
+        boolean isLeftToRight = startX < endX;
+        
+        // Get protocol color (override with red for failure highlight)
+        ProtocolType protocol = message.getProtocolType();
+        Color arrowColor;
+        if (isFailureMessage) {
+            arrowColor = Color.rgb(200, 0, 0); // Dark red for failed message
+        } else {
+            arrowColor = protocol != null ? protocol.getColor() : 
+                              (message.isSuccess() ? COLOR_SUCCESS : COLOR_FAILURE);
+        }
+        
+        // Draw arrow line (thicker for failure)
         gc.setStroke(arrowColor);
-        gc.setLineWidth(2);
+        gc.setLineWidth(isFailureMessage ? 4.0 : 2.5);
         gc.strokeLine(startX, y, endX, y);
         
         // Draw arrowhead
-        drawArrowHead(gc, endX, y, isClientToServer, arrowColor);
+        drawArrowHead(gc, endX, y, isLeftToRight, arrowColor);
         
         // Draw message label above arrow
         String label = message.getMessageType().getDisplayName();
         gc.setFill(COLOR_TEXT);
-        gc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 11));
-        gc.setTextAlign(isClientToServer ? TextAlignment.LEFT : TextAlignment.RIGHT);
+        gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 11));
+        gc.setTextAlign(isLeftToRight ? TextAlignment.LEFT : TextAlignment.RIGHT);
         gc.setTextBaseline(VPos.BOTTOM);
         
-        double labelX = isClientToServer ? startX + 5 : startX - 5;
-        gc.fillText(label, labelX, y - 5);
+        double labelX = isLeftToRight ? startX + 8 : startX - 8;
+        gc.fillText(label, labelX, y - 8);
         
-        // Draw elapsed time below arrow
-        gc.setFill(COLOR_INFO);
-        gc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 9));
-        gc.setTextBaseline(VPos.TOP);
-        gc.fillText(message.getElapsed() + "ms", labelX, y + 3);
+        // Phase 2: Draw protocol annotation below arrow
+        if (protocol != null && protocol != ProtocolType.SIP) {
+            gc.setFill(protocol.getColor());
+            gc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 9));
+            gc.setTextBaseline(VPos.TOP);
+            gc.fillText("[" + protocol.getDisplayName() + "]", labelX, y + 2);
+        } else {
+            // Draw elapsed time if no special protocol
+            gc.setFill(COLOR_INFO);
+            gc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 9));
+            gc.setTextBaseline(VPos.TOP);
+            gc.fillText(message.getElapsed() + "ms", labelX, y + 2);
+        }
         
         // Draw status indicator at end of arrow
         String statusIcon = message.isSuccess() ? "✓" : "✗";
-        gc.setFill(arrowColor);
+        gc.setFill(message.isSuccess() ? COLOR_SUCCESS : COLOR_FAILURE);
         gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
         gc.setTextAlign(TextAlignment.CENTER);
-        double statusX = isClientToServer ? endX + 12 : endX - 12;
+        double statusX = isLeftToRight ? endX + 12 : endX - 12;
         gc.fillText(statusIcon, statusX, y + 5);
     }
     
@@ -293,13 +464,14 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
     }
     
     /**
-     * Draw statistics panel vertically beside the Server lifeline
+     * Draw statistics panel vertically to the right of all actors (Phase 1)
      */
-    private void drawStatistics(GraphicsContext gc) {
-        double statsX = MARGIN + LIFELINE_SPACING + ACTOR_WIDTH + 20; // Right of Server actor
+    private void drawStatistics(GraphicsContext gc, List<SipMessage> messages) {
+        // Position after last actor
+        double statsX = getActorX(actors.size() - 1) + ACTOR_WIDTH + 30;
         double statsY = MARGIN;
-        double statsBoxWidth = STATS_WIDTH - 30;
-        double statsBoxHeight = 120;
+        double statsBoxWidth = STATS_WIDTH - 40;
+        double statsBoxHeight = 130;
         
         // Draw statistics background
         gc.setFill(Color.rgb(250, 250, 250));
@@ -320,15 +492,20 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
         double lineY = statsY + 28;
         double lineHeight = 18;
         
-        // Messages count
+        // Actors count (Phase 1)
         gc.setFill(COLOR_TEXT);
+        gc.fillText(String.format("Actors: %d", actors.size()), 
+            statsX + 10, lineY);
+        lineY += lineHeight;
+        
+        // Messages count
         gc.fillText(String.format("Messages: %d", callFlow.getTotalMessages()), 
             statsX + 10, lineY);
         lineY += lineHeight;
         
         // Successful count with color
         gc.setFill(COLOR_SUCCESS);
-        gc.fillText(String.format("Successful: %d (%.1f%%)", 
+        gc.fillText(String.format("Success: %d (%.0f%%)", 
             callFlow.getSuccessfulMessages(), callFlow.getSuccessRate()), 
             statsX + 10, lineY);
         lineY += lineHeight;
@@ -350,7 +527,30 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
     }
     
     /**
-     * Draw the legend explaining colors and symbols (compact version)
+     * Draw red background highlight for failed message (RCA support)
+     */
+    private void drawFailureHighlight(GraphicsContext gc, double y, SipMessage message) {
+        // Draw red background rectangle across the full width
+        gc.setFill(Color.rgb(255, 200, 200, 0.3)); // Light red with transparency
+        gc.fillRect(MARGIN, y - MESSAGE_HEIGHT / 2 + 10, diagramWidth - (2 * MARGIN), MESSAGE_HEIGHT - 5);
+        
+        // Draw red border
+        gc.setStroke(Color.rgb(200, 0, 0));
+        gc.setLineWidth(2);
+        gc.setLineDashes(5, 5);
+        gc.strokeRect(MARGIN, y - MESSAGE_HEIGHT / 2 + 10, diagramWidth - (2 * MARGIN), MESSAGE_HEIGHT - 5);
+        gc.setLineDashes(0); // Reset
+        
+        // Draw failure icon
+        gc.setFill(Color.rgb(200, 0, 0));
+        gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 20));
+        gc.setTextAlign(TextAlignment.LEFT);
+        gc.setTextBaseline(VPos.CENTER);
+        gc.fillText("⚠", MARGIN + 5, y);
+    }
+    
+    /**
+     * Draw the legend explaining colors, symbols, and protocols (Phase 2)
      */
     private void drawLegend(GraphicsContext gc) {
         double legendY = getHeight() - LEGEND_HEIGHT - MARGIN / 2;
@@ -371,25 +571,29 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
         gc.setTextBaseline(VPos.TOP);
         gc.fillText("Legend:", legendX + 10, legendY + 8);
         
-        // Draw legend items in compact layout
+        // Row 1: Status indicators
         double itemY = legendY + 26;
-        double itemSpacing = 140;
+        double itemSpacing = 120;
         gc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 10));
         
-        // Success indicator
         drawLegendItem(gc, legendX + 10, itemY, COLOR_SUCCESS, "✓ Success");
-        
-        // Failure indicator
         drawLegendItem(gc, legendX + 10 + itemSpacing, itemY, COLOR_FAILURE, "✗ Failed");
         
-        // Direction indicators
+        // Row 2: Key protocols (Phase 2)
+        double protocolRow2Y = itemY + 24;
         gc.setFill(COLOR_TEXT);
-        gc.fillText("→ Client to Server", legendX + 10 + itemSpacing * 2, itemY + 2);
-        gc.fillText("← Server to Client", legendX + 10 + itemSpacing * 2, itemY + 16);
+        gc.fillText("Protocols:", legendX + 10, protocolRow2Y - 6);
+        
+        double protocolX = legendX + 80;
+        drawProtocolLegendItem(gc, protocolX, protocolRow2Y, ProtocolType.SIP);
+        protocolX += 100;
+        drawProtocolLegendItem(gc, protocolX, protocolRow2Y, ProtocolType.DIAMETER_CX);
+        protocolX += 120;
+        drawProtocolLegendItem(gc, protocolX, protocolRow2Y, ProtocolType.DIAMETER_S6A);
     }
     
     /**
-     * Draw a single legend item
+     * Draw a single legend item with color indicator
      */
     private void drawLegendItem(GraphicsContext gc, double x, double y, Color color, String text) {
         // Draw color indicator
@@ -398,9 +602,27 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
         
         // Draw text
         gc.setFill(COLOR_TEXT);
+        gc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 10));
         gc.setTextAlign(TextAlignment.LEFT);
-        gc.setTextBaseline(VPos.CENTER);
-        gc.fillText(text, x + 20, y + 6);
+        gc.fillText(text, x + 18, y + 2);
+    }
+    
+    /**
+     * Draw a protocol legend item (Phase 2)
+     */
+    private void drawProtocolLegendItem(GraphicsContext gc, double x, double y, ProtocolType protocol) {
+        // Draw protocol color bar
+        gc.setFill(protocol.getColor());
+        gc.fillRect(x, y, 20, 8);
+        gc.setStroke(COLOR_BORDER);
+        gc.setLineWidth(0.5);
+        gc.strokeRect(x, y, 20, 8);
+        
+        // Draw protocol name
+        gc.setFill(COLOR_TEXT);
+        gc.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 9));
+        gc.setTextAlign(TextAlignment.LEFT);
+        gc.fillText(protocol.getDisplayName(), x + 24, y + 2);
     }
     
     /**
@@ -434,7 +656,7 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
         tooltip.append("Timing: ").append(message.getElapsed()).append("ms");
         tooltip.append(getTimingContext(message.getElapsed())).append("\n");
         tooltip.append("Position: Message ").append(messageIndex + 1)
-            .append(" of ").append(messages.size()).append("\n");
+            .append(" of ").append(callFlow.getMessages().size()).append("\n");
         tooltip.append("Phase: ").append(getCallPhase(message.getMessageType())).append("\n\n");
         
         // Technical Details section
@@ -608,6 +830,7 @@ public class CallFlowDiagram extends Canvas implements CallFlowUpdateListener {
         double startY = MARGIN + TOP_MARGIN;
         int messageIndex = (int) ((mouseY - startY) / MESSAGE_HEIGHT);
         
+        List<SipMessage> messages = callFlow.getMessages();
         if (messageIndex >= 0 && messageIndex < messages.size()) {
             SipMessage message = messages.get(messageIndex);
             

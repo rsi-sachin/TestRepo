@@ -44,6 +44,38 @@
       }
     },
     {
+      "id": "sip-rca",
+      "title": "VoLTE Call Failure Diagnostics (RCA Demo)",
+      "description": "Automated Root Cause Analysis demo that intentionally induces VoLTE call failures at various stages. Demonstrates intelligent failure detection, diagnosis, and actionable recommendations. Uses IMS Error Scenario test to trigger authentic network failures.",
+      "expectedOutcome": "Test fails due to simulated network issues (timeouts, rejections, protocol errors). RCA engine automatically identifies failure location, affected network element (UE/P-CSCF/S-CSCF/HSS), failure type, and provides diagnostic evidence with remediation steps.",
+      "protocol": "SIP_IMS",
+      "complexity": "ADVANCED",
+      "jmxPath": "C:\\TTS\\docs\\sip\\reference_tests\\ReferenceTest3-IMS_Error_Scenario-client_server.jmx",
+      "defaultParams": {
+        "threads": "1",
+        "loops": "1"
+      }
+    },
+    {
+      "id": "sip-traffic",
+      "title": "VoLTE Traffic Generation with Failure Injection",
+      "description": "High-volume traffic generation engine for VoLTE load testing with controlled 3GPP conformance failure injection. Supports up to 500 concurrent calls with configurable failure rates (0-100%) at specific network nodes (HSS, P-CSCF, S-CSCF, etc.). Injects authentic protocol failures based on 3GPP conformance scenarios (authentication errors, timeouts, malformed messages, routing failures).",
+      "expectedOutcome": "Generates specified call volume with accurate failure rate distribution. Real-time statistics show throughput, success/failure rates, response times, and failure breakdown by type/node/scenario. Demonstrates traffic generation, failure injection accuracy (±2% of configured rate), and system behavior under controlled failure conditions.",
+      "protocol": "SIP_IMS",
+      "complexity": "ADVANCED",
+      "jmxPath": "C:\\TestRepo\\demo-tool\\src\\main\\resources\\jmx\\volte_traffic_generation.jmx",
+      "defaultParams": {
+        "threads": "10",
+        "loops": "100",
+        "rampup": "10",
+        "failure_rate": "0",
+        "failure_node": "HSS",
+        "failure_scenario": "NONE",
+        "call_hold_time": "5000",
+        "inter_call_delay": "100"
+      }
+    },
+    {
       "id": "diameter-001",
       "title": "Test Subscriber Authentication (Diameter Cx)",
       "description": "Simulates HSS interaction for subscriber authentication using Diameter Cx interface. Sends User-Authorization-Request (UAR) and Multimedia-Auth-Request (MAR) to validate subscriber credentials and retrieve authentication vectors.",

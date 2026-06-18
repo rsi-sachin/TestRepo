@@ -207,6 +207,22 @@
                             </VBox>
                         </Tab>
                         
+                        <!-- Tab 3: Architecture (Phase 3) -->
+                        <Tab fx:id="architectureTab" text="Architecture" closable="false">
+                            <ScrollPane fitToWidth="true" fitToHeight="true">
+                                <VBox fx:id="architectureContainer" spacing="10" styleClass="tab-content">
+                                    <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+                                    <Label text="3GPP VoLTE Network Architecture will appear here" 
+                                          style="-fx-text-fill: #95a5a6; -fx-font-size: 14px;"/>
+                                </VBox>
+                            </ScrollPane>
+                        </Tab>
+                        
+                        <!-- Tab 4: Traffic Generator (Phase 2) - Content loaded programmatically -->
+                        <Tab fx:id="trafficGeneratorTab" text="Traffic Generator" closable="false">
+                            <!-- Content will be loaded by MainController.initializeTrafficGeneratorController() -->
+                        </Tab>
+                        
                     </TabPane>
                 </VBox>
                 

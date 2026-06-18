@@ -1,21 +1,26 @@
 package com.tts.demo.controller;
 
 import com.tts.demo.component.CallFlowDiagram;
+import com.tts.demo.component.NetworkArchitecturePanel;
+import com.tts.demo.model.ActorType;
 import com.tts.demo.model.CallFlow;
 import com.tts.demo.model.Demo;
 import com.tts.demo.model.DemoConfig;
+import com.tts.demo.model.RcaResult;
 import com.tts.demo.model.RunResult;
 import com.tts.demo.model.SipMessage;
 import com.tts.demo.service.ConfigManager;
 import com.tts.demo.service.DemoCatalog;
 import com.tts.demo.service.DemoRunner;
 import com.tts.demo.service.JtlParser;
+import com.tts.demo.service.RcaAnalyzer;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
@@ -67,6 +72,8 @@ public class MainController {
     @FXML private TabPane demoTabPane;
     @FXML private Tab configTab;
     @FXML private Tab executionTab;
+    @FXML private Tab architectureTab;
+    @FXML private Tab trafficGeneratorTab;
     @FXML private Button executionTabStopButton;
     
     // Call Flow Visualization components (Phase 4+5)
@@ -77,6 +84,9 @@ public class MainController {
     @FXML private StackPane diagramContainer;
     @FXML private TitledPane terminalPane;
     
+    // Architecture Tab components (Phase 3)
+    @FXML private VBox architectureContainer;
+    
     @FXML private Label ttsStatusLabel;
     @FXML private Label historyCountLabel;
     
@@ -84,15 +94,23 @@ public class MainController {
     private ConfigManager configManager;
     private DemoRunner demoRunner;
     private JtlParser jtlParser;
+    private RcaAnalyzer rcaAnalyzer;
     
     private Demo selectedDemo;
     private DemoConfig currentConfig;
     private Map<String, TextField> parameterFields;
     private CallFlowDiagram currentDiagram;
+    private NetworkArchitecturePanel architecturePanel;  // Phase 3
+    private TrafficGeneratorController trafficGeneratorController;  // Phase 2
     
     // Real-time call flow visualization fields (Phase 1.3)
     private final List<SipMessage> liveMessages = Collections.synchronizedList(new ArrayList<>());
     private volatile CallFlow liveCallFlow = null;
+    
+    // Real-time architecture panel updates (Phase 3.1)
+    private final Set<ActorType> liveActiveActors = Collections.synchronizedSet(new LinkedHashSet<>());
+    private volatile long lastArchitectureUpdateTime = 0;
+    private volatile boolean architectureUpdatePending = false;
 
     @FXML
     public void initialize() {
@@ -103,6 +121,7 @@ public class MainController {
         configManager = new ConfigManager();
         demoRunner = new DemoRunner(configManager);
         jtlParser = new JtlParser();
+        rcaAnalyzer = new RcaAnalyzer();
         
         parameterFields = new HashMap<>();
         
@@ -124,7 +143,54 @@ public class MainController {
             logger.debug("Initialized tab selection to Configuration tab");
         }
         
+        // Initialize architecture panel (Phase 3)
+        initializeArchitecturePanel();
+        
+        // Initialize traffic generator controller (Phase 2)
+        initializeTrafficGeneratorController();
+        
         logger.info("MainController initialized with {} demos", catalog.getDemoCount());
+    }
+    
+    /**
+     * Initialize the 3GPP architecture reference panel (Phase 3)
+     */
+    private void initializeArchitecturePanel() {
+        if (architectureContainer != null) {
+            architecturePanel = new NetworkArchitecturePanel();
+            architectureContainer.getChildren().clear();
+            architectureContainer.getChildren().add(architecturePanel);
+            logger.debug("Architecture panel initialized");
+        }
+    }
+    
+    /**
+     * Initialize the Traffic Generator controller (Phase 2)
+     */
+    private void initializeTrafficGeneratorController() {
+        if (trafficGeneratorTab != null) {
+            try {
+                // Load the FXML for traffic generator
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/traffic-generator.fxml"));
+                javafx.scene.Parent content = loader.load();
+                
+                // Get the controller
+                trafficGeneratorController = loader.getController();
+                
+                // Set the content
+                trafficGeneratorTab.setContent(content);
+                
+                // Initialize services
+                if (trafficGeneratorController != null) {
+                    trafficGeneratorController.setServices(demoRunner, configManager);
+                    logger.debug("Traffic generator controller initialized");
+                } else {
+                    logger.warn("Traffic generator controller is null after loading FXML");
+                }
+            } catch (Exception e) {
+                logger.error("Failed to initialize traffic generator controller", e);
+            }
+        }
     }
     
     /**
@@ -315,6 +381,11 @@ public class MainController {
         switchToConfigTab();
         setConfigTabDisabled(false);
         
+        // Notify traffic generator controller (Phase 2)
+        if (trafficGeneratorController != null) {
+            trafficGeneratorController.setSelectedDemo(demo);
+        }
+        
         logger.info("Selected demo: {}", demo.getTitle());
     }
 
@@ -367,6 +438,17 @@ public class MainController {
         liveCallFlow = new CallFlow();
         logger.debug("Initialized live call flow for real-time visualization");
         
+        // Clear real-time actor tracking (Phase 3.1)
+        synchronized (liveActiveActors) {
+            liveActiveActors.clear();
+        }
+        lastArchitectureUpdateTime = 0;
+        architectureUpdatePending = false;
+        logger.info("[REALTIME] Cleared architecture panel actor tracking");
+        
+        // Reset split pane structure (remove any previous RCA panels)
+        resetVisualizationPane();
+        
         // Create live diagram for SIP/IMS protocols (Phase 2.3)
         if (selectedDemo.getProtocol() == Demo.Protocol.SIP_IMS) {
             currentDiagram = new CallFlowDiagram(liveCallFlow);
@@ -380,6 +462,9 @@ public class MainController {
             if (exportDiagramButton != null) {
                 exportDiagramButton.setDisable(false);
             }
+            
+            // Initialize architecture panel with empty actors (Phase 3)
+            updateArchitecturePanelForDemo();
             
             callFlowStatusLabel.setText("Call Flow: Initializing...");
             logger.info("Created live call flow diagram, registered as listener");
@@ -474,10 +559,97 @@ public class MainController {
                     
                     // Re-enable Configuration tab
                     setConfigTabDisabled(false);
+                    
+                    // RCA: Check for failures in call flow even when test "succeeds" (Phase RCA)
+                    // Many JMeter tests return exit code 0 even with error responses or error scenarios
+                    if (selectedDemo.getProtocol() == Demo.Protocol.SIP_IMS && liveCallFlow != null && liveCallFlow.getTotalMessages() > 0) {
+                        logger.info("Checking for failures in call flow (test status: SUCCESS, messages: {})", liveCallFlow.getTotalMessages());
+                        
+                        // Check if there are error responses OR error-related labels in the call flow
+                        boolean hasErrors = liveCallFlow.getMessages().stream()
+                            .anyMatch(msg -> {
+                                String code = msg.getResponseCode();
+                                String label = msg.getLabel();
+                                
+                                // Check for error response codes
+                                boolean hasErrorCode = code != null && (code.startsWith("4") || code.startsWith("5") || code.startsWith("6"));
+                                
+                                // Check for error-related labels (for Error Scenario tests)
+                                boolean hasErrorLabel = label != null && (
+                                    label.toUpperCase().contains("ERROR") ||
+                                    label.contains("error scenario") ||
+                                    label.contains("REJECT") ||
+                                    label.contains("FAIL")
+                                );
+                                
+                                return hasErrorCode || hasErrorLabel;
+                            });
+                        
+                        // Also check if this is explicitly an RCA demo or error scenario demo
+                        boolean isRcaDemo = selectedDemo.getId().contains("rca") || 
+                                          selectedDemo.getTitle().toLowerCase().contains("failure") ||
+                                          selectedDemo.getTitle().toLowerCase().contains("error");
+                        
+                        if (hasErrors || isRcaDemo) {
+                            logger.info("Found error indicators in call flow (errors={}, rcaDemo={}), triggering RCA analysis", hasErrors, isRcaDemo);
+                            try {
+                                RcaResult rcaResult = rcaAnalyzer.analyze(result, liveCallFlow);
+                                logger.info("RCA result: hasFailure={}, summary={}", rcaResult.hasFailure(), rcaResult.getSummary());
+                                
+                                // Display RCA results
+                                if (rcaResult.hasFailure()) {
+                                    displayRcaResults(rcaResult);
+                                    
+                                    // Highlight failed message in diagram
+                                    if (currentDiagram != null && rcaResult.getFailureMessageIndex() >= 0) {
+                                        currentDiagram.setFailureHighlight(
+                                            rcaResult.getFailureMessageIndex(),
+                                            rcaResult.getRootCause()
+                                        );
+                                        logger.info("Highlighted failure at message index {}", rcaResult.getFailureMessageIndex());
+                                    }
+                                }
+                            } catch (Exception e) {
+                                logger.error("RCA analysis failed", e);
+                            }
+                        }
+                    }
                 } else {
                     statusLabel.setText("Failed");
                     statusLabel.getStyleClass().clear();
                     statusLabel.getStyleClass().add("status-failed");
+                    
+                    // RCA: Analyze failure for SIP demos
+                    logger.info("Test failed. Protocol: {}, CallFlow: {}, Messages: {}", 
+                        selectedDemo.getProtocol(), 
+                        liveCallFlow != null ? "present" : "null",
+                        liveCallFlow != null ? liveCallFlow.getTotalMessages() : 0);
+                    
+                    if (selectedDemo.getProtocol() == Demo.Protocol.SIP_IMS && liveCallFlow != null && liveCallFlow.getTotalMessages() > 0) {
+                        logger.info("Triggering RCA analysis for failed test");
+                        try {
+                            RcaResult rcaResult = rcaAnalyzer.analyze(result, liveCallFlow);
+                            logger.info("RCA result: hasFailure={}, summary={}", rcaResult.hasFailure(), rcaResult.getSummary());
+                            
+                            // Display RCA results
+                            displayRcaResults(rcaResult);
+                            
+                            // Highlight failed message in diagram
+                            if (currentDiagram != null && rcaResult.getFailureMessageIndex() >= 0) {
+                                currentDiagram.setFailureHighlight(
+                                    rcaResult.getFailureMessageIndex(),
+                                    rcaResult.getRootCause()
+                                );
+                                logger.info("Highlighted failure at message index {}", rcaResult.getFailureMessageIndex());
+                            }
+                            
+                            logger.info("RCA analysis complete: {}", rcaResult.getSummary());
+                        } catch (Exception e) {
+                            logger.error("RCA analysis failed", e);
+                        }
+                    } else {
+                        logger.warn("RCA not triggered - conditions not met");
+                    }
                     
                     // Show error message in diagram area for SIP demos
                     if (selectedDemo.getProtocol() == Demo.Protocol.SIP_IMS) {
@@ -547,6 +719,38 @@ public class MainController {
                 message.getMessageType().getDisplayName(),
                 liveMessages.size());
         
+        // Real-time actor extraction for architecture panel (Phase 3.1)
+        if (selectedDemo != null && selectedDemo.getProtocol() == Demo.Protocol.SIP_IMS) {
+            boolean actorAdded = false;
+            List<ActorType> newActors = new ArrayList<>();
+            
+            if (message.getSourceActor() != null && message.getSourceActor() != ActorType.UNKNOWN) {
+                synchronized (liveActiveActors) {
+                    if (liveActiveActors.add(message.getSourceActor())) {
+                        actorAdded = true;
+                        newActors.add(message.getSourceActor());
+                    }
+                }
+            }
+            
+            if (message.getTargetActor() != null && message.getTargetActor() != ActorType.UNKNOWN) {
+                synchronized (liveActiveActors) {
+                    if (liveActiveActors.add(message.getTargetActor())) {
+                        actorAdded = true;
+                        newActors.add(message.getTargetActor());
+                    }
+                }
+            }
+            
+            // Only trigger update if new actor detected
+            if (actorAdded) {
+                logger.info("[REALTIME] New actors detected: {} (total: {})", 
+                    newActors.stream().map(ActorType::getDisplayName).collect(Collectors.joining(", ")),
+                    liveActiveActors.size());
+                scheduleArchitectureUpdate();
+            }
+        }
+        
         // Update call flow status label (Phase 2.3)
         Platform.runLater(() -> {
             if (callFlowStatusLabel != null) {
@@ -562,7 +766,92 @@ public class MainController {
         currentDiagram = new CallFlowDiagram(callFlow);
         diagramContainer.getChildren().clear();
         diagramContainer.getChildren().add(currentDiagram);
+        
+        // Update architecture panel with active actors (Phase 3)
+        updateArchitecturePanelWithCallFlow(callFlow);
+        
         logger.info("Call flow diagram added to UI");
+    }
+    
+    /**
+     * Update architecture panel with active actors from call flow (Phase 3)
+     */
+    private void updateArchitecturePanelWithCallFlow(CallFlow callFlow) {
+        if (architecturePanel != null && callFlow != null) {
+            // Extract unique actors from call flow messages
+            Set<ActorType> uniqueActors = new LinkedHashSet<>();
+            for (SipMessage message : callFlow.getMessages()) {
+                if (message.getSourceActor() != null && message.getSourceActor() != ActorType.UNKNOWN) {
+                    uniqueActors.add(message.getSourceActor());
+                }
+                if (message.getTargetActor() != null && message.getTargetActor() != ActorType.UNKNOWN) {
+                    uniqueActors.add(message.getTargetActor());
+                }
+            }
+            
+            architecturePanel.setActiveActors(new ArrayList<>(uniqueActors));
+            logger.debug("Updated architecture panel with {} active actors", uniqueActors.size());
+        }
+    }
+    
+    /**
+     * Update architecture panel for the selected demo (Phase 3)
+     */
+    private void updateArchitecturePanelForDemo() {
+        if (architecturePanel != null) {
+            // Start with empty actors, will be updated as messages arrive
+            architecturePanel.setActiveActors(new ArrayList<>());
+            logger.debug("Initialized architecture panel for demo");
+        }
+    }
+    
+    /**
+     * Schedule a throttled architecture panel update (Phase 3.1).
+     * Updates at most once per 500ms to prevent UI flickering.
+     */
+    private void scheduleArchitectureUpdate() {
+        long now = System.currentTimeMillis();
+        
+        // Throttle to max 1 update per 500ms (slower than diagram for less visual noise)
+        if (now - lastArchitectureUpdateTime >= 500) {
+            lastArchitectureUpdateTime = now;
+            architectureUpdatePending = false;
+            logger.info("[REALTIME] Updating architecture panel immediately");
+            updateArchitecturePanelRealTime();
+        } else if (!architectureUpdatePending) {
+            architectureUpdatePending = true;
+            long delay = 500 - (now - lastArchitectureUpdateTime);
+            logger.info("[REALTIME] Scheduling architecture update in {}ms", delay);
+            
+            new Thread(() -> {
+                try {
+                    Thread.sleep(delay);
+                    lastArchitectureUpdateTime = System.currentTimeMillis();
+                    architectureUpdatePending = false;
+                    updateArchitecturePanelRealTime();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }).start();
+        }
+    }
+    
+    /**
+     * Update architecture panel in real-time with currently detected actors (Phase 3.1).
+     * Must be called on JavaFX Application Thread or via Platform.runLater().
+     */
+    private void updateArchitecturePanelRealTime() {
+        Platform.runLater(() -> {
+            if (architecturePanel != null && !liveActiveActors.isEmpty()) {
+                synchronized (liveActiveActors) {
+                    List<ActorType> actorList = new ArrayList<>(liveActiveActors);
+                    architecturePanel.setActiveActors(actorList);
+                    logger.info("[REALTIME] Architecture panel updated with {} actors: {}", 
+                        actorList.size(),
+                        actorList.stream().map(ActorType::getDisplayName).collect(Collectors.joining(", ")));
+                }
+            }
+        });
     }
     
     /**
@@ -899,6 +1188,220 @@ public class MainController {
             return text;
         }
         return text.substring(0, maxLength) + "...";
+    }
+    
+    /**
+     * Reset visualization pane to original structure (remove any RCA panels)
+     */
+    private void resetVisualizationPane() {
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(this::resetVisualizationPane);
+            return;
+        }
+        
+        try {
+            if (visualizationSplitPane == null || visualizationSplitPane.getItems().size() < 2) {
+                logger.debug("Split pane not initialized or has fewer than 2 items");
+                return;
+            }
+            
+            // Get the right pane (index 1)
+            Node rightItem = visualizationSplitPane.getItems().get(1);
+            
+            // If it's not the terminalPane directly, it might be wrapped in a VBox
+            if (!(rightItem instanceof TitledPane)) {
+                // Right item was replaced with container, restore original
+                logger.info("Restoring original terminal pane structure");
+                visualizationSplitPane.getItems().set(1, terminalPane);
+            } else {
+                logger.debug("Terminal pane already in correct position");
+            }
+        } catch (Exception e) {
+            logger.error("Error resetting visualization pane", e);
+        }
+    }
+    
+    /**
+     * Display Root Cause Analysis results below the terminal output (right pane)
+     * IMPROVED: More robust split pane manipulation with proper error handling
+     */
+    private void displayRcaResults(RcaResult rca) {
+        if (rca == null || !rca.hasFailure()) {
+            logger.warn("Cannot display RCA: no failure detected or analysis incomplete (rca={}, hasFailure={})", 
+                rca != null, rca != null ? rca.hasFailure() : "N/A");
+            return;
+        }
+        
+        logger.info("Creating RCA panel UI - Summary: {}", rca.getSummary());
+        
+        // Create RCA panel
+        VBox rcaPanel = new VBox(15);
+        rcaPanel.setPadding(new Insets(20));
+        rcaPanel.setStyle("-fx-background-color: #fff3cd; -fx-border-color: #ffc107; -fx-border-width: 2px; -fx-border-radius: 5px; -fx-background-radius: 5px;");
+        
+        // Header
+        Label headerLabel = new Label("⚠ Root Cause Analysis");
+        headerLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #856404;");
+        
+        // Failure Summary
+        Label summaryLabel = new Label(rca.getSummary());
+        summaryLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #333;");
+        summaryLabel.setWrapText(true);
+        
+        // Root Cause
+        VBox rootCauseBox = new VBox(5);
+        Label rootCauseTitle = new Label("Root Cause:");
+        rootCauseTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        TextArea rootCauseText = new TextArea(rca.getRootCause());
+        rootCauseText.setWrapText(true);
+        rootCauseText.setEditable(false);
+        rootCauseText.setPrefRowCount(3);
+        rootCauseText.setStyle("-fx-background-color: white; -fx-border-color: #ddd; -fx-border-width: 1px;");
+        rootCauseBox.getChildren().addAll(rootCauseTitle, rootCauseText);
+        
+        // Affected Node
+        if (rca.getAffectedNode() != null) {
+            HBox nodeBox = new HBox(10);
+            nodeBox.setAlignment(Pos.CENTER_LEFT);
+            Label nodeLabel = new Label("Affected Node:");
+            nodeLabel.setStyle("-fx-font-weight: bold;");
+            Label nodeValue = new Label(rca.getAffectedNode());
+            nodeValue.setStyle("-fx-font-size: 14px; -fx-text-fill: #d32f2f; -fx-font-weight: bold;");
+            nodeBox.getChildren().addAll(nodeLabel, nodeValue);
+            rcaPanel.getChildren().add(nodeBox);
+        }
+        
+        // NEW: Failure Mechanism (HOW it failed)
+        if (rca.getFailureMechanism() != null) {
+            VBox mechanismBox = new VBox(5);
+            mechanismBox.setStyle("-fx-background-color: #e8f5e9; -fx-padding: 10px; -fx-border-color: #4caf50; -fx-border-width: 1px; -fx-border-radius: 3px; -fx-background-radius: 3px;");
+            
+            Label mechanismTitle = new Label("📋 Failure Mechanism:");
+            mechanismTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+            
+            Label mechanismValue = new Label(rca.getFailureMechanism().getDisplayName());
+            mechanismValue.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;");
+            
+            Label mechanismExplanation = new Label(rca.getFailureMechanism().getExplanation());
+            mechanismExplanation.setWrapText(true);
+            mechanismExplanation.setStyle("-fx-font-size: 11px; -fx-text-fill: #555; -fx-font-style: italic;");
+            
+            mechanismBox.getChildren().addAll(mechanismTitle, mechanismValue, mechanismExplanation);
+            rcaPanel.getChildren().add(mechanismBox);
+        }
+        
+        // Evidence Section
+        if (rca.getEvidence() != null && !rca.getEvidence().isEmpty()) {
+            VBox evidenceBox = new VBox(5);
+            Label evidenceTitle = new Label("Evidence:");
+            evidenceTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+            VBox evidenceList = new VBox(3);
+            for (String evidence : rca.getEvidence()) {
+                Label bulletLabel = new Label("• " + evidence);
+                bulletLabel.setWrapText(true);
+                bulletLabel.setStyle("-fx-font-size: 12px;");
+                evidenceList.getChildren().add(bulletLabel);
+            }
+            evidenceBox.getChildren().addAll(evidenceTitle, evidenceList);
+            rcaPanel.getChildren().add(evidenceBox);
+        }
+        
+        // Recommendations Section
+        if (rca.getRecommendations() != null && !rca.getRecommendations().isEmpty()) {
+            VBox recBox = new VBox(5);
+            Label recTitle = new Label("Recommended Actions:");
+            recTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+            VBox recList = new VBox(3);
+            int num = 1;
+            for (String recommendation : rca.getRecommendations()) {
+                Label recLabel = new Label(num + ". " + recommendation);
+                recLabel.setWrapText(true);
+                recLabel.setStyle("-fx-font-size: 12px;");
+                recList.getChildren().add(recLabel);
+                num++;
+            }
+            recBox.getChildren().addAll(recTitle, recList);
+            rcaPanel.getChildren().add(recBox);
+        }
+        
+        // Add all components to RCA panel
+        rcaPanel.getChildren().addAll(0, List.of(headerLabel, summaryLabel, rootCauseBox));
+        
+        // Wrap in TitledPane for collapsibility
+        TitledPane rcaTitledPane = new TitledPane();
+        rcaTitledPane.setText("🔍 Root Cause Analysis");
+        rcaTitledPane.setContent(rcaPanel);
+        rcaTitledPane.setExpanded(true);
+        rcaTitledPane.setCollapsible(true);
+        rcaTitledPane.setMaxHeight(Double.MAX_VALUE);
+        
+        // Add RCA panel to right pane below terminal - IMPROVED APPROACH
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> addRcaPanelToUI(rcaTitledPane));
+        } else {
+            addRcaPanelToUI(rcaTitledPane);
+        }
+    }
+    
+    /**
+     * Add RCA panel to UI - separated method for better error handling and debugging
+     */
+    private void addRcaPanelToUI(TitledPane rcaTitledPane) {
+        try {
+            logger.info("Adding RCA panel to UI (split pane items: {}, terminalPane parent: {})", 
+                visualizationSplitPane.getItems().size(),
+                terminalPane.getParent() != null ? terminalPane.getParent().getClass().getSimpleName() : "null");
+            
+            // Verify split pane structure
+            if (visualizationSplitPane == null) {
+                logger.error("visualizationSplitPane is null!");
+                return;
+            }
+            
+            if (visualizationSplitPane.getItems().size() < 2) {
+                logger.error("Split pane has only {} items, expected at least 2", 
+                    visualizationSplitPane.getItems().size());
+                return;
+            }
+            
+            Node currentRightItem = visualizationSplitPane.getItems().get(1);
+            logger.info("Current right pane type: {}", currentRightItem.getClass().getSimpleName());
+            
+            // Create container for terminal + RCA
+            VBox rightPaneContainer = new VBox(10);
+            rightPaneContainer.setPadding(new Insets(0));
+            rightPaneContainer.setMaxHeight(Double.MAX_VALUE);
+            
+            // Remove terminal from current parent if it's already in a container
+            if (terminalPane.getParent() != null && terminalPane.getParent() != visualizationSplitPane) {
+                ((Pane) terminalPane.getParent()).getChildren().remove(terminalPane);
+                logger.debug("Removed terminalPane from previous parent");
+            }
+            
+            // Set growth properties for proper resizing
+            VBox.setVgrow(terminalPane, Priority.ALWAYS);
+            VBox.setVgrow(rcaTitledPane, Priority.ALWAYS);
+            
+            // Add terminal and RCA to container
+            rightPaneContainer.getChildren().addAll(terminalPane, rcaTitledPane);
+            
+            // Replace the right item in split pane
+            visualizationSplitPane.getItems().set(1, rightPaneContainer);
+            
+            logger.info("✓ RCA panel successfully added to UI (container children: {})", 
+                rightPaneContainer.getChildren().size());
+            
+            // Force layout update
+            visualizationSplitPane.layout();
+            rightPaneContainer.layout();
+            
+        } catch (Exception e) {
+            logger.error("Failed to add RCA panel to UI", e);
+            logger.error("  Split pane items: {}", visualizationSplitPane != null ? 
+                visualizationSplitPane.getItems().size() : "NULL");
+            logger.error("  Terminal pane: {}", terminalPane != null ? 
+                terminalPane.getClass().getSimpleName() : "NULL");
+        }
     }
 
     private void showAlert(String title, String content, Alert.AlertType type) {

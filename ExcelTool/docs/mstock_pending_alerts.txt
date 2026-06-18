@@ -1,0 +1,155 @@
+ NYKAA
+NSE
+Note: bp
+	
+279.15
+7.00 (2.57%)
+	LTP >= 300.00 	Open	edit
+delete
+
+JSWENERGY
+NSE
+Note: bp
+	
+561.35
+-0.70 (-0.12%)
+	LTP >= 650.00 	Open	edit
+delete
+
+TATACHEM
+NSE
+Note: review
+	
+729.05
+-0.40 (-0.05%)
+	LTP <= 700.00 	Open	edit
+delete
+
+TATACHEM
+NSE
+Note: bp
+	
+729.05
+-0.40 (-0.05%)
+	LTP >= 1,000.00 	Open	edit
+delete
+
+SUMICHEM
+NSE
+Note: bp
+	
+467.50
+-5.75 (-1.22%)
+	LTP >= 600.00 	Open	edit
+delete
+
+SUMICHEM
+NSE
+Note: add
+	
+467.50
+-5.75 (-1.22%)
+	LTP <= 400.00 	Open	edit
+delete
+
+ADANIENSOL
+NSE
+Note: bp
+	
+1,483.20
+-7.90 (-0.53%)
+	LTP >= 2,000.00 	Open	edit
+delete
+
+HBLENGINE
+NSE
+Note: bp
+	
+795.10
+-4.55 (-0.57%)
+	LTP >= 1,000.00 	Open	edit
+delete
+
+ADANIPOWER
+NSE
+Note: bp
+	
+220.03
+-2.57 (-1.15%)
+	LTP >= 300.00 	Open	edit
+delete
+
+ADANIPOWER
+NSE
+Note: buy
+	
+220.03
+-2.57 (-1.15%)
+	LTP <= 200.00 	Open	edit
+delete
+
+AEGISLOG
+NSE
+Note: add
+	
+1,004.00
+18.30 (1.86%)
+	LTP <= 700.00 	Open	edit
+delete
+
+UNOMINDA
+NSE
+	
+1,087.30
+-2.20 (-0.20%)
+	LTP >= 1,300.00 	Open	edit
+delete
+
+UNOMINDA
+NSE
+	
+1,087.30
+-2.20 (-0.20%)
+	LTP <= 1,000.00 	Open	edit
+delete
+
+SCHNEIDER
+NSE
+	
+1,260.30
+78.90 (6.68%)
+	LTP >= 1,400.00 	Open	edit
+delete
+
+ADANIENT
+NSE
+	
+2,943.20
+-0.40 (-0.01%)
+	LTP >= 3,500.00 	Open	edit
+delete
+
+SCHNEIDER
+NSE
+	
+1,260.30
+78.90 (6.68%)
+	LTP <= 1,000.00 	Open	edit
+delete
+
+ABB
+NSE
+Note: reaching target
+	
+7,059.50
+38.50 (0.55%)
+	LTP >= 8,000.00 	Open	edit
+delete
+
+ADANIENT
+NSE
+Note: buy
+	
+2,943.20
+-0.40 (-0.01%)
+	LTP <= 2,693.25 	Open	

@@ -1,0 +1,174 @@
+{
+  "id": "df84fe16-fbc1-457a-9273-00d74821c722",
+  "name": "Test Specification Baseline",
+  "description": "Learned from ts_103989v040200p.pdf",
+  "created_date": "2026-06-11T15:24:43.559992",
+  "updated_date": "2026-06-11T15:33:06.579799",
+  "source_document_hash": "fecd048e845e41b7",
+  "source_document_name": "ts_103989v040200p.pdf",
+  "document_type": "TEST_SPECIFICATION",
+  "hierarchy_config": {
+    "max_depth": 4,
+    "level_definitions": {
+      "1": "Test Methodology",
+      "2": "Features",
+      "3": "Modules",
+      "4": "Test Cases"
+    },
+    "extract_content": true,
+    "max_content_length": 500
+  },
+  "extraction_rules": [
+    {
+      "level": 1,
+      "level_name": "Test Methodology",
+      "pattern": "^\\d+\\.?\\s*Test\\s+Methodology",
+      "keywords": [
+        "test",
+        "ric",
+        "cases",
+        "non",
+        "near",
+        "scope",
+        "references",
+        "definition"
+      ],
+      "required": true,
+      "extraction_method": "HEADING_MATCH",
+      "parent_level": null,
+      "section_range": null,
+      "min_confidence": 0.8,
+      "pattern_matchers": [
+        {
+          "pattern": "^\\d+\\.?\\s*Test\\s+Methodology",
+          "flags": "IGNORECASE",
+          "examples": [
+            "4 Test methodology ................................................................................."
+          ]
+        },
+        {
+          "pattern": "^\\d+\\.?\\s*Methodology",
+          "flags": "IGNORECASE",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "level": 2,
+      "level_name": "Features",
+      "pattern": "^\\d+\\.\\d+\\s*Conformance\\s+Testing",
+      "keywords": [
+        "conformance",
+        "cases",
+        "test",
+        "general",
+        "ric",
+        "testing",
+        "interoperability",
+        "references"
+      ],
+      "required": false,
+      "extraction_method": "COMBINED",
+      "parent_level": 1,
+      "section_range": null,
+      "min_confidence": 0.6,
+      "pattern_matchers": [
+        {
+          "pattern": "^\\d+\\.\\d+\\s*Conformance\\s+Testing",
+          "flags": "IGNORECASE",
+          "examples": []
+        },
+        {
+          "pattern": "^\\d+\\.\\d+\\s*Testing",
+          "flags": "IGNORECASE",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "level": 3,
+      "level_name": "Modules",
+      "pattern": "^\\d+\\.\\d+\\s*.*Test\\s+[Cc]ases",
+      "keywords": [
+        "test",
+        "scenarios",
+        "policy",
+        "query",
+        "job",
+        "create",
+        "update",
+        "delete"
+      ],
+      "required": false,
+      "extraction_method": "COMBINED",
+      "parent_level": 2,
+      "section_range": null,
+      "min_confidence": 0.6,
+      "pattern_matchers": [
+        {
+          "pattern": "^\\d+\\.\\d+\\s*.*Test\\s+[Cc]ases",
+          "flags": "IGNORECASE",
+          "examples": []
+        },
+        {
+          "pattern": "^\\d+\\.\\d+\\s*Conformance",
+          "flags": "IGNORECASE",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "level": 4,
+      "level_name": "Test Cases",
+      "pattern": "TC_\\w+",
+      "keywords": [
+        "case",
+        "positive",
+        "job",
+        "query",
+        "policy",
+        "single",
+        "negative",
+        "type"
+      ],
+      "required": false,
+      "extraction_method": "KEYWORD_SCAN",
+      "parent_level": 3,
+      "section_range": null,
+      "min_confidence": 0.5,
+      "pattern_matchers": [
+        {
+          "pattern": "TC_\\w+",
+          "flags": "IGNORECASE",
+          "examples": []
+        },
+        {
+          "pattern": "\\d+\\.\\d+\\.\\d+\\.\\d+\\s",
+          "flags": "IGNORECASE",
+          "examples": [
+            "4.2.2.0 Overview ...................................................................................",
+            "4.2.2.1 Device under test (Non-RT RIC) .............................................................",
+            "4.2.2.2 Test simulator ............................................................................."
+          ]
+        },
+        {
+          "pattern": "Test\\s+[Cc]ase\\s+\\d+",
+          "flags": "IGNORECASE",
+          "examples": []
+        }
+      ]
+    }
+  ],
+  "match_statistics": {
+    "success_count": 2,
+    "failure_count": 0,
+    "avg_quality_score": 0.906,
+    "last_used": "2026-06-11T15:33:06.579151"
+  },
+  "tags": [
+    "test_specification",
+    "auto-learned"
+  ],
+  "version": "1.0",
+  "author": null
+}

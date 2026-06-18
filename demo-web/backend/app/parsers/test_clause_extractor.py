@@ -23,13 +23,16 @@ class TestClauseExtractor:
     def __init__(self):
         self.section_pattern = re.compile(self.SECTION_PATTERN, re.MULTILINE)
     
-    def extract_clauses(self, text: str, spec_type: SpecType) -> List[TestClause]:
+    def extract_clauses(
+        self, text: str, spec_type: SpecType, max_tests: Optional[int] = None
+    ) -> List[TestClause]:
         """
         Extract test clauses from specification text
         
         Args:
             text: Full text content from specification
             spec_type: Type of specification (TS_103_989, etc.)
+            max_tests: Maximum number of tests to extract (None = no limit)
             
         Returns:
             List of extracted test clauses
@@ -41,6 +44,13 @@ class TestClauseExtractor:
         
         # Filter sections that look like test cases
         test_sections = self._filter_test_sections(sections)
+        
+        total_available = len(test_sections)
+        
+        # Apply limit if specified (MVP constraint)
+        if max_tests is not None and max_tests > 0:
+            test_sections = test_sections[:max_tests]
+            logger.info(f"Limited extraction to {len(test_sections)}/{total_available} available tests (MVP constraint)")
         
         # Convert to TestClause objects
         clauses = []

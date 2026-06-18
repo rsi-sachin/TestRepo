@@ -43,3 +43,7 @@ jinja2==3.1.2  # Template engine for pytest script generation
 xmltodict==0.13.0  # XML parsing for O1 interface
 pyyaml==6.0.1  # YAML config file handling
 requests==2.31.0  # HTTP client for A1 interface testing
+
+# Database (Phase 3)
+sqlalchemy==2.0.50  # ORM for test case storage (Python 3.13 compatible)
+alembic==1.13.1  # Database migrations

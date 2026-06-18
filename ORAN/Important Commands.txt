@@ -1,0 +1,4 @@
+1. Check if server is running - Get-NetTCPConnection -LocalPort 8000 # if you see a Listen entry, something is serving on port 8000.
+2. start server: 
+cd C:\TestRepo\demo-web\backend
+python run.py
