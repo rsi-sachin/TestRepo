@@ -5,6 +5,7 @@ FastAPI application entry point with REST API and WebSocket support
 
 import asyncio
 import sys
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -13,7 +14,7 @@ import os
 from pathlib import Path
 
 # Windows-specific fix for asyncio subprocess support
-if sys.platform == 'win32':
+if sys.platform == 'win32' and sys.version_info < (3, 13):
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 from app.api import demos, execution, history, oran, test_cases
@@ -23,11 +24,30 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize and cleanup services using FastAPI lifespan hooks."""
+    logger.info("TTS Demo Tool Web Backend starting...")
+
+    try:
+        init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+
+    logger.info("Startup complete")
+
+    yield
+
+    logger.info("TTS Demo Tool Web Backend shutting down...")
+
 # Create FastAPI app
 app = FastAPI(
     title="TTS Demo Tool API",
     description="REST API and WebSocket server for TTS demonstration scenarios + O-RAN test generation",
     version="2.0.0",
+    lifespan=lifespan,
     docs_url="/api/docs",
     redoc_url="/api/redoc"
 )
@@ -81,29 +101,6 @@ async def health_check():
         "service": "tts-demo-tool-web",
         "version": "2.0.0"
     }
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize services on startup"""
-    logger.info("TTS Demo Tool Web Backend starting...")
-    
-    # Initialize database (create tables if they don't exist)
-    try:
-        init_db()
-        logger.info("Database initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize database: {e}")
-    
-    logger.info("Startup complete")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on shutdown"""
-    logger.info("TTS Demo Tool Web Backend shutting down...")
-    # Cleanup any running processes, close connections
-
 
 if __name__ == "__main__":
     import uvicorn

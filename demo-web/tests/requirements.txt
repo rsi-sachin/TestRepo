@@ -1,5 +1,5 @@
 # Playwright Test Requirements
-playwright==1.40.0
-pytest-playwright==0.4.3
-pytest==7.4.3
-pytest-asyncio==0.23.3
+playwright==1.60.0
+pytest-playwright==0.7.0
+pytest==8.4.1
+pytest-asyncio==0.24.0

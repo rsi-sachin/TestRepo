@@ -7,6 +7,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import Dict, Set
 import json
 import asyncio
+import time
 
 router = APIRouter()
 
@@ -119,7 +120,7 @@ async def broadcast_output(execution_id: str, message_type: str, payload):
     """
     message = {
         "type": message_type,
-        "timestamp": asyncio.get_event_loop().time()
+        "timestamp": time.time()
     }
     
     if isinstance(payload, str):

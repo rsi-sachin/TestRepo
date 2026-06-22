@@ -9,7 +9,7 @@ import uvicorn
 from app.config import settings
 
 # Windows-specific fix for asyncio subprocess support - MUST be set before any asyncio usage
-if sys.platform == 'win32':
+if sys.platform == 'win32' and sys.version_info < (3, 13):
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 if __name__ == "__main__":
