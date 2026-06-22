@@ -3,13 +3,14 @@ ORAN API Endpoints
 Handles O-RAN test catalog management, test generation, and execution
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, UploadFile, File, Depends, Request
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, UploadFile, File, Depends, Request, Response
 from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 from pathlib import Path
 import uuid
 import json
 from datetime import datetime
+from pydantic import BaseModel, Field
 
 from app.models.oran import (
     OranTestCatalog,
@@ -26,6 +27,7 @@ from app.services.oran_execution_service import OranExecutionService
 from app.services.spec_parser_service import SpecParserService
 from app.services.catalog_generator_service import CatalogGeneratorService
 from app.services.rule_learner_service import RuleLearnerService
+from app.services.simulator_a1_service import SimulatorA1PolicyService
 from app.repositories.rule_pack_repository import RulePackRepository
 from app.models.rule_pack import RulePack, RulePackSummary
 from app.models.hierarchy_tree import HierarchyTree
@@ -47,11 +49,82 @@ spec_parser = SpecParserService(specs_upload_dir)
 catalog_generator = CatalogGeneratorService(catalogs_dir)
 rule_learner = RuleLearnerService()
 rule_pack_repository = RulePackRepository()
+a1_policy_service = SimulatorA1PolicyService()
 from app.services.hierarchical_extractor_service import HierarchicalExtractorService
 hierarchical_extractor = HierarchicalExtractorService()
 sections_options_dir = Path("./data/oran_sections")
 sections_options_dir.mkdir(parents=True, exist_ok=True)
 sections_options_file = sections_options_dir / "sections_by_spec.json"
+
+# List-1 canonical simulator modules.
+SIMULATOR_MODULES = {
+    "RAN_INTENT_PROVIDER": {"parent": None, "kind": "module", "simulation_type": "stub"},
+    "SMO": {"parent": None, "kind": "module", "simulation_type": "stub"},
+    "NON_RT_RIC": {"parent": "SMO", "kind": "sub-module", "simulation_type": "stub"},
+    "NEAR_RT_RIC": {"parent": "ORAN_INT_INFO_SOURCE", "kind": "module", "simulation_type": "simulator"},
+    "ORAN_EXT_INFO_SOURCE": {"parent": "ORAN_INT_INFO_SOURCE", "kind": "module", "simulation_type": "stub"},
+    "O_CU_CP": {"parent": "ORAN_INT_INFO_SOURCE", "kind": "sub-module", "simulation_type": "stub"},
+    "O_CU_DP": {"parent": "ORAN_INT_INFO_SOURCE", "kind": "sub-module", "simulation_type": "stub"},
+    "O_DU": {"parent": "ORAN_INT_INFO_SOURCE", "kind": "sub-module", "simulation_type": "stub"},
+    "O_ENODEB": {"parent": "ORAN_INT_INFO_SOURCE", "kind": "sub-module", "simulation_type": "stub"},
+    "ORAN_INT_INFO_SOURCE": {"parent": None, "kind": "module", "simulation_type": "stub"},
+}
+
+SIMULATOR_VALID_STATES = ["INIT", "RUNNING", "DEGRADED", "STOPPED"]
+
+
+class SimulatorCommandRequest(BaseModel):
+    """Placeholder command contract for orchestrator control."""
+    action: str = Field(..., description="Command action, e.g. start, stop, step")
+    execution_mode: str = Field(default="sequential", description="sequential or parallel")
+    target_modules: List[str] = Field(default_factory=list, description="List-1 module IDs")
+    scenario_id: Optional[str] = Field(default=None, description="Feature-1 scenario/test identifier")
+    parameters: Dict[str, str] = Field(default_factory=dict, description="Optional command parameters")
+
+
+class SimulatorA1PolicyRequest(BaseModel):
+    """Placeholder A1 policy contract."""
+    policy_id: str = Field(..., description="Policy identifier")
+    policy_type: str = Field(default="generic", description="Policy type label")
+    source_module: str = Field(default="NON_RT_RIC", description="Source module ID")
+    target_module: str = Field(default="NEAR_RT_RIC", description="Target module ID")
+    policy_object: Dict = Field(default_factory=dict, description="A1 PolicyObject payload")
+    notification_destination: Optional[str] = Field(
+        default=None,
+        description="Callback URI for policy status/feedback notifications",
+    )
+
+
+class SimulatorA1PolicyTypeUpsertRequest(BaseModel):
+    """A1-P create/replace request mapped to /policytypes/{policyTypeId}/policies/{policyId}."""
+    source_module: str = Field(default="NON_RT_RIC", description="Source module ID")
+    target_module: str = Field(default="NEAR_RT_RIC", description="Target module ID")
+    policy_object: Dict = Field(default_factory=dict, description="A1 PolicyObject payload")
+    notification_destination: Optional[str] = Field(
+        default=None,
+        description="Callback URI for policy status/feedback notifications",
+    )
+
+
+class SimulatorA1PolicyStatusNotificationRequest(BaseModel):
+    """Policy feedback/status notification payload."""
+    feedback_message: str = Field(..., description="Policy feedback or status detail")
+
+
+class SimulatorO1AlarmRequest(BaseModel):
+    """Placeholder O1 alarm contract."""
+    alarm_id: str = Field(..., description="Alarm identifier")
+    severity: str = Field(default="MAJOR", description="Alarm severity")
+    source_module: str = Field(default="ORAN_INT_INFO_SOURCE", description="Source module ID")
+    target_module: str = Field(default="SMO", description="Target module ID")
+
+
+class SimulatorE2EventRequest(BaseModel):
+    """Placeholder E2 interaction contract."""
+    event_id: str = Field(..., description="E2 event identifier")
+    source_module: str = Field(..., description="Source module ID")
+    target_module: str = Field(default="NEAR_RT_RIC", description="Target module ID")
+    message_type: str = Field(default="control_update", description="Logical message type")
 
 # TS spec metadata: canonical map used by resolve-specs endpoint
 SPEC_METADATA = {
@@ -126,6 +199,359 @@ def _save_sections_options(all_clauses: Dict[SpecType, List]) -> None:
 
     with open(sections_options_file, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
+
+
+# ==================== SIMULATOR BOOTSTRAP (CONTRACT-FIRST) ====================
+
+@router.get("/simulator/health")
+async def get_simulator_health():
+    """Contract-first simulator health endpoint."""
+    return {
+        "status": "ready",
+        "placeholder": True,
+        "module_count": len(SIMULATOR_MODULES),
+        "primary_target": "NEAR_RT_RIC",
+        "valid_states": SIMULATOR_VALID_STATES,
+    }
+
+
+@router.get("/simulator/modules")
+async def list_simulator_modules():
+    """Return List-1 modules with deterministic scaffold metadata."""
+    modules = []
+    for module_id, metadata in SIMULATOR_MODULES.items():
+        modules.append(
+            {
+                "module_id": module_id,
+                "parent": metadata["parent"],
+                "kind": metadata["kind"],
+                "simulation_type": metadata["simulation_type"],
+                "placeholder": True,
+            }
+        )
+
+    return {
+        "items": modules,
+        "placeholder": True,
+        "source": "List-1 Module Names",
+    }
+
+
+@router.get("/simulator/modules/{module_id}/state")
+async def get_simulator_module_state(module_id: str):
+    """Return deterministic scaffold state for a module."""
+    if module_id not in SIMULATOR_MODULES:
+        raise HTTPException(status_code=404, detail=f"Unknown simulator module: {module_id}")
+
+    return {
+        "module_id": module_id,
+        "state": "INIT",
+        "placeholder": True,
+        "timers": 0,
+        "counters": {},
+        "alerts": [],
+        "buffers": {},
+        "last_updated": datetime.utcnow().isoformat(),
+    }
+
+
+@router.post("/simulator/orchestrator/command")
+async def issue_simulator_orchestrator_command(command: SimulatorCommandRequest):
+    """Accept orchestrator command contract and return scaffold acknowledgement."""
+    invalid_targets = [m for m in command.target_modules if m not in SIMULATOR_MODULES]
+    if invalid_targets:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown target module(s): {', '.join(invalid_targets)}",
+        )
+
+    return {
+        "accepted": True,
+        "placeholder": True,
+        "action": command.action,
+        "execution_mode": command.execution_mode,
+        "target_modules": command.target_modules,
+        "scenario_id": command.scenario_id,
+        "status": "queued",
+    }
+
+
+@router.post("/simulator/interfaces/a1/policies")
+async def post_simulator_a1_policy(payload: SimulatorA1PolicyRequest):
+    """Legacy compatibility route for A1 policy upsert."""
+    if payload.source_module not in SIMULATOR_MODULES:
+        raise HTTPException(status_code=400, detail=f"Unknown source module: {payload.source_module}")
+
+    if payload.target_module not in SIMULATOR_MODULES:
+        raise HTTPException(status_code=400, detail=f"Unknown target module: {payload.target_module}")
+
+    if payload.source_module != "NON_RT_RIC" or payload.target_module != "NEAR_RT_RIC":
+        raise HTTPException(
+            status_code=400,
+            detail="A1-P role pair must be NON_RT_RIC -> NEAR_RT_RIC",
+        )
+
+    if "internal_function" in payload.policy_object or "internalFunction" in payload.policy_object:
+        raise HTTPException(
+            status_code=400,
+            detail="PolicyObject must not include internal function mapping details",
+        )
+
+    result = a1_policy_service.upsert_policy(
+        policy_id=payload.policy_id,
+        policy_type_id=payload.policy_type,
+        policy_object=payload.policy_object,
+        source_module=payload.source_module,
+        target_module=payload.target_module,
+        notification_destination=payload.notification_destination,
+    )
+
+    return {
+        "accepted": True,
+        "placeholder": False,
+        "interface": "A1",
+        "policy_id": payload.policy_id,
+        "source_module": payload.source_module,
+        "target_module": payload.target_module,
+        "operation": result["operation"],
+        "legacy_route": True,
+        "record": result["record"],
+        "status": "recorded",
+    }
+
+
+@router.get("/simulator/interfaces/a1/policytypes")
+async def list_simulator_a1_policy_types():
+    """List supported policy types and schemas exposed by A1-P Producer."""
+    items = a1_policy_service.list_policy_types()
+    return {
+        "items": items,
+        "count": len(items),
+        "interface": "A1",
+        "resource": "/policytypes",
+        "placeholder": False,
+    }
+
+
+@router.get("/simulator/interfaces/a1/policytypes/{policy_type_id}")
+async def get_simulator_a1_policy_type(policy_type_id: str):
+    """Get one supported policy type and its schema descriptors."""
+    policy_type = a1_policy_service.get_policy_type(policy_type_id)
+    if policy_type is None:
+        raise HTTPException(status_code=404, detail=f"Unsupported policyTypeId: {policy_type_id}")
+
+    return {
+        "item": policy_type,
+        "interface": "A1",
+        "resource": f"/policytypes/{policy_type_id}",
+        "placeholder": False,
+    }
+
+
+@router.put("/simulator/interfaces/a1/policytypes/{policy_type_id}/policies/{policy_id}")
+async def put_simulator_a1_policy(
+    policy_type_id: str,
+    policy_id: str,
+    payload: SimulatorA1PolicyTypeUpsertRequest,
+):
+    """Create or replace PolicyObject in policy-type scoped URI."""
+    if not a1_policy_service.is_supported_policy_type(policy_type_id):
+        raise HTTPException(status_code=404, detail=f"Unsupported policyTypeId: {policy_type_id}")
+
+    if payload.source_module not in SIMULATOR_MODULES:
+        raise HTTPException(status_code=400, detail=f"Unknown source module: {payload.source_module}")
+
+    if payload.target_module not in SIMULATOR_MODULES:
+        raise HTTPException(status_code=400, detail=f"Unknown target module: {payload.target_module}")
+
+    if payload.source_module != "NON_RT_RIC" or payload.target_module != "NEAR_RT_RIC":
+        raise HTTPException(
+            status_code=400,
+            detail="A1-P role pair must be NON_RT_RIC -> NEAR_RT_RIC",
+        )
+
+    if "internal_function" in payload.policy_object or "internalFunction" in payload.policy_object:
+        raise HTTPException(
+            status_code=400,
+            detail="PolicyObject must not include internal function mapping details",
+        )
+
+    result = a1_policy_service.upsert_policy(
+        policy_id=policy_id,
+        policy_type_id=policy_type_id,
+        policy_object=payload.policy_object,
+        source_module=payload.source_module,
+        target_module=payload.target_module,
+        notification_destination=payload.notification_destination,
+    )
+
+    return {
+        "accepted": True,
+        "placeholder": False,
+        "interface": "A1",
+        "policy_type_id": policy_type_id,
+        "policy_id": policy_id,
+        "source_module": payload.source_module,
+        "target_module": payload.target_module,
+        "operation": result["operation"],
+        "record": result["record"],
+        "status": "recorded",
+        "resource": f"/policytypes/{policy_type_id}/policies/{policy_id}",
+    }
+
+
+@router.get("/simulator/interfaces/a1/policytypes/{policy_type_id}/policies")
+async def list_simulator_a1_policy_ids(policy_type_id: str):
+    """List policy identifiers under one policy type."""
+    if not a1_policy_service.is_supported_policy_type(policy_type_id):
+        raise HTTPException(status_code=404, detail=f"Unsupported policyTypeId: {policy_type_id}")
+
+    policy_ids = a1_policy_service.list_policy_ids(policy_type_id)
+    return {
+        "items": policy_ids,
+        "count": len(policy_ids),
+        "interface": "A1",
+        "resource": f"/policytypes/{policy_type_id}/policies",
+        "placeholder": False,
+    }
+
+
+@router.get("/simulator/interfaces/a1/policytypes/{policy_type_id}/policies/{policy_id}")
+async def get_simulator_a1_policy_by_type(policy_type_id: str, policy_id: str):
+    """Get one policy from policy-type scoped URI."""
+    if not a1_policy_service.is_supported_policy_type(policy_type_id):
+        raise HTTPException(status_code=404, detail=f"Unsupported policyTypeId: {policy_type_id}")
+
+    policy = a1_policy_service.get_policy(policy_type_id=policy_type_id, policy_id=policy_id)
+    if policy is None:
+        raise HTTPException(status_code=404, detail=f"Unknown policy: {policy_id}")
+
+    return {
+        "item": policy,
+        "interface": "A1",
+        "resource": f"/policytypes/{policy_type_id}/policies/{policy_id}",
+        "placeholder": False,
+    }
+
+
+@router.delete("/simulator/interfaces/a1/policytypes/{policy_type_id}/policies/{policy_id}")
+async def delete_simulator_a1_policy(policy_type_id: str, policy_id: str):
+    """Delete one policy object for a policy type."""
+    if not a1_policy_service.is_supported_policy_type(policy_type_id):
+        raise HTTPException(status_code=404, detail=f"Unsupported policyTypeId: {policy_type_id}")
+
+    deleted = a1_policy_service.delete_policy(policy_type_id=policy_type_id, policy_id=policy_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Unknown policy: {policy_id}")
+
+    return {
+        "deleted": True,
+        "interface": "A1",
+        "resource": f"/policytypes/{policy_type_id}/policies/{policy_id}",
+        "placeholder": False,
+    }
+
+
+@router.get("/simulator/interfaces/a1/policytypes/{policy_type_id}/policies/{policy_id}/status")
+async def get_simulator_a1_policy_status(policy_type_id: str, policy_id: str):
+    """Return PolicyStatusObject for a specific policy."""
+    if not a1_policy_service.is_supported_policy_type(policy_type_id):
+        raise HTTPException(status_code=404, detail=f"Unsupported policyTypeId: {policy_type_id}")
+
+    policy_status = a1_policy_service.get_policy_status(policy_type_id=policy_type_id, policy_id=policy_id)
+    if policy_status is None:
+        raise HTTPException(status_code=404, detail=f"Unknown policy: {policy_id}")
+
+    return {
+        "item": policy_status,
+        "interface": "A1",
+        "resource": f"/policytypes/{policy_type_id}/policies/{policy_id}/status",
+        "placeholder": False,
+    }
+
+
+@router.post("/simulator/interfaces/a1/policytypes/{policy_type_id}/policies/{policy_id}/status/notify", status_code=204)
+async def notify_simulator_a1_policy_status(
+    policy_type_id: str,
+    policy_id: str,
+    payload: SimulatorA1PolicyStatusNotificationRequest,
+):
+    """Accept policy status/feedback notification payloads."""
+    if not a1_policy_service.is_supported_policy_type(policy_type_id):
+        raise HTTPException(status_code=404, detail=f"Unsupported policyTypeId: {policy_type_id}")
+
+    updated_status = a1_policy_service.append_policy_feedback(
+        policy_type_id=policy_type_id,
+        policy_id=policy_id,
+        feedback_message=payload.feedback_message,
+    )
+    if updated_status is None:
+        raise HTTPException(status_code=404, detail=f"Unknown policy: {policy_id}")
+
+    return Response(status_code=204)
+
+
+@router.get("/simulator/interfaces/a1/policies")
+async def list_simulator_a1_policies():
+    """List all A1 policies currently tracked in memory."""
+    policies = a1_policy_service.list_policies()
+    return {
+        "items": policies,
+        "count": len(policies),
+        "interface": "A1",
+        "placeholder": False,
+    }
+
+
+@router.get("/simulator/interfaces/a1/policies/{policy_id}")
+async def get_simulator_a1_policy(policy_id: str):
+    """Return one A1 policy record by policy ID."""
+    matching_policy = None
+    for policy in a1_policy_service.list_policies():
+        if policy["policy_id"] == policy_id:
+            matching_policy = policy
+            break
+
+    policy = matching_policy
+    if policy is None:
+        raise HTTPException(status_code=404, detail=f"Unknown policy: {policy_id}")
+
+    return {
+        "item": policy,
+        "interface": "A1",
+        "placeholder": False,
+    }
+
+
+@router.post("/simulator/interfaces/o1/alarms")
+async def post_simulator_o1_alarm(payload: SimulatorO1AlarmRequest):
+    """Placeholder O1 alarm flow (ORAN_INT_INFO_SOURCE -> SMO)."""
+    return {
+        "accepted": True,
+        "placeholder": True,
+        "interface": "O1",
+        "alarm_id": payload.alarm_id,
+        "source_module": payload.source_module,
+        "target_module": payload.target_module,
+        "status": "recorded",
+    }
+
+
+@router.post("/simulator/interfaces/e2/events")
+async def post_simulator_e2_event(payload: SimulatorE2EventRequest):
+    """Placeholder E2 exchange endpoint for RAN nodes -> NEAR_RT_RIC."""
+    if payload.source_module not in SIMULATOR_MODULES:
+        raise HTTPException(status_code=400, detail=f"Unknown source module: {payload.source_module}")
+
+    return {
+        "accepted": True,
+        "placeholder": True,
+        "interface": "E2",
+        "event_id": payload.event_id,
+        "source_module": payload.source_module,
+        "target_module": payload.target_module,
+        "status": "recorded",
+    }
 
 
 @router.post("/extract-methodology", response_model=MethodologyAnalysisResult)

@@ -1,0 +1,162 @@
+{
+  "version": "1.0.0",
+  "scope": "ORAN-first",
+  "phase_focus": {
+    "primary_target": "NEAR_RT_RIC",
+    "active_interfaces": ["A1-P", "O1", "E2"],
+    "deferred_interfaces": ["A1-EI", "A1-ML"]
+  },
+  "source_contract": {
+    "required_documents": [
+      "ORAN/docs/Non_RT_RIC_A1_Interface_Design.md",
+      "ORAN/docs/List 1 Module Names.md",
+      "ORAN/TODO-F2-simulator-tdd.md"
+    ],
+    "optional_fields": [
+      "test_id",
+      "component_targets",
+      "module_targets",
+      "expected_results",
+      "protocol_or_interface"
+    ]
+  },
+  "interface_to_module_mapping": {
+    "A1-P": {
+      "module_pairs": [
+        {
+          "consumer": "NON_RT_RIC",
+          "producer": "NEAR_RT_RIC"
+        }
+      ],
+      "directional_notes": [
+        "Requests from consumer to producer",
+        "Responses and notifications from producer to consumer"
+      ]
+    },
+    "O1": {
+      "module_pairs": [
+        {
+          "source": "ORAN_INT_INFO_SOURCE",
+          "target": "SMO"
+        },
+        {
+          "source_group": ["NEAR_RT_RIC", "O_CU_CP", "O_CU_DP", "O_DU", "O_ENODEB"],
+          "target": "SMO"
+        }
+      ],
+      "directional_notes": [
+        "Monitoring and alarm flow toward SMO"
+      ]
+    },
+    "E2": {
+      "module_pairs": [
+        {
+          "source_group": ["O_CU_CP", "O_CU_DP", "O_DU", "O_ENODEB"],
+          "target": "NEAR_RT_RIC"
+        }
+      ],
+      "directional_notes": [
+        "RAN-side events and control interactions with NEAR_RT_RIC"
+      ]
+    }
+  },
+  "function_groups": {
+    "A1-P": {
+      "route_layer": [
+        "post_simulator_a1_policy"
+      ],
+      "service_layer_targets": [
+        "create_policy",
+        "update_policy",
+        "get_policy",
+        "delete_policy",
+        "notify_policy_status"
+      ],
+      "runtime_targets": [
+        "apply_policy_to_near_rt_ric_state"
+      ],
+      "persistence_targets": [
+        "store_policy_object",
+        "store_policy_status"
+      ]
+    },
+    "O1": {
+      "route_layer": [
+        "post_simulator_o1_alarm"
+      ],
+      "service_layer_targets": [
+        "publish_alarm",
+        "acknowledge_alarm",
+        "clear_alarm",
+        "get_alarm_history"
+      ],
+      "runtime_targets": [
+        "evaluate_alarm_thresholds"
+      ],
+      "persistence_targets": [
+        "store_alarm_event"
+      ]
+    },
+    "E2": {
+      "route_layer": [
+        "post_simulator_e2_event"
+      ],
+      "service_layer_targets": [
+        "ingest_e2_event",
+        "queue_e2_message",
+        "process_e2_message",
+        "send_e2_response"
+      ],
+      "runtime_targets": [
+        "update_near_rt_ric_context",
+        "update_counters_and_buffers"
+      ],
+      "persistence_targets": [
+        "store_e2_event"
+      ]
+    },
+    "ORCHESTRATOR": {
+      "route_layer": [
+        "issue_simulator_orchestrator_command"
+      ],
+      "service_layer_targets": [
+        "execute_scenario",
+        "resolve_module_targets",
+        "dispatch_by_interface",
+        "set_execution_mode"
+      ],
+      "runtime_targets": [
+        "transition_simulator_state",
+        "schedule_timers"
+      ],
+      "persistence_targets": [
+        "store_execution_trace"
+      ]
+    }
+  },
+  "linkage_patterns": [
+    {
+      "name": "same_module_route_to_service",
+      "pattern": "api_route -> service_function -> persistence -> runtime_state"
+    },
+    {
+      "name": "cross_module_orchestrated_dispatch",
+      "pattern": "orchestrator_command -> target_resolution -> interface_service -> module_state_update"
+    },
+    {
+      "name": "event_propagation",
+      "pattern": "interface_event -> state_machine/timer -> alert/counter/buffer -> output_stream"
+    }
+  ],
+  "confidence_rules": {
+    "high": [
+      "Direct interface keyword and explicit module roles present"
+    ],
+    "medium": [
+      "Interface keyword present with implied roles"
+    ],
+    "low": [
+      "No explicit roles or ambiguous interface semantics"
+    ]
+  }
+}

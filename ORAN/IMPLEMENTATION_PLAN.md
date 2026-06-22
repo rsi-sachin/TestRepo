@@ -1,6 +1,8 @@
 # ORAN Test Generation Integration Plan
 
 ## TL;DR
+Feture to extract test plan from an already provided test specification document.
+
 Extend demo-web (existing FastAPI + Vanilla JS TTS execution platform) to add O-RAN A1 specification-to-test generation capabilities. Reuses 60-70% of existing infrastructure (WebSocket streaming, execution engine, UI shell) while adding new components for spec parsing, semantic extraction, and pytest script generation. Target: transform PDF/DOCX O-RAN specs into executable test catalogs and Python pytest scripts.
 
 **Approach**: Incremental extension with 4 phases - (1) Core ORAN services, (2) Spec parsing pipeline, (3) Test generation engine, (4) UI integration. Each phase independently testable.
@@ -327,3 +329,20 @@ Extend demo-web (existing FastAPI + Vanilla JS TTS execution platform) to add O-
 ✅ **DECISION**: **Option A** - Phase 1: read-only with "Download" button for external editing workflow.
 
 📋 **TODO**: Phase 2 - Add in-browser code editor (Monaco Editor or CodeMirror) with "Save & Execute Custom" feature. Include version control for custom edits.
+
+### **4. Consolidated Output Artifacts**
+
+The implementation should consistently produce these artifacts:
+
+- JSON test catalog
+- Python pytest scripts
+- Test configuration YAML
+- Execution results and logs
+
+### **5. Failure Injection Baseline Scenarios**
+
+Baseline negative scenarios to support in MVP execution and validation:
+
+- Schema error -> expect HTTP 400
+- Invalid URI -> expect HTTP 404
+- Timeout handling -> expect controlled failure result

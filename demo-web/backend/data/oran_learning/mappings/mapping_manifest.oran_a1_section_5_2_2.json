@@ -1,0 +1,121 @@
+{
+  "mapping_id": "oran-a1-s5_2_2-20260618-001",
+  "test_id": null,
+  "source_documents": [
+    "ORAN/docs/ts_103987v040300p.pdf",
+    "ORAN/docs/List 1 Module Names.md",
+    "ORAN/TODO-F2-simulator-tdd.md"
+  ],
+  "section_refs": [
+    {
+      "source": "ORAN/docs/ts_103987v040300p.pdf",
+      "section": "5.2.2 Service description (5.2.2.1-5.2.2.4)",
+      "key_statements": [
+        "A1-P Consumer resides in Non-RT RIC and A1-P Producer resides in Near-RT RIC",
+        "Both consumer and producer contain HTTP Client and HTTP Server",
+        "Policy resources are identified under /policytypes/{policyTypeId}/policies/{policyId}",
+        "Policy status resource is /policytypes/{policyTypeId}/policies/{policyId}/status",
+        "Policy status and feedback notifications use callback URI notificationDestination",
+        "PolicyObject does not include internal function mapping details in Near-RT RIC"
+      ]
+    }
+  ],
+  "required_modules": [
+    "NON_RT_RIC",
+    "NEAR_RT_RIC",
+    "SMO",
+    "ORAN_INT_INFO_SOURCE",
+    "O_CU_CP",
+    "O_CU_DP",
+    "O_DU",
+    "O_ENODEB"
+  ],
+  "function_plan": [
+    {
+      "interface": "A1-P",
+      "layer": "route",
+      "functions": [
+        "post_simulator_a1_policy",
+        "list_simulator_a1_policy_types",
+        "get_simulator_a1_policy_type",
+        "put_simulator_a1_policy",
+        "list_simulator_a1_policy_ids",
+        "get_simulator_a1_policy_by_type",
+        "delete_simulator_a1_policy",
+        "get_simulator_a1_policy_status",
+        "notify_simulator_a1_policy_status"
+      ],
+      "action": "modify"
+    },
+    {
+      "interface": "A1-P",
+      "layer": "service",
+      "functions": [
+        "list_policy_types",
+        "get_policy_type",
+        "is_supported_policy_type",
+        "upsert_policy",
+        "list_policy_ids",
+        "get_policy",
+        "delete_policy",
+        "get_policy_status",
+        "append_policy_feedback"
+      ],
+      "action": "extend"
+    },
+    {
+      "interface": "A1-P",
+      "layer": "runtime",
+      "functions": [
+        "callback_subscription state tracking",
+        "policy_status feedback append",
+        "last_evaluated_at refresh"
+      ],
+      "action": "extend"
+    },
+    {
+      "interface": "A1-P",
+      "layer": "persistence",
+      "functions": [
+        "policy storage keyed by policy_type_id + policy_id"
+      ],
+      "action": "extend"
+    }
+  ],
+  "linkage_chain": [
+    {
+      "name": "same_module_route_to_service",
+      "steps": [
+        "policy route validates module pair and PolicyObject constraints",
+        "service resolves policy type support and upserts record",
+        "persistence stores PolicyObject and callback URI by policyTypeId/policyId",
+        "runtime maintains PolicyStatusObject"
+      ]
+    },
+    {
+      "name": "event_propagation_notification_feedback",
+      "steps": [
+        "notification route receives feedback message",
+        "service appends feedback to PolicyStatusObject",
+        "status endpoint returns updated policy feedback history"
+      ]
+    }
+  ],
+  "verification_checks": [
+    "A1-P role pair restricted to NON_RT_RIC -> NEAR_RT_RIC",
+    "Policy type listing and retrieval endpoints are present",
+    "Policy CRUD follows policyTypeId-scoped URI structure",
+    "Policy status endpoint returns PolicyStatusObject",
+    "Callback URI is persisted when provided"
+  ],
+  "manual_review_required": false,
+  "deferred_scope": [
+    "A1-EI",
+    "A1-ML API definition",
+    "strict A1TD schema validation"
+  ],
+  "confidence": {
+    "level": "high",
+    "rationale": "Section 5.2.2 provides explicit role placement, representation objects, and resource identifiers that map directly to simulator route/service updates."
+  }
+}

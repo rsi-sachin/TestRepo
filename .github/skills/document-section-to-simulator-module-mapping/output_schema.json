@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Document Section To Simulator Mapping Manifest",
+  "type": "object",
+  "required": [
+    "mapping_id",
+    "source_documents",
+    "section_refs",
+    "required_modules",
+    "function_plan",
+    "linkage_chain",
+    "verification_checks",
+    "confidence"
+  ],
+  "properties": {
+    "mapping_id": { "type": "string" },
+    "test_id": { "type": ["string", "null"] },
+    "source_documents": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "section_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source", "section", "key_statements"],
+        "properties": {
+          "source": { "type": "string" },
+          "section": { "type": "string" },
+          "key_statements": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "required_modules": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "function_plan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["interface", "layer", "functions", "action"],
+        "properties": {
+          "interface": { "type": "string" },
+          "layer": { "type": "string" },
+          "functions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "action": {
+            "type": "string",
+            "enum": ["create", "modify", "extend"]
+          }
+        }
+      }
+    },
+    "linkage_chain": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "steps"],
+        "properties": {
+          "name": { "type": "string" },
+          "steps": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "verification_checks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "manual_review_required": { "type": "boolean", "default": false },
+    "deferred_scope": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "confidence": {
+      "type": "object",
+      "required": ["level", "rationale"],
+      "properties": {
+        "level": { "type": "string", "enum": ["high", "medium", "low"] },
+        "rationale": { "type": "string" }
+      }
+    }
+  }
+}
