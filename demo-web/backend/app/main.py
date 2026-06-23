@@ -20,6 +20,7 @@ if sys.platform == 'win32' and sys.version_info < (3, 13):
 from app.api import demos, execution, history, oran, test_cases
 from app.websockets import demo_output
 from app.database import init_db
+from app.intelligent_document_parsing.api_routes import router as doc_analysis_router
 import logging
 
 logger = logging.getLogger(__name__)
@@ -71,6 +72,7 @@ app.include_router(execution.router, prefix="/api", tags=["Execution"])
 app.include_router(history.router, prefix="/api", tags=["History"])
 app.include_router(oran.router, prefix="/api/oran", tags=["ORAN"])
 app.include_router(test_cases.router, prefix="/api/oran", tags=["Test Cases"])
+app.include_router(doc_analysis_router, tags=["Document Analysis"])
 
 # Include WebSocket router
 app.include_router(demo_output.router, prefix="/ws", tags=["WebSocket"])
