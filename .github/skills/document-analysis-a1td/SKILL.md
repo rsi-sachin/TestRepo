@@ -324,6 +324,243 @@ result = analyze_a1td_specification(
 # - Procedure impacts (from A1GAP cross-ref)
 ```
 
+## Impact Analysis
+
+### Step 1: Identify Impacted Modules/Features
+
+The skill automatically identifies which modules are affected by extracted data structures:
+
+```python
+Impacted Modules Analysis:
+
+For each extracted entity:
+  - Feature: Data Persistence
+    Modules: models/database_models.py, services/repository_service.py
+    Impact: DIRECT (new database tables/relationships)
+    
+  - Feature: API Request/Response Models
+    Modules: models/request_models.py, models/response_models.py
+    Impact: DIRECT (new Pydantic schemas)
+    
+  - Feature: Data Validation
+    Modules: utils/validation.py, services/data_validator.py
+    Impact: DIRECT (new field validators)
+    
+  - Feature: Database Migrations
+    Modules: services/migration_service.py, alembic/versions/
+    Impact: DIRECT (new schema migrations)
+    
+  - Feature: ORM Relationships
+    Modules: models/database_models.py, utils/relationship_mapper.py
+    Impact: MEDIUM (new entity relationships)
+    
+  - Feature: Serialization/Deserialization
+    Modules: services/serialization_service.py, utils/json_encoder.py
+    Impact: MEDIUM (new data structures to serialize)
+```
+
+### Step 2: Identify Files to Modify
+
+The skill lists files requiring updates to implement new data structures:
+
+```python
+Files to Modify:
+
+┌─ PYDANTIC/ORM MODELS ────────────────────┐
+│                                           │
+│ models/analysis_models.py                 │
+│   Changes: Add 3 new Pydantic classes    │
+│   Lines: Add User, Resource, Tag models  │
+│   Priority: CRITICAL                      │
+│                                           │
+│ models/database_models.py                 │
+│   Changes: Add 3 new SQLAlchemy models   │
+│   Lines: Add User, Resource, Tag tables  │
+│   Priority: CRITICAL                      │
+│                                           │
+│ models/request_models.py                  │
+│   Changes: Add request schemas            │
+│   Lines: Add CreateUserRequest, etc       │
+│   Priority: CRITICAL                      │
+│                                           │
+│ models/response_models.py                 │
+│   Changes: Add response schemas           │
+│   Lines: Add UserResponse, etc            │
+│   Priority: CRITICAL                      │
+│                                           │
+└─────────────────────────────────────────┘
+
+┌─ VALIDATION & CONSTRAINTS ───────────────┐
+│                                           │
+│ utils/validation.py                       │
+│   Changes: Add field validators           │
+│   Lines: Add email validation, length     │
+│   Priority: HIGH                          │
+│                                           │
+│ utils/constraint_validators.py            │
+│   Changes: Add constraint checking        │
+│   Lines: Add unique constraint validators │
+│   Priority: HIGH                          │
+│                                           │
+└─────────────────────────────────────────┘
+
+┌─ DATABASE & MIGRATIONS ──────────────────┐
+│                                           │
+│ alembic/versions/[new_timestamp].py      │
+│   Changes: Create migration script        │
+│   Lines: Add migration for new tables    │
+│   Priority: CRITICAL                      │
+│                                           │
+│ services/repository_service.py            │
+│   Changes: Add repository methods         │
+│   Lines: Add CRUD for new entities       │
+│   Priority: HIGH                          │
+│                                           │
+└─────────────────────────────────────────┘
+
+┌─ DOCUMENTATION & CONFIG ─────────────────┐
+│                                           │
+│ docs/data_model_reference.md              │
+│   Changes: Document new entities         │
+│   Scope: Add entity descriptions          │
+│   Priority: MEDIUM                        │
+│                                           │
+│ config/database_config.json               │
+│   Changes: Add table mappings             │
+│   Lines: Add entity-to-table mappings    │
+│   Priority: MEDIUM                        │
+│                                           │
+└─────────────────────────────────────────┘
+```
+
+### Step 3: Identify Tests to Modify/Create
+
+The skill identifies comprehensive test requirements for new data models:
+
+```python
+Tests to Create/Modify:
+
+┌─ NEW TEST FILES ─────────────────────────┐
+│                                           │
+│ tests/test_pydantic_models_section_5.py  │
+│   Type: Pydantic model validation tests  │
+│   Test Cases:                             │
+│     - test_user_model_creation           │
+│     - test_user_required_fields          │
+│     - test_user_email_validation         │
+│     - test_resource_model_creation       │
+│     - test_tag_model_constraints         │
+│   Total Test Cases: 15                   │
+│   Priority: CRITICAL                     │
+│                                           │
+│ tests/test_database_models_section_5.py  │
+│   Type: SQLAlchemy ORM tests             │
+│   Test Cases:                             │
+│     - test_user_table_creation           │
+│     - test_user_relationships            │
+│     - test_unique_constraints            │
+│     - test_foreign_keys                  │
+│   Total Test Cases: 12                   │
+│   Priority: CRITICAL                     │
+│                                           │
+│ tests/test_migrations_section_5.py       │
+│   Type: Database migration tests         │
+│   Test Cases:                             │
+│     - test_forward_migration             │
+│     - test_downgrade_migration           │
+│     - test_data_integrity_post_migration │
+│   Total Test Cases: 5                    │
+│   Priority: HIGH                         │
+│                                           │
+│ tests/test_constraints_section_5.py      │
+│   Type: Data constraint validation       │
+│   Test Cases:                             │
+│     - test_unique_email_constraint       │
+│     - test_required_field_enforcement    │
+│     - test_type_coercion                 │
+│   Total Test Cases: 8                    │
+│   Priority: HIGH                         │
+│                                           │
+└─────────────────────────────────────────┘
+
+┌─ MODIFY EXISTING TEST FILES ─────────────┐
+│                                           │
+│ tests/test_models.py                     │
+│   Changes: Add new model test cases      │
+│   Lines: Add parametrized tests          │
+│   Priority: HIGH                         │
+│                                           │
+│ tests/test_validation.py                 │
+│   Changes: Add field validators tests    │
+│   Lines: Add validator test cases        │
+│   Priority: HIGH                         │
+│                                           │
+│ tests/integration/test_orm.py            │
+│   Changes: Add ORM integration tests     │
+│   Lines: Add end-to-end ORM tests        │
+│   Priority: MEDIUM                       │
+│                                           │
+└─────────────────────────────────────────┘
+```
+
+### Impact Summary Report
+
+The skill generates structured impact analysis:
+
+```python
+Impact Assessment Output:
+
+{
+  "document_version": "v1.2",
+  "section_analyzed": "5",
+  "extraction_summary": {
+    "entities_found": 5,
+    "fields_total": 28,
+    "relationships": 6,
+    "enumerations": 3,
+    "constraints": 12
+  },
+  "module_impact": {
+    "high_impact": [
+      "models/analysis_models.py",
+      "models/database_models.py",
+      "alembic/versions/"
+    ],
+    "medium_impact": [
+      "utils/validation.py",
+      "services/repository_service.py"
+    ]
+  },
+  "files_to_modify": {
+    "pydantic_models": 2,
+    "orm_models": 1,
+    "request_response_schemas": 2,
+    "validators": 2,
+    "migrations": 1,
+    "test_files": 8
+  },
+  "test_requirements": {
+    "new_test_files": 4,
+    "tests_to_create": 40,
+    "existing_files_to_update": 3
+  },
+  "database_impact": {
+    "new_tables": 5,
+    "new_indexes": 8,
+    "new_relationships": 6,
+    "migration_required": true
+  },
+  "implementation_effort": {
+    "estimated_hours": 16,
+    "critical_priority": 8,
+    "high_priority": 6,
+    "medium_priority": 3
+  },
+  "risk_assessment": "MEDIUM - Database migrations must be carefully tested",
+  "recommendation": "Create comprehensive ORM + migration tests before production deployment"
+}
+```
+
 ## Integration with Central Analysis
 
 This skill is called by:

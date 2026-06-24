@@ -9,7 +9,8 @@ user-invocable: true
 related-skills:
   - document-cross-reference-analysis
   - document-analysis-a1td
-  - document-analysis-a1gapconfiguration:
+  - document-analysis-a1gap
+configuration:
   ask-user-for-mode: true
   supported-modes:
     - single
@@ -20,7 +21,8 @@ related-skills:
     single: "Analyze this API specification in isolation"
     dependencies: "Include request/response schemas and procedure triggers from related documents"
     full-suite: "Complete analysis with all related A1 documents and ETSI standards"
-    version-evolution: "Track API changes and breaking changes across document versions"---
+    version-evolution: "Track API changes and breaking changes across document versions"
+---
 
 # A1 Technical Protocol (A1TP) Analysis Skill
 
@@ -226,17 +228,224 @@ from skill import analyze_a1tp_specification
 result = analyze_a1tp_specification(
     document_path="C:/docs/a1tp_v1.2.pdf",
     version="v1.2",
-    target_modules=["api_routes", "models/analysis_models"],
+    target_modules=["api_routes.py", "models/analysis_models"],
+    compare_to_version="v1.1",  # Show API changes
+    extract_methods=True,
     extract_cross_references=True,
     generate_code_suggestions=True
 )
 
 # Result contains:
-# - Extracted HTTP endpoints and auth specs
-# - Mapped modules to enrich
-# - Code generation suggestions
-# - Version comparison vs v1.1
-# - Cross-reference mappings to A1TD/A1GAP
+# - Extracted endpoints, methods, auth, error patterns
+# - FastAPI route templates
+# - Version diff highlighting breaking changes
+# - Data schema references (from A1TD cross-ref)
+# - Procedure triggers (from A1GAP cross-ref)
+```
+
+## Impact Analysis
+
+### Step 1: Identify Impacted Modules/Features
+
+The skill automatically identifies which modules and features are affected by extracted API definitions:
+
+```python
+Impacted Modules Analysis:
+
+For each extracted endpoint:
+  - Feature: Authentication & Authorization
+    Modules: services/authentication_service.py, utils/token_validator.py
+    Impact: HIGH (all endpoints require auth)
+    
+  - Feature: API Request/Response Handling
+    Modules: api_routes.py, models/request_models.py, models/response_models.py
+    Impact: DIRECT (new endpoints = new routes)
+    
+  - Feature: Error Handling
+    Modules: services/error_handler.py, utils/error_formatter.py
+    Impact: MEDIUM (new error codes/scenarios)
+    
+  - Feature: API Documentation
+    Modules: docs/api_reference.md, utils/openapi_generator.py
+    Impact: MEDIUM (OpenAPI/Swagger updates needed)
+    
+  - Feature: Request Validation
+    Modules: utils/validation.py, services/request_validator.py
+    Impact: DIRECT (validate new request schemas)
+    
+  - Feature: Response Serialization
+    Modules: services/serialization_service.py, utils/json_encoder.py
+    Impact: DIRECT (serialize new response schemas)
+```
+
+### Step 2: Identify Files to Modify
+
+The skill lists files that must be updated to implement extracted changes:
+
+```python
+Files to Modify:
+
+┌─ PRODUCTION CODE ─────────────────────────────────────┐
+│                                                       │
+│ api_routes.py                                         │
+│   Changes: Add 3 new FastAPI routes                  │
+│   Lines: Insert routes for POST/PUT/DELETE            │
+│   Priority: CRITICAL                                  │
+│                                                       │
+│ models/request_models.py                              │
+│   Changes: Add 2 new Pydantic request models          │
+│   Lines: Add ResourceCreateRequest,                   │
+│          ResourceUpdateRequest                        │
+│   Priority: CRITICAL                                  │
+│                                                       │
+│ services/authentication_service.py                    │
+│   Changes: Add auth for new endpoints                 │
+│   Lines: Update token validation logic                │
+│   Priority: CRITICAL                                  │
+│                                                       │
+│ utils/validation.py                                   │
+│   Changes: Add validators for new fields              │
+│   Lines: Add field constraints validation             │
+│   Priority: HIGH                                      │
+│                                                       │
+│ services/error_handler.py                             │
+│   Changes: Add new error codes                        │
+│   Lines: Add 409 Conflict handler                     │
+│   Priority: MEDIUM                                    │
+│                                                       │
+└───────────────────────────────────────────────────────┘
+
+┌─ CONFIGURATION & DOCUMENTATION ─────────────────────┐
+│                                                     │
+│ docs/api_reference.md                               │
+│   Changes: Document new endpoints                   │
+│   Scope: Add Section 4.2 endpoint docs              │
+│   Priority: HIGH                                    │
+│                                                     │
+│ config/api_config.json                              │
+│   Changes: Add feature flags                        │
+│   Lines: Add "enable_resource_management"           │
+│   Priority: MEDIUM                                  │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+### Step 3: Identify Tests to Modify/Create
+
+The skill identifies test files requiring updates to cover new functionality:
+
+```python
+Tests to Create/Modify:
+
+┌─ NEW TEST FILES ──────────────────────────────────────┐
+│                                                       │
+│ tests/test_api_endpoints_section_4_2.py              │
+│   Type: Unit tests for new endpoints                 │
+│   Test Cases:                                         │
+│     - test_create_resource_201                       │
+│     - test_create_resource_400_invalid               │
+│     - test_create_resource_409_conflict              │
+│     - test_get_resource_200                          │
+│     - test_get_resource_404_not_found                │
+│     - test_update_resource_200                       │
+│     - test_update_resource_404                       │
+│     - test_delete_resource_204                       │
+│     - test_delete_resource_404                       │
+│   Total Test Cases: 12                               │
+│   Priority: CRITICAL                                 │
+│                                                       │
+│ tests/test_auth_section_4_2.py                       │
+│   Type: Auth validation for new endpoints            │
+│   Test Cases:                                         │
+│     - test_endpoints_require_bearer_token            │
+│     - test_invalid_token_401                         │
+│     - test_expired_token_401                         │
+│     - test_token_scope_validation                    │
+│   Total Test Cases: 4                                │
+│   Priority: CRITICAL                                 │
+│                                                       │
+│ tests/test_validation_section_4_2.py                 │
+│   Type: Request validation tests                     │
+│   Test Cases:                                         │
+│     - test_create_resource_validation                │
+│     - test_required_fields_validation                │
+│     - test_field_type_validation                     │
+│   Total Test Cases: 5                                │
+│   Priority: HIGH                                     │
+│                                                       │
+└───────────────────────────────────────────────────────┘
+
+┌─ MODIFY EXISTING TEST FILES ──────────────────────────┐
+│                                                       │
+│ tests/test_api_routes.py                             │
+│   Changes: Add new endpoints to suite                │
+│   Lines: Add parametrized test cases                 │
+│   Priority: HIGH                                     │
+│                                                       │
+│ tests/test_error_handling.py                         │
+│   Changes: Add 409 Conflict error tests              │
+│   Lines: Add error code 409 test cases               │
+│   Priority: HIGH                                     │
+│                                                       │
+│ tests/integration/test_full_workflow.py              │
+│   Changes: Add integration tests                     │
+│   Lines: Add end-to-end workflow tests               │
+│   Priority: MEDIUM                                   │
+│                                                       │
+└───────────────────────────────────────────────────────┘
+```
+
+### Impact Summary Report
+
+The skill generates a structured impact report:
+
+```python
+Impact Assessment Output:
+
+{
+  "document_version": "v1.2",
+  "section_analyzed": "4.2",
+  "extraction_summary": {
+    "endpoints_found": 8,
+    "request_models_needed": 2,
+    "response_models_needed": 2,
+    "error_scenarios": 5
+  },
+  "module_impact": {
+    "high_impact": [
+      "api_routes.py",
+      "models/request_models.py",
+      "services/authentication_service.py"
+    ],
+    "medium_impact": [
+      "services/error_handler.py",
+      "utils/validation.py"
+    ],
+    "low_impact": [
+      "docs/api_reference.md",
+      "config/api_config.json"
+    ]
+  },
+  "files_to_modify": {
+    "production_files": 5,
+    "test_files": 8,
+    "config_files": 1,
+    "doc_files": 1
+  },
+  "test_requirements": {
+    "new_test_files": 3,
+    "tests_to_create": 21,
+    "existing_files_to_update": 3
+  },
+  "implementation_effort": {
+    "estimated_hours": 8,
+    "critical_priority": 5,
+    "high_priority": 7,
+    "medium_priority": 2
+  },
+  "risk_assessment": "MEDIUM - New error scenarios require careful testing",
+  "recommendation": "Create comprehensive unit + integration test suite before deployment"
+}
 ```
 
 ## Integration with Central Analysis

@@ -379,6 +379,254 @@ result = analyze_a1gap_specification(
 # - Data entity impacts (from A1TD cross-ref)
 ```
 
+## Impact Analysis
+
+### Step 1: Identify Impacted Modules/Features
+
+The skill automatically identifies which modules are affected by extracted procedures and policies:
+
+```python
+Impacted Modules Analysis:
+
+For each extracted procedure:
+  - Feature: Workflow Execution
+    Modules: services/workflow_engine.py, services/workflow_orchestrator.py
+    Impact: DIRECT (new workflows to execute)
+    
+  - Feature: State Management
+    Modules: models/state_machine.py, services/state_manager.py
+    Impact: DIRECT (new state transitions)
+    
+  - Feature: Policy Enforcement
+    Modules: services/policy_enforcer.py, utils/policy_validator.py
+    Impact: DIRECT (new policy rules)
+    
+  - Feature: Error Handling & Recovery
+    Modules: services/error_handler.py, services/recovery_manager.py
+    Impact: DIRECT (new error scenarios)
+    
+  - Feature: Audit Logging
+    Modules: services/audit_logger.py, utils/event_logger.py
+    Impact: MEDIUM (log procedure execution)
+    
+  - Feature: Notifications
+    Modules: services/notification_service.py, utils/event_publisher.py
+    Impact: MEDIUM (notify on state changes)
+```
+
+### Step 2: Identify Files to Modify
+
+The skill lists files requiring updates to implement new procedures:
+
+```python
+Files to Modify:
+
+┌─ WORKFLOW & STATE MACHINES ──────────────┐
+│                                           │
+│ services/workflow_engine.py               │
+│   Changes: Add workflow executor classes │
+│   Lines: Add 3 new workflow classes      │
+│   Priority: CRITICAL                      │
+│                                           │
+│ models/state_machine.py                   │
+│   Changes: Add state definitions          │
+│   Lines: Add states for new entities     │
+│   Priority: CRITICAL                      │
+│                                           │
+│ services/state_manager.py                 │
+│   Changes: Add state transition logic     │
+│   Lines: Add transition handlers          │
+│   Priority: CRITICAL                      │
+│                                           │
+│ services/workflow_orchestrator.py         │
+│   Changes: Add orchestration logic        │
+│   Lines: Add workflow sequencing          │
+│   Priority: HIGH                          │
+│                                           │
+└─────────────────────────────────────────┘
+
+┌─ POLICIES & RULES ───────────────────────┐
+│                                           │
+│ services/policy_enforcer.py               │
+│   Changes: Add policy implementations     │
+│   Lines: Add 5 new policy classes        │
+│   Priority: CRITICAL                      │
+│                                           │
+│ utils/policy_validator.py                 │
+│   Changes: Add policy validators          │
+│   Lines: Add constraint checking logic    │
+│   Priority: HIGH                          │
+│                                           │
+│ models/policy_model.py                    │
+│   Changes: Add policy data structures     │
+│   Lines: Add policy rule definitions      │
+│   Priority: HIGH                          │
+│                                           │
+└─────────────────────────────────────────┘
+
+┌─ ERROR & RECOVERY ───────────────────────┐
+│                                           │
+│ services/error_handler.py                 │
+│   Changes: Add error scenarios            │
+│   Lines: Add 4 new error types            │
+│   Priority: CRITICAL                      │
+│                                           │
+│ services/recovery_manager.py              │
+│   Changes: Add recovery strategies        │
+│   Lines: Add recovery logic               │
+│   Priority: HIGH                          │
+│                                           │
+└─────────────────────────────────────────┘
+
+┌─ LOGGING & MONITORING ───────────────────┐
+│                                           │
+│ services/audit_logger.py                  │
+│   Changes: Log workflow execution         │
+│   Lines: Add audit event logging          │
+│   Priority: MEDIUM                        │
+│                                           │
+│ services/notification_service.py          │
+│   Changes: Notify on state changes        │
+│   Lines: Add notification handlers        │
+│   Priority: MEDIUM                        │
+│                                           │
+│ docs/procedure_reference.md               │
+│   Changes: Document procedures            │
+│   Scope: Add procedure descriptions       │
+│   Priority: MEDIUM                        │
+│                                           │
+└─────────────────────────────────────────┘
+```
+
+### Step 3: Identify Tests to Modify/Create
+
+The skill identifies comprehensive test requirements for new procedures:
+
+```python
+Tests to Create/Modify:
+
+┌─ NEW TEST FILES ─────────────────────────┐
+│                                           │
+│ tests/test_workflow_section_3_x.py       │
+│   Type: Workflow execution tests         │
+│   Test Cases:                             │
+│     - test_workflow_initialization       │
+│     - test_workflow_step_execution       │
+│     - test_workflow_error_handling       │
+│     - test_workflow_cancellation         │
+│     - test_workflow_retry_logic          │
+│   Total Test Cases: 18                   │
+│   Priority: CRITICAL                     │
+│                                           │
+│ tests/test_state_machine_section_3_x.py  │
+│   Type: State machine tests              │
+│   Test Cases:                             │
+│     - test_valid_transitions             │
+│     - test_invalid_transitions           │
+│     - test_state_guards                  │
+│     - test_state_actions                 │
+│   Total Test Cases: 12                   │
+│   Priority: CRITICAL                     │
+│                                           │
+│ tests/test_policies_section_3_x.py       │
+│   Type: Policy enforcement tests         │
+│   Test Cases:                             │
+│     - test_policy_evaluation             │
+│     - test_policy_conflicts              │
+│     - test_policy_precedence             │
+│     - test_exception_handling            │
+│   Total Test Cases: 10                   │
+│   Priority: HIGH                         │
+│                                           │
+│ tests/test_error_scenarios_section_3_x.py│
+│   Type: Error handling tests             │
+│   Test Cases:                             │
+│     - test_error_detection               │
+│     - test_recovery_procedures           │
+│     - test_retry_logic                   │
+│     - test_error_logging                 │
+│   Total Test Cases: 8                    │
+│   Priority: HIGH                         │
+│                                           │
+└─────────────────────────────────────────┘
+
+┌─ MODIFY EXISTING TEST FILES ─────────────┐
+│                                           │
+│ tests/test_services.py                   │
+│   Changes: Add workflow service tests    │
+│   Lines: Add integration test cases      │
+│   Priority: HIGH                         │
+│                                           │
+│ tests/test_error_handling.py             │
+│   Changes: Add procedure error tests     │
+│   Lines: Add scenario-based tests        │
+│   Priority: HIGH                         │
+│                                           │
+│ tests/integration/test_workflows.py      │
+│   Changes: Add end-to-end workflow tests │
+│   Lines: Add full procedure tests        │
+│   Priority: MEDIUM                       │
+│                                           │
+└─────────────────────────────────────────┘
+```
+
+### Impact Summary Report
+
+The skill generates structured impact assessment:
+
+```python
+Impact Assessment Output:
+
+{
+  "document_version": "v1.2",
+  "section_analyzed": "3.x",
+  "extraction_summary": {
+    "procedures_found": 6,
+    "policies_defined": 8,
+    "state_machines": 4,
+    "error_scenarios": 10,
+    "decision_points": 12
+  },
+  "module_impact": {
+    "high_impact": [
+      "services/workflow_engine.py",
+      "services/policy_enforcer.py",
+      "models/state_machine.py"
+    ],
+    "medium_impact": [
+      "services/error_handler.py",
+      "services/audit_logger.py"
+    ]
+  },
+  "files_to_modify": {
+    "workflow_files": 4,
+    "policy_files": 3,
+    "error_handling_files": 2,
+    "logging_files": 2,
+    "test_files": 7
+  },
+  "test_requirements": {
+    "new_test_files": 4,
+    "tests_to_create": 48,
+    "existing_files_to_update": 3
+  },
+  "procedural_impact": {
+    "new_workflows": 6,
+    "new_policies": 8,
+    "new_error_scenarios": 10,
+    "state_transitions": 15
+  },
+  "implementation_effort": {
+    "estimated_hours": 24,
+    "critical_priority": 8,
+    "high_priority": 8,
+    "medium_priority": 4
+  },
+  "risk_assessment": "HIGH - Complex state machines and error recovery logic",
+  "recommendation": "Implement comprehensive state machine and error scenario tests before production"
+}
+```
+
 ## Integration with Central Analysis
 
 This skill is called by:

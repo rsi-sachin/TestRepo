@@ -413,6 +413,260 @@ result = analyze_etsi_patterns(
 # - A1TP/TD/GAP compliance mapping
 ```
 
+## Impact Analysis
+
+### Step 1: Identify Impacted Modules/Features
+
+The skill automatically identifies which modules need to be enhanced for standards compliance:
+
+```python
+Impacted Modules Analysis:
+
+For each design pattern/standard:
+  - Feature: Code Style & Conventions
+    Modules: codestyle/naming_conventions.py, utils/style_validator.py
+    Impact: MEDIUM (linter rules, formatters)
+    
+  - Feature: API Design Patterns
+    Modules: patterns/rest_patterns.py, templates/route_templates.py
+    Impact: MEDIUM (route generation guidance)
+    
+  - Feature: Data Format Standards
+    Modules: utils/serialization_validator.py, services/format_converter.py
+    Impact: MEDIUM (JSON encoding rules)
+    
+  - Feature: Security Patterns
+    Modules: services/security_validator.py, utils/auth_pattern_checker.py
+    Impact: HIGH (OAuth2.1, token patterns)
+    
+  - Feature: Error Handling Standards
+    Modules: services/error_formatter.py, utils/error_code_mapper.py
+    Impact: MEDIUM (error code standards)
+    
+  - Feature: Compliance Validation
+    Modules: validators/pattern_validator.py, utils/conformance_checker.py
+    Impact: MEDIUM (audit and compliance)
+```
+
+### Step 2: Identify Files to Modify
+
+The skill lists files needing updates to achieve ETSI compliance:
+
+```python
+Files to Modify:
+
+┌─ CODING STANDARDS & LINTING ─────────────┐
+│                                           │
+│ codestyle/naming_conventions.py           │
+│   Changes: Add ETSI naming rules          │
+│   Lines: Add camelCase, snake_case rules │
+│   Priority: MEDIUM                        │
+│                                           │
+│ .pylintrc                                 │
+│   Changes: Add ETSI-specific rules        │
+│   Lines: Add pattern matching rules       │
+│   Priority: MEDIUM                        │
+│                                           │
+│ pyproject.toml                            │
+│   Changes: Configure tools per ETSI       │
+│   Lines: Add black, isort, mypy configs   │
+│   Priority: MEDIUM                        │
+│                                           │
+└─────────────────────────────────────────┘
+
+┌─ API DESIGN PATTERNS ────────────────────┐
+│                                           │
+│ patterns/rest_patterns.py                 │
+│   Changes: Implement ETSI REST patterns  │
+│   Lines: Add resource patterns            │
+│   Priority: MEDIUM                        │
+│                                           │
+│ templates/route_templates.py              │
+│   Changes: Add ETSI-compliant templates  │
+│   Lines: Add FastAPI endpoint template    │
+│   Priority: MEDIUM                        │
+│                                           │
+│ utils/api_design_validator.py             │
+│   Changes: Validate API design            │
+│   Lines: Add endpoint validation logic    │
+│   Priority: HIGH                          │
+│                                           │
+└─────────────────────────────────────────┘
+
+┌─ SECURITY STANDARDS ─────────────────────┐
+│                                           │
+│ services/security_validator.py            │
+│   Changes: Enforce ETSI security rules   │
+│   Lines: Add OAuth2.1 validation logic    │
+│   Priority: CRITICAL                      │
+│                                           │
+│ utils/auth_pattern_checker.py             │
+│   Changes: Check token patterns           │
+│   Lines: Add token format validators      │
+│   Priority: HIGH                          │
+│                                           │
+│ config/security_config.json               │
+│   Changes: Configure security standards  │
+│   Lines: Add ETSI-compliant settings     │
+│   Priority: HIGH                          │
+│                                           │
+└─────────────────────────────────────────┘
+
+┌─ ERROR & DATA FORMAT STANDARDS ──────────┐
+│                                           │
+│ services/error_formatter.py               │
+│   Changes: Format errors per ETSI         │
+│   Lines: Add error response structure     │
+│   Priority: MEDIUM                        │
+│                                           │
+│ utils/serialization_validator.py          │
+│   Changes: Validate JSON format           │
+│   Lines: Add JSON structure validators    │
+│   Priority: MEDIUM                        │
+│                                           │
+├─ DOCUMENTATION ──────────────────────────┤
+│                                           │
+│ docs/etsi_compliance_guide.md             │
+│   Changes: Document compliance rules      │
+│   Scope: Add ETSI pattern guide           │
+│   Priority: MEDIUM                        │
+│                                           │
+│ docs/architecture_patterns.md             │
+│   Changes: Document architectural ways   │
+│   Scope: Add pattern descriptions         │
+│   Priority: MEDIUM                        │
+│                                           │
+└─────────────────────────────────────────┘
+```
+
+### Step 3: Identify Tests to Modify/Create
+
+The skill identifies test requirements for standards compliance:
+
+```python
+Tests to Create/Modify:
+
+┌─ NEW TEST FILES ─────────────────────────┐
+│                                           │
+│ tests/test_naming_conventions.py          │
+│   Type: Naming standard compliance tests │
+│   Test Cases:                             │
+│     - test_camel_case_method_names       │
+│     - test_pascal_case_class_names       │
+│     - test_snake_case_variable_names     │
+│     - test_constant_naming_rules         │
+│   Total Test Cases: 10                   │
+│   Priority: HIGH                         │
+│                                           │
+│ tests/test_api_patterns_compliance.py     │
+│   Type: REST API pattern tests           │
+│   Test Cases:                             │
+│     - test_resource_naming_convention    │
+│     - test_http_method_semantics         │
+│     - test_status_code_patterns          │
+│     - test_error_response_structure      │
+│   Total Test Cases: 12                   │
+│   Priority: HIGH                         │
+│                                           │
+│ tests/test_security_compliance.py         │
+│   Type: Security standard tests          │
+│   Test Cases:                             │
+│     - test_oauth2_1_compliance           │
+│     - test_token_format_validation       │
+│     - test_encryption_standards          │
+│   Total Test Cases: 8                    │
+│   Priority: CRITICAL                     │
+│                                           │
+│ tests/test_json_format_compliance.py      │
+│   Type: Data format tests                │
+│   Test Cases:                             │
+│     - test_json_field_naming             │
+│     - test_nested_object_structure       │
+│     - test_array_serialization           │
+│   Total Test Cases: 7                    │
+│   Priority: MEDIUM                       │
+│                                           │
+└─────────────────────────────────────────┘
+
+┌─ MODIFY EXISTING TEST FILES ─────────────┐
+│                                           │
+│ tests/test_api_routes.py                 │
+│   Changes: Validate ETSI compliance     │
+│   Lines: Add pattern compliance checks   │
+│   Priority: HIGH                         │
+│                                           │
+│ tests/test_security.py                   │
+│   Changes: Add ETSI security tests       │
+│   Lines: Add OAuth2.1 test scenarios     │
+│   Priority: HIGH                         │
+│                                           │
+│ tests/test_models.py                     │
+│   Changes: Validate naming conventions   │
+│   Lines: Add naming validation tests     │
+│   Priority: MEDIUM                       │
+│                                           │
+└─────────────────────────────────────────┘
+```
+
+### Impact Summary Report
+
+The skill generates standards compliance assessment:
+
+```python
+Impact Assessment Output:
+
+{
+  "document_version": "v17.0.0",
+  "patterns_analyzed": 25,
+  "extraction_summary": {
+    "architectural_patterns": 6,
+    "naming_conventions": 12,
+    "api_patterns": 8,
+    "error_patterns": 5,
+    "security_patterns": 4
+  },
+  "module_impact": {
+    "high_impact": [
+      "services/security_validator.py",
+      "utils/api_design_validator.py"
+    ],
+    "medium_impact": [
+      "codestyle/naming_conventions.py",
+      "services/error_formatter.py"
+    ]
+  },
+  "files_to_modify": {
+    "standards_validators": 5,
+    "config_files": 2,
+    "template_files": 2,
+    "test_files": 7,
+    "doc_files": 2
+  },
+  "test_requirements": {
+    "new_test_files": 4,
+    "tests_to_create": 37,
+    "existing_files_to_update": 3
+  },
+  "compliance_status": {
+    "current_compliance": "70%",
+    "violations_found": 8,
+    "violations_severity": {
+      "critical": 2,
+      "high": 3,
+      "medium": 3
+    }
+  },
+  "implementation_effort": {
+    "estimated_hours": 12,
+    "critical_priority": 2,
+    "high_priority": 5,
+    "medium_priority": 4
+  },
+  "risk_assessment": "MEDIUM - Security pattern changes require careful review",
+  "recommendation": "Address security violations (critical) first, then implement naming standards"
+}
+```
+
 ## Integration with Central Analysis
 
 This skill:
