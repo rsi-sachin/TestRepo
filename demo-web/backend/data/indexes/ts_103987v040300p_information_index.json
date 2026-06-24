@@ -1,0 +1,82 @@
+{
+  "document_metadata": {
+    "document_id": "ts_103987v040300p",
+    "document_name": "ts_103987v040300p",
+    "document_version": "4.3.0",
+    "document_path": "C:\\TestRepo\\ORAN\\docs\\ts_103987v040300p.pdf",
+    "extraction_date": "2026-06-24T13:59:26.443432"
+  },
+  "facts_by_section": {
+    "4.1": [
+      {
+        "fact_id": "fact_b45cad725d18",
+        "title": "It is based on HTTP as defined in A1TP [3] and an application data model defined",
+        "description": "It is based on HTTP as defined in A1TP [3] and an application data model defined in A1TD [4]",
+        "section": "4.1",
+        "page": null,
+        "extraction_confidence": 0.44,
+        "extraction_methods": [],
+        "status": "draft",
+        "source_code_references": []
+      },
+      {
+        "fact_id": "fact_9ecc248179cf",
+        "title": "It is based on HTTP as defined in A1TP [3] and an application data model defined",
+        "description": "It is based on HTTP as defined in A1TP [3] and an application data model defined in A1TD [4]",
+        "section": "4.1",
+        "page": null,
+        "extraction_confidence": 0.33,
+        "extraction_methods": [],
+        "status": "draft",
+        "source_code_references": []
+      },
+      {
+        "fact_id": "fact_a9d4ccc8609a",
+        "title": "The present document specifies a REST realization of the A1  interface architect",
+        "description": "The present document specifies a REST realization of the A1  interface architecture, and the policy and EI procedures \nidentified in A1GAP [2]",
+        "section": "4.1",
+        "page": null,
+        "extraction_confidence": 0.27,
+        "extraction_methods": [],
+        "status": "draft",
+        "source_code_references": []
+      },
+      {
+        "fact_id": "fact_94f16554ce26",
+        "title": "It is based on HTTP as defined in A1TP [3] and an application data model defined",
+        "description": "It is based on HTTP as defined in A1TP [3] and an application data model defined in A1TD [4]",
+        "section": "4.1",
+        "page": null,
+        "extraction_confidence": 0.33,
+        "extraction_methods": [],
+        "status": "draft",
+        "source_code_references": []
+      },
+      {
+        "fact_id": "fact_15b3ecf449d0",
+        "title": "It corresponds to a REST-based Solution Set and is based on the structure in ETS",
+        "description": "It corresponds to a REST-based Solution Set and is based on the structure in ETSI TS 129 501 [6] and the related TS template [i.1]",
+        "section": "4.1",
+        "page": null,
+        "extraction_confidence": 0.22,
+        "extraction_methods": [],
+        "status": "draft",
+        "source_code_references": []
+      },
+      {
+        "fact_id": "fact_dafbb549d1b8",
+        "title": "The design patterns for HTTP procedures and JSON objects follow ETSI TS 132 158",
+        "description": "The design patterns for HTTP procedures and JSON objects follow ETSI TS 132 158 [i.2]",
+        "section": "4.1",
+        "page": null,
+        "extraction_confidence": 0.27,
+        "extraction_methods": [],
+        "status": "draft",
+        "source_code_references": []
+      }
+    ]
+  },
+  "source_code_mapping": {},
+  "extraction_summary": {},
+  "metadata": {}
+}

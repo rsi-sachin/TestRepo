@@ -2,11 +2,217 @@
   "metadata": {
     "index_version": "1.0",
     "created_date": "2026-06-23T00:00:00.000000",
-    "last_updated": "2026-06-23T00:00:00.000000",
+    "last_updated": "2026-06-24T13:59:26.442172",
     "document_count": 0,
-    "facts_count": 0,
-    "references_count": 0
+    "facts_count": 6,
+    "references_count": 4
   },
-  "facts": [],
-  "references": []
+  "facts": [
+    {
+      "fact_id": "fact_2a0e8129a6b5",
+      "title": "It is based on HTTP as defined in A1TP [3] and an application data model defined",
+      "description": "It is based on HTTP as defined in A1TP [3] and an application data model defined in A1TD [4]",
+      "type": "other",
+      "status": "draft",
+      "confidence": 0.44,
+      "keywords": [
+        "It"
+      ],
+      "evidence_count": 1,
+      "evidence_links": [
+        {
+          "source_document": "ts_103987v040300p.pdf",
+          "section": "4.1",
+          "page": null,
+          "line": null,
+          "confidence": 0.44,
+          "extraction_methods": []
+        }
+      ],
+      "created_date": "2026-06-24T13:59:26.437835",
+      "last_updated": "2026-06-24T13:59:26.437841",
+      "user_notes": null
+    },
+    {
+      "fact_id": "fact_4c8a0375239f",
+      "title": "It is based on HTTP as defined in A1TP [3] and an application data model defined",
+      "description": "It is based on HTTP as defined in A1TP [3] and an application data model defined in A1TD [4]",
+      "type": "action_low",
+      "status": "draft",
+      "confidence": 0.33,
+      "keywords": [],
+      "evidence_count": 1,
+      "evidence_links": [
+        {
+          "source_document": "ts_103987v040300p.pdf",
+          "section": "4.1",
+          "page": null,
+          "line": null,
+          "confidence": 0.33,
+          "extraction_methods": []
+        }
+      ],
+      "created_date": "2026-06-24T13:59:26.437856",
+      "last_updated": "2026-06-24T13:59:26.437858",
+      "user_notes": null
+    },
+    {
+      "fact_id": "fact_229c14dfea49",
+      "title": "The present document specifies a REST realization of the A1  interface architect",
+      "description": "The present document specifies a REST realization of the A1  interface architecture, and the policy and EI procedures \nidentified in A1GAP [2]",
+      "type": "gap_low",
+      "status": "draft",
+      "confidence": 0.27,
+      "keywords": [],
+      "evidence_count": 1,
+      "evidence_links": [
+        {
+          "source_document": "ts_103987v040300p.pdf",
+          "section": "4.1",
+          "page": null,
+          "line": null,
+          "confidence": 0.27,
+          "extraction_methods": []
+        }
+      ],
+      "created_date": "2026-06-24T13:59:26.437867",
+      "last_updated": "2026-06-24T13:59:26.437869",
+      "user_notes": null
+    },
+    {
+      "fact_id": "fact_c02a59db6aa9",
+      "title": "It is based on HTTP as defined in A1TP [3] and an application data model defined",
+      "description": "It is based on HTTP as defined in A1TP [3] and an application data model defined in A1TD [4]",
+      "type": "gap_low",
+      "status": "draft",
+      "confidence": 0.33,
+      "keywords": [],
+      "evidence_count": 1,
+      "evidence_links": [
+        {
+          "source_document": "ts_103987v040300p.pdf",
+          "section": "4.1",
+          "page": null,
+          "line": null,
+          "confidence": 0.33,
+          "extraction_methods": []
+        }
+      ],
+      "created_date": "2026-06-24T13:59:26.437877",
+      "last_updated": "2026-06-24T13:59:26.437878",
+      "user_notes": null
+    },
+    {
+      "fact_id": "fact_8b20bc58817a",
+      "title": "It corresponds to a REST-based Solution Set and is based on the structure in ETS",
+      "description": "It corresponds to a REST-based Solution Set and is based on the structure in ETSI TS 129 501 [6] and the related TS template [i.1]",
+      "type": "gap_low",
+      "status": "draft",
+      "confidence": 0.22,
+      "keywords": [],
+      "evidence_count": 1,
+      "evidence_links": [
+        {
+          "source_document": "ts_103987v040300p.pdf",
+          "section": "4.1",
+          "page": null,
+          "line": null,
+          "confidence": 0.22,
+          "extraction_methods": []
+        }
+      ],
+      "created_date": "2026-06-24T13:59:26.437885",
+      "last_updated": "2026-06-24T13:59:26.437887",
+      "user_notes": null
+    },
+    {
+      "fact_id": "fact_55ff65687186",
+      "title": "The design patterns for HTTP procedures and JSON objects follow ETSI TS 132 158",
+      "description": "The design patterns for HTTP procedures and JSON objects follow ETSI TS 132 158 [i.2]",
+      "type": "gap_low",
+      "status": "draft",
+      "confidence": 0.27,
+      "keywords": [],
+      "evidence_count": 1,
+      "evidence_links": [
+        {
+          "source_document": "ts_103987v040300p.pdf",
+          "section": "4.1",
+          "page": null,
+          "line": null,
+          "confidence": 0.27,
+          "extraction_methods": []
+        }
+      ],
+      "created_date": "2026-06-24T13:59:26.437893",
+      "last_updated": "2026-06-24T13:59:26.437894",
+      "user_notes": null
+    }
+  ],
+  "references": [
+    {
+      "reference_id": "A1TP",
+      "reference_name": "A1 Technical Protocol",
+      "description": null,
+      "url_template": null,
+      "status": "not_found",
+      "discovered_in_documents": [
+        "ts_103987v040300p.pdf"
+      ],
+      "discovered_sections": [
+        "4.1"
+      ],
+      "retrieval_notes": null,
+      "created_date": "2026-06-24T13:59:26.440697",
+      "last_checked": null
+    },
+    {
+      "reference_id": "A1TD",
+      "reference_name": "A1 Technical Data Model",
+      "description": null,
+      "url_template": null,
+      "status": "not_found",
+      "discovered_in_documents": [
+        "ts_103987v040300p.pdf"
+      ],
+      "discovered_sections": [
+        "4.1"
+      ],
+      "retrieval_notes": null,
+      "created_date": "2026-06-24T13:59:26.440748",
+      "last_checked": null
+    },
+    {
+      "reference_id": "A1GAP",
+      "reference_name": "A1 Gap Analysis Protocol",
+      "description": null,
+      "url_template": null,
+      "status": "not_found",
+      "discovered_in_documents": [
+        "ts_103987v040300p.pdf"
+      ],
+      "discovered_sections": [
+        "4.1"
+      ],
+      "retrieval_notes": null,
+      "created_date": "2026-06-24T13:59:26.440793",
+      "last_checked": null
+    },
+    {
+      "reference_id": "ETSI TS 132 158",
+      "reference_name": "ETSI TS 132 158 - Design Patterns",
+      "description": null,
+      "url_template": null,
+      "status": "not_found",
+      "discovered_in_documents": [
+        "ts_103987v040300p.pdf"
+      ],
+      "discovered_sections": [
+        "4.1"
+      ],
+      "retrieval_notes": null,
+      "created_date": "2026-06-24T13:59:26.440857",
+      "last_checked": null
+    }
+  ]
 }
