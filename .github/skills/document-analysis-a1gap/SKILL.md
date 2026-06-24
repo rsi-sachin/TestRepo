@@ -10,6 +10,18 @@ related-skills:
   - document-cross-reference-analysis
   - document-analysis-a1tp
   - document-analysis-a1td
+configuration:
+  ask-user-for-mode: true
+  supported-modes:
+    - single
+    - dependencies
+    - full-suite
+    - version-evolution
+  mode-descriptions:
+    single: "Analyze procedures and policies in this specification alone"
+    dependencies: "Include API endpoints that trigger procedures and data entities affected"
+    full-suite: "Complete analysis with all related A1 documents and ETSI standards"
+    version-evolution: "Track procedure changes and breaking changes across policy versions"
 ---
 
 # A1 Gap Analysis Protocol (A1GAP) Analysis Skill

@@ -12,6 +12,18 @@ orchestrates:
   - document-analysis-a1td
   - document-analysis-a1gap
   - document-analysis-etsi-ts-132-158
+configuration:
+  ask-user-for-mode: true
+  supported-modes:
+    - single
+    - dependencies
+    - full-suite
+    - version-evolution
+  mode-descriptions:
+    single: "Analyze one document and identify external references"
+    dependencies: "Automatically resolve dependencies and gather context from referenced documents"
+    full-suite: "Analyze all A1 documents (A1TP, A1TD, A1GAP) together with complete cross-referencing"
+    version-evolution: "Compare document versions to identify breaking changes and schema evolution"
 ---
 
 # Document Cross-Reference Analysis Skill

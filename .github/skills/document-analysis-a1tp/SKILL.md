@@ -9,8 +9,18 @@ user-invocable: true
 related-skills:
   - document-cross-reference-analysis
   - document-analysis-a1td
-  - document-analysis-a1gap
----
+  - document-analysis-a1gapconfiguration:
+  ask-user-for-mode: true
+  supported-modes:
+    - single
+    - dependencies
+    - full-suite
+    - version-evolution
+  mode-descriptions:
+    single: "Analyze this API specification in isolation"
+    dependencies: "Include request/response schemas and procedure triggers from related documents"
+    full-suite: "Complete analysis with all related A1 documents and ETSI standards"
+    version-evolution: "Track API changes and breaking changes across document versions"---
 
 # A1 Technical Protocol (A1TP) Analysis Skill
 

@@ -11,6 +11,16 @@ related-skills:
   - document-analysis-a1tp
   - document-analysis-a1td
   - document-analysis-a1gap
+configuration:
+  ask-user-for-mode: true
+  supported-modes:
+    - single
+    - dependencies
+    - full-suite
+  mode-descriptions:
+    single: "Analyze ETSI patterns and standards in isolation"
+    dependencies: "Validate A1TP, A1TD, and A1GAP compliance against these standards"
+    full-suite: "Complete analysis with all A1 specifications validated against ETSI"
 ---
 
 # ETSI TS 132 158 Design Patterns Analysis Skill

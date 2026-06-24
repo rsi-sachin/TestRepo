@@ -10,6 +10,18 @@ related-skills:
   - document-cross-reference-analysis
   - document-analysis-a1tp
   - document-analysis-a1gap
+configuration:
+  ask-user-for-mode: true
+  supported-modes:
+    - single
+    - dependencies
+    - full-suite
+    - version-evolution
+  mode-descriptions:
+    single: "Analyze data structures in this specification alone"
+    dependencies: "Include API endpoints that use these models and procedures that modify them"
+    full-suite: "Complete analysis with all related A1 documents and ETSI standards"
+    version-evolution: "Track schema changes and breaking changes across data model versions"
 ---
 
 # A1 Technical Data Model (A1TD) Analysis Skill
