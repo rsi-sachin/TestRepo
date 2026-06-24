@@ -11,6 +11,7 @@ import uuid
 import json
 from datetime import datetime
 
+from app.models.a1_service import A1ServiceRegistryResponse
 from app.models.oran import (
     OranTestCatalog,
     OranTestCase,
@@ -25,6 +26,9 @@ from app.models.db_models import TestCase
 from app.services.oran_execution_service import OranExecutionService
 from app.services.spec_parser_service import SpecParserService
 from app.services.catalog_generator_service import CatalogGeneratorService
+from app.services.a1_service_registry import A1ServiceRegistry
+from app.services.a1_policy_service import A1PolicyService
+from app.services.a1_enrichment_service import A1EnrichmentInformationService
 from app.services.rule_learner_service import RuleLearnerService
 from app.repositories.rule_pack_repository import RulePackRepository
 from app.models.rule_pack import RulePack, RulePackSummary
@@ -37,6 +41,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 oran_execution_service = OranExecutionService()
+a1_service_registry = A1ServiceRegistry()
+a1_policy_service = A1PolicyService(a1_service_registry)
+a1_ei_service = A1EnrichmentInformationService(a1_service_registry)
 
 # Initialize parser and catalog generator
 specs_upload_dir = Path("./data/spec_uploads")
@@ -60,6 +67,27 @@ SPEC_METADATA = {
     "TS_103_988": {"ts_number": "TS 103 988", "title": "A1 Type Definitions"},
     "TS_103_983": {"ts_number": "TS 103 983", "title": "A1 General Principles"},
 }
+
+
+@router.get("/services", response_model=A1ServiceRegistryResponse)
+async def list_a1_services():
+    """List supported A1 services and their role definitions."""
+    return a1_service_registry.get_response()
+
+
+@router.get("/services/{service_type}")
+async def get_a1_service(service_type: str):
+    """Return metadata for a single supported A1 service."""
+    try:
+        definition = a1_service_registry.get_service_definition(service_type)
+        helper = a1_policy_service if definition.service_type.value == "A1-P" else a1_ei_service
+        return {
+            "service": definition.model_dump(mode="json"),
+            "catalog_context": helper.get_catalog_context(),
+            "summary": helper.build_service_summary(),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 def _get_docs_path() -> Optional[Path]:
@@ -131,6 +159,7 @@ def _save_sections_options(all_clauses: Dict[SpecType, List]) -> None:
 @router.post("/extract-methodology", response_model=MethodologyAnalysisResult)
 async def extract_methodology_plan(
     spec_type: str = Query(default="TS_103_989", description="Spec to analyze, e.g. TS_103_989"),
+    service_type: str = Query(default="A1-P", description="A1 service to target"),
 ):
     """Extract methodology context and generate module/title candidates."""
     try:
@@ -141,6 +170,7 @@ async def extract_methodology_plan(
                 detail=f"Spec file for {spec_type} not found in uploads or repository docs",
             )
 
+        service_definition = a1_service_registry.get_service_definition(service_type)
         analysis = spec_parser.extract_methodology_plan(spec_file, SpecType(spec_type))
 
         sections = [
@@ -178,6 +208,7 @@ async def extract_methodology_plan(
 
         return MethodologyAnalysisResult(
             spec_type=SpecType(spec_type),
+            service_type=service_definition.service_type.value,
             spec_file=analysis['spec_file'],
             methodology_sections=sections,
             test_modules=modules,
@@ -421,6 +452,7 @@ async def download_test_script(test_id: str):
 async def generate_test_catalog(
     catalog_name: str = Query(..., description="Name for the generated catalog"),
     description: Optional[str] = Query("", description="Catalog description"),
+    service_type: str = Query(default="A1-P", description="A1 service to generate for"),
     db: Session = Depends(get_db)
 ):
     """
@@ -431,6 +463,7 @@ async def generate_test_catalog(
     """
     try:
         logger.info(f"Starting catalog generation: {catalog_name}")
+        service_definition = a1_service_registry.get_service_definition(service_type)
         
         # Map uploaded files to SpecType
         spec_files = {}
@@ -472,7 +505,9 @@ async def generate_test_catalog(
             enriched_cases,
             catalog_name,
             description,
-            apply_section_limit=True  # MVP constraint: 1 test per section
+            apply_section_limit=True,  # MVP constraint: 1 test per section
+            service_type=service_definition.service_type.value,
+            service_name=service_definition.name,
         )
         
         # Save catalog JSON
@@ -504,7 +539,9 @@ async def generate_test_catalog(
             "message": f"Successfully generated catalog with {catalog.total_tests} test cases",
             "total_tests": str(catalog.total_tests),
             "total_clauses_parsed": str(total_clauses),
-            "conflicts_detected": str(len(conflicts))
+            "conflicts_detected": str(len(conflicts)),
+            "service_type": service_definition.service_type.value,
+            "service_name": service_definition.name,
         }
     
     except HTTPException:
@@ -581,6 +618,7 @@ async def generate_from_selection(
     selected_sections: Dict[str, List[str]],
     catalog_name: str = Query(..., description="Name for the generated catalog"),
     description: Optional[str] = Query("", description="Catalog description"),
+    service_type: str = Query(default="A1-P", description="A1 service to generate for"),
     db: Session = Depends(get_db)
 ):
     """
@@ -595,6 +633,7 @@ async def generate_from_selection(
     """
     try:
         logger.info(f"Generating catalog from selected sections: {catalog_name}")
+        service_definition = a1_service_registry.get_service_definition(service_type)
         
         # Map uploaded files to SpecType
         spec_files = {}
@@ -643,7 +682,9 @@ async def generate_from_selection(
             enriched_cases,
             catalog_name,
             description,
-            apply_section_limit=False  # Don't apply limit - user made selection
+            apply_section_limit=False,  # Don't apply limit - user made selection
+            service_type=service_definition.service_type.value,
+            service_name=service_definition.name,
         )
         
         # Save catalog JSON
@@ -666,7 +707,9 @@ async def generate_from_selection(
             "status": "completed",
             "message": f"Successfully generated catalog with {catalog.total_tests} test cases from selected sections",
             "total_tests": str(catalog.total_tests),
-            "total_selected_sections": str(total_selected)
+            "total_selected_sections": str(total_selected),
+            "service_type": service_definition.service_type.value,
+            "service_name": service_definition.name,
         }
     
     except HTTPException:
@@ -679,6 +722,7 @@ async def generate_from_selection(
 @router.post("/upload-specs")
 async def upload_specifications(
     request: Request,
+    service_type: str = Query(default="A1-P", description="A1 service to upload for"),
     ts_103_989: Optional[UploadFile] = File(None, description="TS 103 989 - A1 Test Specification"),
     ts_103_987: Optional[UploadFile] = File(None, description="TS 103 987 - A1 Application Protocol"),
     ts_103_988: Optional[UploadFile] = File(None, description="TS 103 988 - A1 Type Definitions"),
@@ -693,6 +737,7 @@ async def upload_specifications(
     Returns per-spec resolution status for the frontend to render.
     """
     try:
+        service_definition = a1_service_registry.get_service_definition(service_type)
         # Parse selected_specs from form data (list of spec type strings)
         form = await request.form()
         selected_specs_raw = form.getlist("selected_specs")
@@ -746,6 +791,8 @@ async def upload_specifications(
             "resolution": resolution,
             "missing": missing,
             "status": "ready" if not missing else "partial",
+            "service_type": service_definition.service_type.value,
+            "service_name": service_definition.name,
         }
 
     except Exception as e:

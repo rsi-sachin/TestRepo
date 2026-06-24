@@ -79,3 +79,5 @@ Full requirements: `C:\testrepo\docs\requirements.txt`
 - Follow standard Maven project layout
 - UI labels must always use business language (REQ-006)
 - Each demo scenario in `demos.json` must have: id, title, description, outcome, protocol, complexity, jmxPath, defaultParams
+- For any Python-based software, package, or tooling need, including document and PDF reading, always use the workspace virtual environment and its installed packages.
+- Do not rely on system Python or globally installed packages when a workspace virtual environment is available.

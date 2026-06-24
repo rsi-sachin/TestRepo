@@ -321,6 +321,7 @@ function updateSelectionCounts() {
  */
 async function handleGenerateFromSelection() {
     const selectedCount = sectionSelectorState.selectedSections.size;
+    const serviceType = document.getElementById('service-select')?.value || 'A1-P';
     
     if (selectedCount === 0) {
         showNotification('Please select at least one section', 'warning');
@@ -347,7 +348,7 @@ async function handleGenerateFromSelection() {
         });
 
         const response = await fetch(
-            `/api/oran/generate-from-selection?catalog_name=${encodeURIComponent(sectionSelectorState.catalogName)}&description=${encodeURIComponent(sectionSelectorState.catalogDescription)}`,
+            `/api/oran/generate-from-selection?catalog_name=${encodeURIComponent(sectionSelectorState.catalogName)}&description=${encodeURIComponent(sectionSelectorState.catalogDescription)}&service_type=${encodeURIComponent(serviceType)}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

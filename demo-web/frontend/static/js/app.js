@@ -4,9 +4,9 @@
  */
 
 // Import ORAN modules with cache-busting query strings so browser reloads pick up edits
-import { initOranUI } from './oran.js?v=6';
+import { initOranUI } from './oran.js?v=7';
 import { initTestManagement } from './test_management.js?v=6';
-import { initSectionSelector } from './section_selector.js?v=6';
+import { initSectionSelector } from './section_selector.js?v=7';
 
 // Configuration
 const API_BASE = window.location.origin + '/api';
