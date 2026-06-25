@@ -1,6 +1,6 @@
 # ORAN Feature Traceability Map (Metadata Tracking)
 
-Last updated: 2026-06-25
+Last updated: 2026-06-25 (ORAN-FTM-002: added TS 103 987 §5.2.4 to source reference scope)
 Scope: ORAN feature, module, and component traceability for planning, implementation, and verification.
 
 ## Purpose
@@ -34,7 +34,7 @@ This artifact provides non-code metadata mapping between:
 | Trace ID | Level | Item | TODO Mapping | Skills Used | Source Reference | Code Scope | Owner | Status | Verification | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
 | ORAN-FTM-001 | Feature | A1 Service Selection and Registry | Traceability and Quality Follow-up; Phase 2 | document-cross-reference-analysis, document-analysis-a1tp | TS 103 987 Section 5.1 | demo-web/backend/app/services/a1_service_registry.py | ORAN backend | In Progress | API regression tests for service-aware flows | A1-P and A1-EI in scope; A1-ML out of scope |
-| ORAN-FTM-002 | Module | A1 Policy Service | Traceability and Quality Follow-up | document-cross-reference-analysis, document-analysis-a1tp, document-analysis-a1td | TS 103 987 Sections 5.2.1, 5.2.2.1-5.2.2.4, 5.2.3 | demo-web/backend/app/services/a1_policy_service.py | ORAN backend | In Progress | Unit tests for policy operations and constraints | Must enforce policy ownership and mutability rules |
+| ORAN-FTM-002 | Module | A1 Policy Service | Traceability and Quality Follow-up | document-cross-reference-analysis, document-analysis-a1tp, document-analysis-a1td | TS 103 987 Sections 5.2.1, 5.2.2.1-5.2.2.4, 5.2.3, 5.2.4 | demo-web/backend/app/services/a1_policy_service.py | ORAN backend | In Progress | Unit tests for policy operations and constraints | Must enforce policy ownership and mutability rules |
 | ORAN-FTM-003 | Module | A1 Enrichment Service | Traceability and Quality Follow-up; Phase 2 | document-cross-reference-analysis, document-analysis-a1tp | TS 103 987 A1-EI service scope (Section 5.1) | demo-web/backend/app/services/a1_enrichment_service.py | ORAN backend | Planned | Service unit tests and API tests | Align with A1-EI workflow and payload requirements |
 | ORAN-FTM-004 | Component | ORAN API Router and Service-Aware Endpoints | Traceability and Quality Follow-up | document-cross-reference-analysis, document-analysis-a1tp | TS 103 987 resource model and HTTP operations | demo-web/backend/app/api/oran.py | ORAN backend | In Progress | API tests for `/api/oran/services`, generation, upload, selection flows | Include ProblemDetails-style error handling where applicable |
 | ORAN-FTM-005 | Feature | Specification Ingestion Pipeline | Phase 2 Task 2.1 | document-cross-reference-analysis, document-analysis-a1tp | TS 103 989 (test clauses), TS 103 987 (protocol), TS 103 988 (types), TS 103 983 (principles) | demo-web/backend/app/services/spec_parser_service.py | ORAN backend | Planned | Unit tests for PDF/DOCX ingestion | Supports multi-spec ingestion for enrichment |

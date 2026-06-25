@@ -20,7 +20,7 @@ def test_list_policy_type_ids_contains_default() -> None:
 def test_create_get_status_and_delete_policy() -> None:
     service = A1PolicyService()
 
-    created = service.create_or_replace_policy(
+    created, was_created = service.create_or_replace_policy(
         policy_type_id="default",
         policy_id="policy-1",
         policy=_sample_policy(),
@@ -30,6 +30,7 @@ def test_create_get_status_and_delete_policy() -> None:
     status = service.get_policy_status("default", "policy-1")
 
     assert created.policy_statements[0]["action"] == "allow"
+    assert was_created is True
     assert fetched.scope["scope_type"] == "cell"
     assert status.enforcement_status == "ACCEPTED"
 

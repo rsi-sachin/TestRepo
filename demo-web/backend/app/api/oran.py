@@ -13,7 +13,6 @@ from datetime import datetime
 
 from app.models.a1_service import A1ServiceRegistryResponse
 from app.models.a1_policy_models import (
-    CreateOrReplacePolicyRequest,
     PolicyObject,
     PolicyStatusObject,
     PolicyTypeObject,
@@ -128,24 +127,53 @@ async def get_policy_type(policy_type_id: str):
         _raise_problem(404, "Policy Type Not Found", str(e), instance=f"/a1/policytypes/{policy_type_id}")
 
 
+@router.get("/a1/policytypes/{policy_type_id}/policies", response_model=List[str])
+async def list_policy_ids(policy_type_id: str) -> List[str]:
+    """List all policy identifiers for a given policy type (§5.2.4.2)."""
+    try:
+        return a1_policy_service.list_policy_ids(policy_type_id)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "Policy Type Not Found",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/policies",
+        )
+
+
 @router.put(
     "/a1/policytypes/{policy_type_id}/policies/{policy_id}",
     response_model=PolicyObject,
-    status_code=201,
 )
 async def create_or_replace_policy(
     policy_type_id: str,
     policy_id: str,
-    request: CreateOrReplacePolicyRequest,
+    policy: PolicyObject,
+    response: Response,
+    notification_destination: Optional[str] = Query(None, alias="notificationDestination"),
 ):
-    """Create or replace a policy and register callback destination for status notifications."""
+    """Create or update a policy (§5.2.4.3/5.2.4.4).
+
+    Returns 201 Created (+ Location header) when the policy is new;
+    returns 200 OK when an existing policy is replaced.
+    Pass notificationDestination as a query parameter to subscribe to status
+    notifications; omit it to cancel an existing subscription.
+    """
     try:
-        return a1_policy_service.create_or_replace_policy(
+        result, was_created = a1_policy_service.create_or_replace_policy(
             policy_type_id=policy_type_id,
             policy_id=policy_id,
-            policy=request.policy,
-            notification_destination=str(request.notification_destination),
+            policy=policy,
+            notification_destination=notification_destination,
         )
+        if was_created:
+            response.status_code = 201
+            response.headers["Location"] = (
+                f"/api/oran/a1/policytypes/{policy_type_id}/policies/{policy_id}"
+            )
+        else:
+            response.status_code = 200
+        return result
     except KeyError as e:
         _raise_problem(
             404,
