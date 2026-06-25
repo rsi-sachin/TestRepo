@@ -8,7 +8,7 @@ from typing import List, Optional, Dict, Tuple
 from pathlib import Path
 import logging
 
-from app.models.oran import TestClause, SpecType
+from app.models.oran import TestClause, SpecType, ScenarioType
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +205,7 @@ class TestClauseExtractor:
                 clause_number=section_num,
                 title=title,
                 description=description or title,
+                scenario_type=self._classify_scenario_type(title, text, spec_type),
                 spec_type=spec_type,
                 page_number=page_num,
                 entrance_criteria=entrance_criteria,
@@ -243,6 +244,26 @@ class TestClauseExtractor:
                     return value[:500]  # Limit to 500 chars
         
         return None
+
+    def _classify_scenario_type(
+        self,
+        title: str,
+        text: str,
+        spec_type: SpecType,
+    ) -> ScenarioType:
+        """Classify a clause as conformance or interoperability using TS 103 989 methodology cues."""
+        signal_text = f"{title}\n{text}".lower()
+
+        if "interoperability" in signal_text:
+            return ScenarioType.INTEROPERABILITY
+
+        if any(keyword in signal_text for keyword in ["conformance", "simulator", "test purpose", "expected result"]):
+            return ScenarioType.CONFORMANCE
+
+        if spec_type == SpecType.TS_103_989:
+            return ScenarioType.CONFORMANCE
+
+        return ScenarioType.INTEROPERABILITY
     
     def extract_http_info(self, text: str) -> Dict[str, Optional[str]]:
         """

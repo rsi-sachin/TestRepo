@@ -2,7 +2,7 @@
 Database configuration and session management
 """
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from pathlib import Path
@@ -54,6 +54,7 @@ def init_db():
     
     logger.info(f"Initializing database at {DATABASE_URL}")
     Base.metadata.create_all(bind=engine)
+    _upgrade_test_cases_schema()
     logger.info("Database tables created successfully")
 
 
@@ -66,3 +67,34 @@ def reset_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     logger.info("Database reset complete")
+
+
+def _upgrade_test_cases_schema():
+    """Apply lightweight additive schema upgrades for SQLite installs without migrations."""
+    inspector = inspect(engine)
+    if "test_cases" not in inspector.get_table_names():
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("test_cases")}
+    alter_statements = []
+
+    if "scenario_type" not in existing_columns:
+        alter_statements.append(
+            "ALTER TABLE test_cases ADD COLUMN scenario_type VARCHAR(16)"
+        )
+    if "simulator_required" not in existing_columns:
+        alter_statements.append(
+            "ALTER TABLE test_cases ADD COLUMN simulator_required BOOLEAN NOT NULL DEFAULT 0"
+        )
+    if "configurable_request_parts" not in existing_columns:
+        alter_statements.append(
+            "ALTER TABLE test_cases ADD COLUMN configurable_request_parts TEXT NOT NULL DEFAULT '[]'"
+        )
+
+    if not alter_statements:
+        return
+
+    with engine.begin() as connection:
+        for statement in alter_statements:
+            logger.info("Applying schema upgrade: %s", statement)
+            connection.execute(text(statement))

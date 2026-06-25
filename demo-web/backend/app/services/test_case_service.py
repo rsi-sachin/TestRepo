@@ -2,13 +2,14 @@
 Test Case Service - Database CRUD operations for ORAN test cases
 """
 
+import json
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 import logging
 
 from app.models.db_models import TestCase, TestCaseEnrichment, EnrichmentType
-from app.models.oran import SpecType, HttpMethod, EnrichedTestCase, OranTestCase
+from app.models.oran import SpecType, HttpMethod, EnrichedTestCase, OranTestCase, ScenarioType
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,9 @@ class TestCaseService:
             source_spec=base.spec_type,
             source_section=base.clause_number,
             source_page=base.page_number,
+            scenario_type=enriched_case.scenario_type or sem.scenario_type,
+            simulator_required=sem.simulator_required,
+            configurable_request_parts=json.dumps(sem.configurable_request_parts),
             http_method=sem.http_method or HttpMethod.GET,
             endpoint=sem.endpoint or "/unknown",
             expected_status=sem.expected_status or 200,
@@ -90,6 +94,8 @@ class TestCaseService:
         limit: int = 100,
         source_spec: Optional[List[SpecType]] = None,
         source_section: Optional[str] = None,
+        scenario_type: Optional[List[ScenarioType]] = None,
+        simulator_required: Optional[bool] = None,
         http_method: Optional[List[HttpMethod]] = None,
         complexity: Optional[List[str]] = None,
         catalog_id: Optional[str] = None
@@ -103,6 +109,8 @@ class TestCaseService:
             limit: Maximum records to return
             source_spec: Filter by source specification(s)
             source_section: Filter by section (partial match)
+            scenario_type: Filter by scenario classification(s)
+            simulator_required: Filter by simulator requirement
             http_method: Filter by HTTP method(s)
             complexity: Filter by complexity level(s)
             catalog_id: Filter by catalog ID
@@ -118,6 +126,12 @@ class TestCaseService:
         
         if source_section:
             query = query.filter(TestCase.source_section.like(f"{source_section}%"))
+
+        if scenario_type:
+            query = query.filter(TestCase.scenario_type.in_(scenario_type))
+
+        if simulator_required is not None:
+            query = query.filter(TestCase.simulator_required == simulator_required)
         
         if http_method:
             query = query.filter(TestCase.http_method.in_(http_method))
@@ -136,6 +150,8 @@ class TestCaseService:
         db: Session,
         source_spec: Optional[List[SpecType]] = None,
         source_section: Optional[str] = None,
+        scenario_type: Optional[List[ScenarioType]] = None,
+        simulator_required: Optional[bool] = None,
         http_method: Optional[List[HttpMethod]] = None,
         complexity: Optional[List[str]] = None,
         catalog_id: Optional[str] = None
@@ -147,6 +163,10 @@ class TestCaseService:
             query = query.filter(TestCase.source_spec.in_(source_spec))
         if source_section:
             query = query.filter(TestCase.source_section.like(f"{source_section}%"))
+        if scenario_type:
+            query = query.filter(TestCase.scenario_type.in_(scenario_type))
+        if simulator_required is not None:
+            query = query.filter(TestCase.simulator_required == simulator_required)
         if http_method:
             query = query.filter(TestCase.http_method.in_(http_method))
         if complexity:
@@ -180,6 +200,8 @@ class TestCaseService:
         # Update allowed fields
         for key, value in updates.items():
             if hasattr(db_test, key):
+                if key == "configurable_request_parts" and isinstance(value, list):
+                    value = json.dumps(value)
                 setattr(db_test, key, value)
         
         db.commit()
@@ -244,10 +266,23 @@ class TestCaseService:
             count = query.filter(TestCase.complexity == complexity).count()
             if count > 0:
                 by_complexity[complexity] = count
+
+        by_scenario_type = {}
+        for scenario in ScenarioType:
+            count = query.filter(TestCase.scenario_type == scenario).count()
+            if count > 0:
+                by_scenario_type[scenario.value] = count
+
+        simulator_breakdown = {
+            "required": query.filter(TestCase.simulator_required == True).count(),
+            "not_required": query.filter(TestCase.simulator_required == False).count(),
+        }
         
         return {
             "total": total,
             "by_source_spec": by_spec,
+            "by_scenario_type": by_scenario_type,
+            "by_simulator_requirement": simulator_breakdown,
             "by_http_method": by_method,
             "by_complexity": by_complexity
         }

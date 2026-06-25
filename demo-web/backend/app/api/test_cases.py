@@ -3,13 +3,15 @@ Test Case Management API Endpoints (Phase 3)
 CRUD operations for ORAN test cases in database
 """
 
+import json
+
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import logging
 
 from app.database import get_db
-from app.models.oran import SpecType, HttpMethod
+from app.models.oran import SpecType, HttpMethod, ScenarioType
 from app.models.db_models import TestCase as DBTestCase, TestCaseEnrichment
 from app.services.test_case_service import test_case_service
 from pydantic import BaseModel
@@ -30,6 +32,9 @@ class TestCaseResponse(BaseModel):
     source_spec: str
     source_section: str
     source_page: Optional[int]
+    scenario_type: Optional[str]
+    simulator_required: bool
+    configurable_request_parts: List[str]
     http_method: str
     endpoint: str
     expected_status: int
@@ -46,6 +51,9 @@ class TestCaseUpdate(BaseModel):
     """Model for updating test case fields"""
     scenario: Optional[str] = None
     description: Optional[str] = None
+    scenario_type: Optional[ScenarioType] = None
+    simulator_required: Optional[bool] = None
+    configurable_request_parts: Optional[List[str]] = None
     http_method: Optional[HttpMethod] = None
     endpoint: Optional[str] = None
     expected_status: Optional[int] = None
@@ -73,6 +81,40 @@ class TestCaseListResponse(BaseModel):
     test_cases: List[TestCaseResponse]
 
 
+def _parse_configurable_request_parts(value: Optional[str]) -> List[str]:
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+        if isinstance(parsed, list):
+            return [str(item) for item in parsed]
+    except json.JSONDecodeError:
+        logger.warning("Failed to decode configurable_request_parts: %s", value)
+    return []
+
+
+def _to_test_case_response(test_case: DBTestCase) -> TestCaseResponse:
+    return TestCaseResponse(
+        id=test_case.id,
+        test_id=test_case.test_id,
+        scenario=test_case.scenario,
+        description=test_case.description,
+        source_spec=test_case.source_spec.value if test_case.source_spec else "",
+        source_section=test_case.source_section,
+        source_page=test_case.source_page,
+        scenario_type=test_case.scenario_type.value if test_case.scenario_type else None,
+        simulator_required=bool(test_case.simulator_required),
+        configurable_request_parts=_parse_configurable_request_parts(test_case.configurable_request_parts),
+        http_method=test_case.http_method.value if test_case.http_method else "",
+        endpoint=test_case.endpoint,
+        expected_status=test_case.expected_status,
+        complexity=test_case.complexity,
+        catalog_id=test_case.catalog_id,
+        created_at=test_case.created_at.isoformat(),
+        updated_at=test_case.updated_at.isoformat(),
+    )
+
+
 # ==================== ENDPOINTS ====================
 
 @router.get("/test-cases", response_model=TestCaseListResponse)
@@ -81,6 +123,8 @@ def list_test_cases(
     page_size: int = Query(50, ge=1, le=100, description="Items per page"),
     source_spec: Optional[List[SpecType]] = Query(None, description="Filter by source spec"),
     source_section: Optional[str] = Query(None, description="Filter by section (prefix match)"),
+    scenario_type: Optional[List[ScenarioType]] = Query(None, description="Filter by scenario classification"),
+    simulator_required: Optional[bool] = Query(None, description="Filter by simulator requirement"),
     http_method: Optional[List[HttpMethod]] = Query(None, description="Filter by HTTP method"),
     complexity: Optional[List[str]] = Query(None, description="Filter by complexity"),
     catalog_id: Optional[str] = Query(None, description="Filter by catalog ID"),
@@ -100,6 +144,8 @@ def list_test_cases(
         limit=page_size,
         source_spec=source_spec,
         source_section=source_section,
+        scenario_type=scenario_type,
+        simulator_required=simulator_required,
         http_method=http_method,
         complexity=complexity,
         catalog_id=catalog_id
@@ -110,6 +156,8 @@ def list_test_cases(
         db,
         source_spec=source_spec,
         source_section=source_section,
+        scenario_type=scenario_type,
+        simulator_required=simulator_required,
         http_method=http_method,
         complexity=complexity,
         catalog_id=catalog_id
@@ -119,7 +167,7 @@ def list_test_cases(
         total=total,
         page=page,
         page_size=page_size,
-        test_cases=[TestCaseResponse.model_validate(tc) for tc in test_cases]
+        test_cases=[_to_test_case_response(tc) for tc in test_cases]
     )
 
 
@@ -135,7 +183,7 @@ def get_test_case(
     if not test_case:
         raise HTTPException(status_code=404, detail="Test case not found")
     
-    return TestCaseResponse.model_validate(test_case)
+    return _to_test_case_response(test_case)
 
 
 @router.put("/test-cases/{test_id}", response_model=TestCaseResponse)
@@ -159,7 +207,7 @@ def update_test_case(
     if not updated_test:
         raise HTTPException(status_code=404, detail="Test case not found")
     
-    return TestCaseResponse.model_validate(updated_test)
+    return _to_test_case_response(updated_test)
 
 
 @router.delete("/test-cases/{test_id}")

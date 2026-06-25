@@ -148,6 +148,31 @@ Exit Criteria:
     - Updated `tests/regression/impact-map.yaml` and `tests/regression/selectors.md`
   - **Analysis artifact:** `ORAN/docs/section_5_2_3_analysis.md` (not created — analysis delivered inline per session)
 
+- [x] **Analyze TS 103 989 §4.1 — General test methodology for A1 interface**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** inline
+  - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`, support lens: `document-rule-learning`
+  - **Trace IDs:** ORAN-FTM-005, ORAN-FTM-006, ORAN-FTM-007, ORAN-FTM-008
+  - **Document:** `ORAN/docs/ts_103989v040200p.pdf` (v4.2.0)
+  - **Section analyzed:** §4.1 (General)
+  - **Key findings:**
+    - Test methodology is split into conformance testing and interoperability testing for the A1 interface between Non-RT RIC and Near-RT RIC.
+    - Conformance testing is simulator-driven and requires configurable HTTP `GET`, `PUT`, `POST`, and `DELETE` behavior.
+    - URI, headers, and body must remain configurable to derive multiple test cases from common A1 procedures.
+    - Interoperability testing assumes real devices under test, with surrounding systems allowed to be real or simulated.
+    - The spec favors scenario-driven validation of A1 behavior, which supports a strict TDD-first implementation flow.
+  - **Implementation verdict:** The current ORAN prototype plan should treat simulator-backed conformance tests as the entry point for all new A1 feature work, with interoperability scenarios promoted only after conformance is green.
+  - **Actions taken:**
+    - Created analysis artifact: `ORAN/docs/section_4_1_analysis.md`
+    - Updated `ORAN/IMPLEMENTATION_PLAN.md` with a TS 103 989 §4.1-driven TDD development approach and verification additions
+  - **Next steps:** Add scenario classification for conformance vs interoperability, add simulator capability tests for configurable HTTP operations, and keep new A1 route/service work gated on failing spec-derived conformance tests.
+
+- [ ] **P1-ENH: Analyze TS 103 987 §5.3 — Enrichment Information Service**
+  - **Priority:** P1-ENH
+  - **Skill to use:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`
+  - **Document:** `ORAN/docs/ts_103987v040300p.pdf` (v4.3.0)
+  - **Section to analyze:** §5.3 (Enrichment Information Service)
+  - **Expected output:** analysis notes, implementation impact, and TODO follow-ups for service models/routes/tests
+
 ### ✅ Phase 1: ORAN Foundation (Backend + Frontend)
 **Status:** ✅ COMPLETE (100%)  
 **Estimated:** 5-6 days  
