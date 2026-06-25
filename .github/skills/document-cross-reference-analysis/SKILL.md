@@ -24,6 +24,9 @@ configuration:
     dependencies: "Automatically resolve dependencies and gather context from referenced documents"
     full-suite: "Analyze all A1 documents (A1TP, A1TD, A1GAP) together with complete cross-referencing"
     version-evolution: "Compare document versions to identify breaking changes and schema evolution"
+  section-selection-defaults:
+    skip-first-section-match: true
+    rationale: "The first section-name/ID match is often from Table of Contents; prefer body headings by default."
 traceability:
   required-artifact: "ORAN/docs/feature_traceability_map.md"
   required-before-code-generation: true
@@ -132,6 +135,21 @@ ETSI TS 132 158 (Standards):
 - ETSI standard violated by A1TD entity
 
 ## Analysis Modes
+
+## Section Selection Policy (Default)
+
+When a user asks to analyze specific section IDs or section names:
+
+1. Find all heading matches for each requested section token (for example, `4.1`, `7.3.2`, `Policy Lifecycle`).
+2. Skip the first match by default.
+3. Treat that first match as likely Table of Contents/navigation content.
+4. Use the next matching heading from body pages as the analysis target.
+5. If multiple body matches remain, prefer exact section-ID + title matches over partial matches.
+6. If no body match exists after skipping the first match, report ambiguity and ask for confirmation before analyzing TOC text.
+
+Heuristics for non-body matches:
+- Ignore matches inside sections titled `Table of Contents` or `Contents`.
+- Ignore matches that are list-only entries with page numbers and no substantive paragraph content.
 
 ### Mode 1: Single Document Analysis
 Analyze one document in isolation, then check for references.
@@ -411,7 +429,8 @@ result = analyze_document_with_references(
     document="A1TP",
     version="v1.2",
     sections=["4.1"],
-    trace_references=True
+  trace_references=True,
+  skip_first_section_match=True
 )
 
 # Outputs:
