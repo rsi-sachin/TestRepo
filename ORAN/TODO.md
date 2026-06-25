@@ -104,6 +104,30 @@ Exit Criteria:
     - Added preference memory: `/memories/preferences.md` for persistent skill-trigger guidance
   - **Next steps:** Database persistence layer, policy-type schema validation (A1TD integration), callback URI event stream, full lifecycle tests, ownership constraint enforcement tests
 
+- [x] **Analyze TS 103 987 §5.2.4 — Service operations for A1 policies**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** `007c971`, `2110bbd`
+  - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lenses: `document-analysis-a1tp`, `document-analysis-a1td`
+  - **Trace IDs:** ORAN-FTM-002, ORAN-FTM-004
+  - **Sections analyzed:** §5.2.4.1 (HTTP mapping table), §5.2.4.2 (Query policy identifiers), §5.2.4.3 (Create policy), §5.2.4.4 (Update policy), §5.2.4.5 (Query policy), §5.2.4.6 (Delete policy), §5.2.4.7 (Query policy status), §5.2.4.8 (Notify policy status)
+  - **Key findings:**
+    - Create and Update both use `PUT`; upsert semantics — existence of resource determines 201 vs 200.
+    - `policyId` is consumer-generated (not server-assigned); included in PUT URI.
+    - `notificationDestination` is a query parameter on PUT (not request body); omitting it cancels existing subscription (§5.2.4.4.1).
+    - Notify policy status (§5.2.4.8) reverses HTTP roles: A1-P Producer acts as HTTP Client, Consumer exposes callback HTTP Server endpoint.
+    - `policyTypeId` drives server-side JSON schema selection for `PolicyObject` and `PolicyStatusObject` validation.
+    - "Query all" patterns are client-side iteration, not single server endpoints.
+  - **Implementation verdict:** Spec-compliant implementation delivered; `notificationDestination` moved to query param, upsert status codes corrected, missing routes and service methods added.
+  - **Actions taken:**
+    - Added `list_policy_ids(policy_type_id)` to `A1PolicyService` for §5.2.4.2 query policy identifiers
+    - Changed `create_or_replace_policy()` return to `(PolicyObject, was_created: bool)` for 201 vs 200 differentiation
+    - Made `notification_destination` Optional in `create_or_replace_policy()`; omission cancels subscription
+    - Added `async notify_policy_status(destination, status_obj)` — outbound HTTP POST via `httpx` (§5.2.4.8)
+    - Added `GET /a1/policytypes/{policyTypeId}/policies` route to `oran.py` (§5.2.4.2)
+    - Fixed `PUT` route: `notificationDestination` as query param, returns 201+`Location` for create / 200 for update
+    - Updated `ORAN/docs/feature_traceability_map.md` — ORAN-FTM-002 source reference extended to include §5.2.4
+    - Updated `tests/unit/services/test_a1_policy_service.py` — unpack `(policy, was_created)` tuple
+  - **Test results:** 7 unit + 15 nonfunctional tests — all pass
+
 - [x] **Analyze TS 103 987 §5.2.3 — Service operations for A1 policy types**
   - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** `5f8f299`, `f5623bd`
   - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`
