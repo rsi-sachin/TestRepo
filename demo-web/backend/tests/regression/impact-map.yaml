@@ -1,0 +1,31 @@
+changed_artifacts:
+  demo-web/backend/app/api/oran.py:
+    tests:
+      - tests/component/api/test_problem_details_component.py::test_problem_details_component_shape
+      - tests/interface/api/test_oran_a1_policy_api.py::test_list_a1_services_contract
+      - tests/interface/api/test_oran_a1_policy_api.py::test_policy_lifecycle_endpoints
+      - tests/interface/api/test_oran_a1_policy_api.py::test_policy_not_found_returns_problem_details_shape
+      - tests/feature/test_a1_service_selection_feature.py::test_service_selection_metadata_for_a1_p_and_a1_ei
+      - tests/e2e/test_a1_policy_workflow_e2e.py::test_a1_policy_workflow_e2e
+    perspectives: [component, interface, feature, e2e, parameter, fault]
+
+  demo-web/backend/app/services/a1_policy_service.py:
+    tests:
+      - tests/unit/services/test_a1_policy_service.py::test_create_get_status_and_delete_policy
+      - tests/nonfunctional/load/test_a1_policy_load.py::test_policy_service_handles_moderate_load_create_and_status_reads
+      - tests/nonfunctional/stress/test_a1_policy_stress.py::test_policy_service_handles_repeated_replace_stress
+      - tests/nonfunctional/memory/test_a1_policy_memory_behavior.py::test_policy_service_cleans_up_internal_state_after_delete_cycles
+    perspectives: [unit, load, stress, memory, fault]
+
+  demo-web/backend/app/services/a1_service_registry.py:
+    tests:
+      - tests/unit/services/test_a1_service_registry.py::test_get_service_definition_accepts_normalized_strings
+      - tests/unit/services/test_a1_service_registry.py::test_is_supported_returns_false_for_unknown_service
+      - tests/module/oran/test_a1_service_flow.py::test_a1_service_helpers_share_registry_contract
+    perspectives: [unit, module, parameter]
+
+  demo-web/backend/app/services/a1_enrichment_service.py:
+    tests:
+      - tests/module/oran/test_a1_service_flow.py::test_a1_service_helpers_share_registry_contract
+      - tests/feature/test_a1_service_selection_feature.py::test_service_selection_metadata_for_a1_p_and_a1_ei
+    perspectives: [module, feature]

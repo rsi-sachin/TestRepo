@@ -81,3 +81,11 @@ Full requirements: `C:\testrepo\docs\requirements.txt`
 - Each demo scenario in `demos.json` must have: id, title, description, outcome, protocol, complexity, jmxPath, defaultParams
 - For any Python-based software, package, or tooling need, including document and PDF reading, always use the workspace virtual environment and its installed packages.
 - Do not rely on system Python or globally installed packages when a workspace virtual environment is available.
+
+## Skill Trigger Rules
+
+- When a user request matches the pattern `analyze <sections> from <document>`, always invoke the document-analysis workflow skill first.
+- Prefer `document-cross-reference-analysis` as the workflow entry skill, and choose `single` mode unless the user asks for dependency or multi-document expansion.
+- For protocol-centric content (HTTP/REST/resources), include `document-analysis-a1tp` extraction patterns in the analysis output.
+- When a user request includes `Use Test Harness skill to add unit/component/module/interface/feature and e2e tests for a given commit or change summary`, invoke `test-harness-regression` first.
+- For test harness requests, include perspectives for memory, load, stress, parameter passing, and fault/error handling where applicable, and maintain regression mapping artifacts for changed files/modules.
