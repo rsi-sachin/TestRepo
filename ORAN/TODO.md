@@ -15,6 +15,45 @@ Tracking Mode: ORAN-only split with 2 feature TODO files
 - Feature 2 is downstream and must select simulator targets only from Feature 1 outputs.
 - Dependency flow: Feature 1 output -> Feature 2 target selection -> TDD simulator implementation.
 
+## P1-ENH: Python 3.13 Migration Readiness and Implementation
+
+Priority: P1-ENH
+Status: In Progress
+Owner Track: ORAN / demo-web backend and tests
+
+Objective:
+- Confirm and implement Python 3.13 compatibility for existing demo-web backend and test code that was previously developed for Python 3.11/3.12.
+
+Scope:
+- Dependency alignment in backend and test requirements.
+- Runtime compatibility fixes for asyncio loop handling.
+- FastAPI lifecycle/startup-shutdown compatibility hardening.
+- Test harness validation for pytest and Playwright on Python 3.13.
+
+Target Files:
+- demo-web/backend/requirements.txt
+- demo-web/tests/requirements.txt
+- demo-web/backend/app/services/execution_service.py
+- demo-web/backend/app/services/oran_execution_service.py
+- demo-web/backend/app/websockets/demo_output.py
+- demo-web/backend/app/main.py
+- demo-web/backend/run.py
+- demo-web/tests/conftest.py
+
+Execution Plan:
+- [ ] Capture baseline and run backend smoke checks on Python 3.13.
+- [ ] Replace loop access patterns that can fail under stricter asyncio behavior.
+- [ ] Align dependency versions for Python 3.13 compatibility.
+- [ ] Run backend tests and classify/fix failures.
+- [ ] Run Playwright E2E tests and classify/fix failures.
+- [ ] Re-run regression matrix and confirm no critical compatibility blockers.
+
+Exit Criteria:
+- Backend starts successfully and `/health` returns healthy.
+- Backend and E2E test flows run on Python 3.13.
+- No critical runtime failures related to event loop handling or dependency incompatibility.
+- Changes are committed on feature branch with PR against develop.
+
 ---
 
 ## A1 Test Bed MVP - Pickup TODO

@@ -37,7 +37,9 @@ class CatalogGeneratorService:
         enriched_cases: List[EnrichedTestCase],
         catalog_name: str,
         description: str = "",
-        apply_section_limit: bool = True
+        apply_section_limit: bool = True,
+        service_type: Optional[str] = None,
+        service_name: Optional[str] = None,
     ) -> Tuple[OranTestCatalog, List[EnrichedTestCase]]:
         """
         Generate test catalog from enriched test cases
@@ -63,7 +65,7 @@ class CatalogGeneratorService:
         # Convert to OranTestCase objects
         test_cases = []
         for i, enriched in enumerate(deduplicated_cases, start=1):
-            test_case = self._convert_to_test_case(enriched, i)
+            test_case = self._convert_to_test_case(enriched, i, service_type)
             test_cases.append(test_case)
         
         # Create catalog
@@ -72,6 +74,8 @@ class CatalogGeneratorService:
             catalog_id=catalog_id,
             name=catalog_name,
             description=description,
+            service_type=service_type,
+            service_name=service_name,
             generated_at=datetime.now(),
             total_tests=len(test_cases),
             test_cases=test_cases,
@@ -86,7 +90,9 @@ class CatalogGeneratorService:
         hierarchy_tree: HierarchyTree,
         catalog_name: str,
         description: str = "",
-        spec_type: Optional[SpecType] = None
+        spec_type: Optional[SpecType] = None,
+        service_type: Optional[str] = None,
+        service_name: Optional[str] = None,
     ) -> OranTestCatalog:
         """
         Generate test catalog from hierarchical structure
@@ -118,7 +124,8 @@ class CatalogGeneratorService:
             test_case = self._convert_node_to_test_case(
                 node=node,
                 hierarchy_tree=hierarchy_tree,
-                spec_type=spec_type
+                spec_type=spec_type,
+                service_type=service_type,
             )
             test_cases.append(test_case)
         
@@ -131,6 +138,8 @@ class CatalogGeneratorService:
             catalog_id=catalog_id,
             name=catalog_name,
             description=description or f"Generated from {hierarchy_tree.document_name}",
+            service_type=service_type,
+            service_name=service_name,
             generated_at=datetime.now(),
             total_tests=len(test_cases),
             test_cases=test_cases,
@@ -147,7 +156,8 @@ class CatalogGeneratorService:
         self,
         node: HierarchyNode,
         hierarchy_tree: HierarchyTree,
-        spec_type: Optional[SpecType] = None
+        spec_type: Optional[SpecType] = None,
+        service_type: Optional[str] = None,
     ) -> OranTestCase:
         """
         Convert a HierarchyNode to OranTestCase
@@ -181,6 +191,7 @@ class CatalogGeneratorService:
             test_id=test_id,
             scenario=node.title,
             description=node.content_text[:200] if node.content_text else node.title,
+            service_type=service_type,
             method=http_method,
             endpoint=endpoint,
             expected_status=200,  # Default, should be extracted from content
@@ -447,7 +458,7 @@ class CatalogGeneratorService:
         return filtered_cases
     
     def _convert_to_test_case(
-        self, enriched: EnrichedTestCase, index: int
+        self, enriched: EnrichedTestCase, index: int, service_type: Optional[str] = None
     ) -> OranTestCase:
         """
         Convert EnrichedTestCase to OranTestCase
@@ -470,6 +481,7 @@ class CatalogGeneratorService:
             test_id=test_id,
             scenario=base.title,
             description=base.description or base.title,
+            service_type=service_type,
             method=sem.http_method,
             endpoint=sem.endpoint,
             expected_status=sem.expected_status,

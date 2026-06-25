@@ -32,6 +32,8 @@ function resetSpecState(specType) {
 
 const oranState = {
     selectedSpecs: ['TS_103_989', 'TS_103_987', 'TS_103_988', 'TS_103_983'],
+    selectedService: 'A1-P',
+    serviceDefinitions: [],
     catalogs: [],
     currentCatalog: null,
     methodologyAnalysis: null,
@@ -49,6 +51,9 @@ export function initOranUI() {
 
     document.getElementById('protocol-select')
         ?.addEventListener('change', handleProtocolChange);
+
+    document.getElementById('service-select')
+        ?.addEventListener('change', handleServiceChange);
 
     document.querySelectorAll('.spec-checkbox').forEach(cb => {
         cb.addEventListener('change', handleSpecCheckboxChange);
@@ -112,12 +117,19 @@ export function initOranUI() {
         ?.addEventListener('click', handleDeleteRulePack);
 
     refreshResolution();
+    loadServiceDefinitions();
     loadCatalogs();
     loadRulePacks();
 }
 
 function handleProtocolChange() {
     refreshResolution();
+}
+
+function handleServiceChange(e) {
+    oranState.selectedService = e.target.value || 'A1-P';
+    updateServiceSummary();
+    syncCatalogNamePlaceholder();
 }
 
 function handleSpecCheckboxChange(e) {
@@ -292,7 +304,7 @@ async function handleAnalyzeMethodology() {
     if (titlesEl) titlesEl.innerHTML = '<div class="analysis-placeholder">Loading test title candidates...</div>';
 
     try {
-        const response = await fetch(`/api/oran/extract-methodology?spec_type=${encodeURIComponent(specType)}`, {
+        const response = await fetch(`/api/oran/extract-methodology?spec_type=${encodeURIComponent(specType)}&service_type=${encodeURIComponent(oranState.selectedService)}`, {
             method: 'POST'
         });
         if (!response.ok) {
@@ -389,7 +401,7 @@ function escapeHtml(text) {
 }
 
 async function handleGenerateCatalog() {
-    const catalogName = document.getElementById('catalog-name')?.value || 'Untitled Catalog';
+    const catalogName = document.getElementById('catalog-name')?.value || getDefaultCatalogName();
     const catalogDesc = document.getElementById('catalog-description')?.value || '';
 
     const progressDiv = document.getElementById('upload-progress');
@@ -414,7 +426,7 @@ async function handleGenerateCatalog() {
 
         if (statusLog) statusLog.innerHTML += '<p>Uploading / resolving specifications...</p>';
 
-        const uploadResponse = await fetch('/api/oran/upload-specs', {
+        const uploadResponse = await fetch(`/api/oran/upload-specs?service_type=${encodeURIComponent(oranState.selectedService)}`, {
             method: 'POST',
             body: formData
         });
@@ -438,7 +450,7 @@ async function handleGenerateCatalog() {
         }
 
         const generateResponse = await fetch(
-            `/api/oran/generate?catalog_name=${encodeURIComponent(catalogName)}&description=${encodeURIComponent(catalogDesc)}&use_rules=${oranState.useRules}`,
+            `/api/oran/generate?catalog_name=${encodeURIComponent(catalogName)}&description=${encodeURIComponent(catalogDesc)}&use_rules=${oranState.useRules}&service_type=${encodeURIComponent(oranState.selectedService)}`,
             { method: 'POST' }
         );
 
@@ -507,6 +519,7 @@ function displayCatalogs(catalogs) {
             </div>
             <p class="catalog-description">${catalog.description || 'No description'}</p>
             <div class="catalog-meta">
+                    <span>${catalog.service_name || catalog.service_type || 'A1 service not set'}</span>
                 <span>Generated: ${new Date(catalog.generated_at).toLocaleString()}</span>
             </div>
             <div class="catalog-actions">
@@ -583,6 +596,11 @@ function displayCatalogDetails(catalog) {
     document.getElementById('catalog-generated').textContent = new Date(catalog.generated_at).toLocaleString();
     document.getElementById('catalog-total-tests').textContent = catalog.total_tests;
     document.getElementById('catalog-sources').textContent = Object.keys(catalog.spec_sources || {}).join(', ');
+
+    const serviceSummary = [catalog.service_type, catalog.service_name].filter(Boolean).join(' • ');
+    if (serviceSummary) {
+        document.getElementById('catalog-title').textContent = `${catalog.name} (${serviceSummary})`;
+    }
 
     const tbody = document.getElementById('test-cases-tbody');
     if (tbody) {
@@ -698,6 +716,67 @@ async function runOranTest(testId, catalogId) {
         console.error('Error running test:', error);
         alert('Failed to start test execution.');
     }
+}
+
+async function loadServiceDefinitions() {
+    try {
+        const response = await fetch('/api/oran/services');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        oranState.serviceDefinitions = data.services || [];
+
+        const serviceSelect = document.getElementById('service-select');
+        if (serviceSelect) {
+            const currentValue = serviceSelect.value || oranState.selectedService;
+            serviceSelect.innerHTML = oranState.serviceDefinitions.map(service => `
+                <option value="${service.service_type}">${service.service_type} - ${service.name}</option>
+            `).join('');
+
+            const availableValue = oranState.serviceDefinitions.some(service => service.service_type === currentValue)
+                ? currentValue
+                : (oranState.serviceDefinitions[0]?.service_type || 'A1-P');
+
+            serviceSelect.value = availableValue;
+            oranState.selectedService = availableValue;
+        }
+
+        updateServiceSummary();
+        syncCatalogNamePlaceholder();
+    } catch (error) {
+        console.warn('Failed to load service definitions, using fallback options:', error);
+        updateServiceSummary();
+        syncCatalogNamePlaceholder();
+    }
+}
+
+function updateServiceSummary() {
+    const summary = document.getElementById('service-summary');
+    const selected = oranState.serviceDefinitions.find(service => service.service_type === oranState.selectedService);
+
+    if (!summary) return;
+
+    if (selected) {
+        summary.textContent = `${selected.consumer_role.label} / ${selected.producer_role.label}`;
+    } else if (oranState.selectedService === 'A1-EI') {
+        summary.textContent = 'A1-EI Consumer / A1-EI Producer';
+    } else {
+        summary.textContent = 'A1-P Consumer / A1-P Producer';
+    }
+}
+
+function getDefaultCatalogName() {
+    const selected = oranState.serviceDefinitions.find(service => service.service_type === oranState.selectedService);
+    return selected?.default_catalog_name || 'A1 Test Catalog';
+}
+
+function syncCatalogNamePlaceholder() {
+    const catalogNameInput = document.getElementById('catalog-name');
+    if (!catalogNameInput) return;
+
+    catalogNameInput.placeholder = getDefaultCatalogName();
 }
 
 // ============================================================================

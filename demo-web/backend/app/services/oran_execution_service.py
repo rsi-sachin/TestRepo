@@ -160,7 +160,7 @@ class OranExecutionService(ExecutionService):
                 return process
             
             # Start process in thread pool
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             with ThreadPoolExecutor() as executor:
                 process = await loop.run_in_executor(executor, run_process)
                 self.processes[execution_id] = process

@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
     
     <!-- App Scripts -->
-    <script type="module" src="/static/js/app.js?v=6" defer></script>
+    <script type="module" src="/static/js/app.js?v=7" defer></script>
 </head>
 <body>
     <!-- Header -->
@@ -60,6 +60,17 @@
                                 <select id="protocol-select" class="selector-dropdown">
                                     <option value="A1" selected>A1 Application Protocol</option>
                                 </select>
+                            </div>
+
+                            <div class="selector-group">
+                                <label for="service-select" class="selector-label">
+                                    A1 Service
+                                </label>
+                                <select id="service-select" class="selector-dropdown">
+                                    <option value="A1-P" selected>A1-P - Policy Management</option>
+                                    <option value="A1-EI">A1-EI - Enrichment Information</option>
+                                </select>
+                                <span id="service-summary" class="selector-hint">Select the A1 service boundary for catalog generation.</span>
                             </div>
 
                             <!-- Step 2: Specification multi-select -->

@@ -30,6 +30,7 @@ class OranTestCase(BaseModel):
     test_id: str = Field(..., description="Unique test identifier (e.g., A1_TC_001)")
     scenario: str = Field(..., description="Test scenario name")
     description: str = Field(..., description="Test description")
+    service_type: Optional[str] = Field(None, description="A1 service type (A1-P or A1-EI)")
     
     # Request specification
     method: HttpMethod = Field(..., description="HTTP method")
@@ -77,6 +78,8 @@ class OranTestCatalog(BaseModel):
     catalog_id: str = Field(..., description="Unique catalog identifier")
     name: str = Field(..., description="Catalog name")
     description: Optional[str] = Field(None, description="Catalog description")
+    service_type: Optional[str] = Field(None, description="A1 service type")
+    service_name: Optional[str] = Field(None, description="A1 service name")
     
     # Source specifications
     spec_sources: Dict[str, str] = Field(default_factory=dict, description="Source spec files (SpecType -> file path)")
@@ -335,6 +338,7 @@ class TestTitleCandidate(BaseModel):
 class MethodologyAnalysisResult(BaseModel):
     """Result payload for methodology extraction and module naming."""
     spec_type: SpecType = Field(..., description="Source specification")
+    service_type: Optional[str] = Field(None, description="Target A1 service type")
     spec_file: str = Field(..., description="Source file name")
     methodology_sections: List[MethodologySectionResult] = Field(default_factory=list)
     test_modules: List[TestModuleCandidate] = Field(default_factory=list)

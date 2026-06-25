@@ -1,0 +1,29 @@
+{
+  "global_index": {
+    "facts_count": 6,
+    "facts_by_status": {
+      "draft": 6,
+      "pending_user_approval": 0,
+      "scheduled": 0,
+      "completed": 0
+    },
+    "references_count": 4,
+    "references_by_status": {
+      "not_found": 4,
+      "found_public": 0,
+      "proprietary": 0,
+      "scheduled_for_retrieval": 0,
+      "retrieved": 0,
+      "retrieval_error": 0
+    }
+  },
+  "action_items": {
+    "total_count": 4,
+    "by_status": {
+      "draft": 0,
+      "pending_user_approval": 4,
+      "scheduled": 0,
+      "completed": 0
+    }
+  }
+}

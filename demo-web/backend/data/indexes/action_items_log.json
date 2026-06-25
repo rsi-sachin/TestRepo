@@ -1,0 +1,64 @@
+{
+  "metadata": {
+    "last_updated": "2026-06-24T13:59:26.447460",
+    "action_items_count": 4
+  },
+  "action_items": [
+    {
+      "action_id": "action_db0699de9a6d",
+      "title": "Retrieve and analyze reference document: A1TP",
+      "description": "Locate and process reference document A1TP mentioned in Section 4.1 of ts_103987v040300p.pdf. Extract decisions, actions, and gaps. Link findings back to global information index.",
+      "related_documents": [
+        "A1TP"
+      ],
+      "status": "pending_user_approval",
+      "priority": "high",
+      "created_date": "2026-06-24T13:59:26.445231",
+      "scheduled_date": null,
+      "completed_date": null,
+      "notes": "Placeholder action - awaiting user confirmation for retrieval"
+    },
+    {
+      "action_id": "action_7c5dec42bb47",
+      "title": "Retrieve and analyze reference document: A1TD",
+      "description": "Locate and process reference document A1TD mentioned in Section 4.1 of ts_103987v040300p.pdf. Extract decisions, actions, and gaps. Link findings back to global information index.",
+      "related_documents": [
+        "A1TD"
+      ],
+      "status": "pending_user_approval",
+      "priority": "high",
+      "created_date": "2026-06-24T13:59:26.446617",
+      "scheduled_date": null,
+      "completed_date": null,
+      "notes": "Placeholder action - awaiting user confirmation for retrieval"
+    },
+    {
+      "action_id": "action_3c255af48ab9",
+      "title": "Retrieve and analyze reference document: A1GAP",
+      "description": "Locate and process reference document A1GAP mentioned in Section 4.1 of ts_103987v040300p.pdf. Extract decisions, actions, and gaps. Link findings back to global information index.",
+      "related_documents": [
+        "A1GAP"
+      ],
+      "status": "pending_user_approval",
+      "priority": "high",
+      "created_date": "2026-06-24T13:59:26.447052",
+      "scheduled_date": null,
+      "completed_date": null,
+      "notes": "Placeholder action - awaiting user confirmation for retrieval"
+    },
+    {
+      "action_id": "action_a7971116f674",
+      "title": "Retrieve and analyze reference document: ETSI TS 132 158",
+      "description": "Locate and process reference document ETSI TS 132 158 mentioned in Section 4.1 of ts_103987v040300p.pdf. Extract decisions, actions, and gaps. Link findings back to global information index.",
+      "related_documents": [
+        "ETSI TS 132 158"
+      ],
+      "status": "pending_user_approval",
+      "priority": "high",
+      "created_date": "2026-06-24T13:59:26.447454",
+      "scheduled_date": null,
+      "completed_date": null,
+      "notes": "Placeholder action - awaiting user confirmation for retrieval"
+    }
+  ]
+}

@@ -22,6 +22,8 @@ from app.services.document_classifier_service import DocumentClassifier, Documen
 from app.services.rule_matcher_service import RuleMatcherService
 from app.services.hierarchical_extractor_service import HierarchicalExtractorService
 from app.repositories.rule_pack_repository import RulePackRepository
+from app.services.semantic_version_tracker import SemanticVersionTracker, SemanticVersion
+from app.services.module_impact_analyzer import ModuleImpactAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +63,12 @@ class SpecParserService:
         self.rule_matcher = RuleMatcherService()
         self.hierarchical_extractor = HierarchicalExtractorService()
         self.rule_pack_repository = RulePackRepository()
+        
+        # Version tracking and impact analysis (TODO: Feature in development)
+        self.version_tracker = SemanticVersionTracker(
+            self.learning_metadata_dir / "version_history.json"
+        )
+        self.impact_analyzer = ModuleImpactAnalyzer()
     
     def parse_specification(
         self, file_path: Path, spec_type: SpecType, max_tests: Optional[int] = None
@@ -739,3 +747,71 @@ class SpecParserService:
             json.dump(conflicts_data, f, indent=2)
         
         logger.info(f"Saved {len(conflicts_data)} conflicts to {output_path}")
+    
+    # ==================== VERSION TRACKING & IMPACT ANALYSIS ====================
+    # TODO: Feature in development - Semantic version tracking and module impact analysis
+    # Feature: Detect version changes in specifications and identify source code modules
+    #          that may require updates based on specification version changes.
+    # Integration: Triggered from spec upload/processing workflow
+    
+    def detect_and_analyze_version_changes(
+        self, file_path: Path, spec_type: str
+    ) -> Optional[Dict]:
+        """
+        Detect version changes in a spec and analyze impact on source code.
+        
+        This is a placeholder implementation for the version tracking feature.
+        Currently it:
+        1. Extracts version from document text
+        2. Compares with previously tracked version
+        3. Analyzes impact on source code modules if version changed
+        4. Generates human-readable impact report
+        
+        Args:
+            file_path: Path to specification file (PDF or DOCX)
+            spec_type: Specification type (e.g., "TS_103987")
+            
+        Returns:
+            Dictionary with version tracking and impact analysis details, or None if no version detected
+            
+        Example:
+            result = parser_service.detect_and_analyze_version_changes(
+                file_path=Path("ts_103987v040300p.pdf"),
+                spec_type="TS_103987"
+            )
+            if result and result['is_breaking']:
+                print(f"BREAKING CHANGE: {result['impact_report']}")
+        
+        TODO Implementation Steps:
+        1. Extract text from PDF/DOCX
+        2. Call version_tracker.extract_version_from_text() to parse version
+        3. Check version_tracker.documents[spec_type] for previous version
+        4. If changed, determine change_type (major/minor/patch)
+        5. Call impact_analyzer.analyze_impact() to get affected modules
+        6. Call impact_analyzer.generate_impact_report() for human-readable output
+        7. Update version_tracker.register_document() with new version
+        8. Call version_tracker.save_history() to persist changes
+        9. Return comprehensive result dict with impact analysis
+        """
+        logger.info(
+            f"[PLACEHOLDER] Detecting version changes for {spec_type} from {file_path.name}"
+        )
+        
+        # TODO: Extract text
+        # if file_path.suffix.lower() == '.pdf':
+        #     text = self.pdf_parser.parse_file(file_path)[:5000]
+        # else:
+        #     text = self.docx_parser.parse_file(file_path)[:5000]
+        
+        # TODO: Extract version
+        # current_version = self.version_tracker.extract_version_from_text(text, spec_type)
+        # if not current_version:
+        #     logger.warning(f"Could not extract version from {file_path.name}")
+        #     return None
+        
+        # TODO: Check for previous version and detect change
+        # TODO: Analyze impact using self.impact_analyzer
+        # TODO: Generate report
+        # TODO: Persist history
+        
+        return None
