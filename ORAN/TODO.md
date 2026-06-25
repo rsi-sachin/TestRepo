@@ -1,7 +1,7 @@
 # Demo-Web ORAN Integration - TODO List
 
 **Project:** Extend demo-web with O-RAN A1 test generation capabilities  
-**Last Updated:** January 2026  
+**Last Updated:** 2026-06-25  
 **Status:** Phase 1 Complete (Backend + Frontend), Phase 2-4 Pending
 
 ## P1-ENH: Python 3.13 Migration Readiness and Implementation
@@ -79,6 +79,26 @@ Exit Criteria:
   - Create and maintain a metadata artifact outside source code (no inline code comments): `ORAN/docs/feature_traceability_map.md`.
   - For each feature/module/component, map to one or more TODO sections plus one or more skills used for document interpretation.
   - Include document and section references (for example, TS/section identifiers) and ownership/status fields.
+
+- [x] **Analyze TS 103 987 §5.2.3 — Service operations for A1 policy types**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** `5f8f299`, `f5623bd`
+  - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`
+  - **Trace IDs:** ORAN-FTM-002, ORAN-FTM-004
+  - **Sections analyzed:** §5.2.3.1 (HTTP mapping table), §5.2.3.2 (Query policy type identifiers), §5.2.3.3.1–5.2.3.3.4 (Query policy type — single/multiple/all procedures)
+  - **Key findings:**
+    - Policy type operations are read-only (GET only); no POST/PUT/DELETE on policy types.
+    - `GET /policytypes` MUST return `200 []` (not 404) when no types are registered.
+    - `GET /policytypes/{policyTypeId}` MUST return `404` (normative SHALL) for unknown ids.
+    - "Query all policy types" is a client-side iteration pattern, not a server endpoint.
+  - **Implementation verdict:** Current code in `demo-web/backend/app/api/oran.py` is conformant; no structural changes required.
+  - **Actions taken:**
+    - Added interface contract tests: `test_list_policy_types_returns_200_with_empty_array_when_no_types_registered`, `test_get_unknown_policy_type_returns_404` → `tests/interface/api/test_oran_a1_policy_api.py`
+    - Added unit tests: `test_list_policy_type_ids_returns_empty_list_when_store_is_cleared`, `test_get_policy_type_raises_key_error_for_unknown_type_id` → `tests/unit/services/test_a1_policy_service.py`
+    - Added component test: `test_problem_details_component_shape_for_policy_type_not_found` → `tests/component/api/test_problem_details_component.py`
+    - Added 6 parameter boundary tests for `policyTypeId` → `tests/nonfunctional/parameter/test_a1_policy_parameter_passing.py`
+    - Updated `ORAN/docs/feature_traceability_map.md` — ORAN-FTM-002 source reference extended to include §5.2.3
+    - Updated `tests/regression/impact-map.yaml` and `tests/regression/selectors.md`
+  - **Analysis artifact:** `ORAN/docs/section_5_2_3_analysis.md` (not created — analysis delivered inline per session)
 
 ### ✅ Phase 1: ORAN Foundation (Backend + Frontend)
 **Status:** ✅ COMPLETE (100%)  
