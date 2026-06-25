@@ -24,6 +24,15 @@ configuration:
     dependencies: "Automatically resolve dependencies and gather context from referenced documents"
     full-suite: "Analyze all A1 documents (A1TP, A1TD, A1GAP) together with complete cross-referencing"
     version-evolution: "Compare document versions to identify breaking changes and schema evolution"
+traceability:
+  required-artifact: "ORAN/docs/feature_traceability_map.md"
+  required-before-code-generation: true
+  required-output-fields:
+    - selected_trace_ids
+    - mapped_todo_sections
+    - mapped_code_scope
+    - verification_targets
+  code-generation-gate: "Do not generate source code unless selected_trace_ids is non-empty and resolved against ORAN/docs/feature_traceability_map.md."
 ---
 
 # Document Cross-Reference Analysis Skill
@@ -38,6 +47,32 @@ Orchestrate intelligent analysis of interconnected A1-related documents to:
 - Prioritize implementation based on dependencies
 - Track version evolution across document set
 - Validate conformance to industry standards (ETSI)
+
+## Traceability Requirements
+
+Before converting analysis knowledge into source code, this skill must:
+
+1. Read `ORAN/docs/feature_traceability_map.md`.
+2. Select one or more matching Trace IDs for the requested implementation.
+3. Map recommendations to TODO sections and code scopes listed in the traceability map.
+4. Produce explicit verification targets from the `Verification` column.
+5. Stop code generation if no Trace ID mapping is available.
+
+Required conversion payload fields:
+
+```yaml
+selected_trace_ids: ["ORAN-FTM-001"]
+mapped_todo_sections:
+  - "Traceability and Quality Follow-up"
+mapped_code_scope:
+  - "demo-web/backend/app/services/a1_service_registry.py"
+verification_targets:
+  - "API regression tests for service-aware flows"
+```
+
+Hard gate:
+
+- Do not emit source code unless `selected_trace_ids` is non-empty and resolved against `ORAN/docs/feature_traceability_map.md`.
 
 ## Document Ecosystem
 

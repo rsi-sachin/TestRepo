@@ -22,6 +22,15 @@ configuration:
     dependencies: "Include API endpoints that trigger procedures and data entities affected"
     full-suite: "Complete analysis with all related A1 documents and ETSI standards"
     version-evolution: "Track procedure changes and breaking changes across policy versions"
+traceability:
+  required-artifact: "ORAN/docs/feature_traceability_map.md"
+  required-before-code-generation: true
+  required-output-fields:
+    - selected_trace_ids
+    - mapped_todo_sections
+    - mapped_code_scope
+    - verification_targets
+  code-generation-gate: "Do not generate source code unless selected_trace_ids is non-empty and resolved against ORAN/docs/feature_traceability_map.md."
 ---
 
 # A1 Gap Analysis Protocol (A1GAP) Analysis Skill
@@ -35,6 +44,32 @@ Extract and interpret A1GAP specification content to:
 - Generate workflow engine definitions
 - Track procedure evolution across versions
 - Resolve procedure references from API/data model specs
+
+## Traceability Requirements
+
+Before converting extracted procedural/policy knowledge to source code, this skill must:
+
+1. Read `ORAN/docs/feature_traceability_map.md`.
+2. Resolve extracted workflows/policy rules/state transitions to one or more Trace IDs.
+3. Restrict generated file targets to mapped `Code Scope` entries.
+4. Produce verification work from mapped `Verification` entries.
+5. Block code generation if no traceable mapping exists.
+
+Required conversion payload fields:
+
+```yaml
+selected_trace_ids: ["ORAN-FTM-007"]
+mapped_todo_sections:
+  - "Phase 2 Task 2.4, 2.5"
+mapped_code_scope:
+  - "demo-web/backend/app/services/spec_parser_service.py"
+verification_targets:
+  - "Integration tests for enrichment and conflict detection"
+```
+
+Hard gate:
+
+- Do not emit source code unless `selected_trace_ids` is non-empty and resolved against `ORAN/docs/feature_traceability_map.md`.
 
 ## Document Context
 **Document:** A1 Gap Analysis Protocol (A1GAP)  

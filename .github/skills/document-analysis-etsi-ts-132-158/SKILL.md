@@ -21,6 +21,15 @@ configuration:
     single: "Analyze ETSI patterns and standards in isolation"
     dependencies: "Validate A1TP, A1TD, and A1GAP compliance against these standards"
     full-suite: "Complete analysis with all A1 specifications validated against ETSI"
+traceability:
+  required-artifact: "ORAN/docs/feature_traceability_map.md"
+  required-before-code-generation: true
+  required-output-fields:
+    - selected_trace_ids
+    - mapped_todo_sections
+    - mapped_code_scope
+    - verification_targets
+  code-generation-gate: "Do not generate source code unless selected_trace_ids is non-empty and resolved against ORAN/docs/feature_traceability_map.md."
 ---
 
 # ETSI TS 132 158 Design Patterns Analysis Skill
@@ -34,6 +43,34 @@ Extract and interpret ETSI TS 132 158 content to:
 - Generate pattern-compliant code
 - Validate existing code conformance
 - Establish baseline standards for new development
+
+## Traceability Requirements
+
+Before converting extracted standards guidance to source code, this skill must:
+
+1. Read `ORAN/docs/feature_traceability_map.md`.
+2. Resolve pattern/conformance recommendations to one or more Trace IDs.
+3. Restrict generated file targets to mapped `Code Scope` entries.
+4. Produce verification work from mapped `Verification` entries.
+5. Block code generation if no traceable mapping exists.
+
+Required conversion payload fields:
+
+```yaml
+selected_trace_ids: ["ORAN-FTM-004", "ORAN-FTM-012"]
+mapped_todo_sections:
+  - "Traceability and Quality Follow-up"
+mapped_code_scope:
+  - "demo-web/backend/app/api/oran.py"
+  - "ORAN/docs/feature_traceability_map.md"
+verification_targets:
+  - "API tests for /api/oran/services, generation, upload, selection flows"
+  - "Manual review on each milestone update"
+```
+
+Hard gate:
+
+- Do not emit source code unless `selected_trace_ids` is non-empty and resolved against `ORAN/docs/feature_traceability_map.md`.
 
 ## Document Context
 **Document:** ETSI TS 132 158 - 3GPP Design Patterns  
