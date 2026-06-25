@@ -166,12 +166,33 @@ Exit Criteria:
     - Updated `ORAN/IMPLEMENTATION_PLAN.md` with a TS 103 989 §4.1-driven TDD development approach and verification additions
   - **Next steps:** Add scenario classification for conformance vs interoperability, add simulator capability tests for configurable HTTP operations, and keep new A1 route/service work gated on failing spec-derived conformance tests.
 
+- [x] **Commit and push TS 103 989 §4.1 analysis and scenario-classification implementation**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commit:** `f010d8e`
+  - **Scope:** ORAN analysis artifact, TDD planning updates, parser/catalog scenario classification, persistence metadata, and `/test-cases` API metadata support
+  - **Remote:** `origin/feature/ORAN_MVP_1_Py3_13`
+  - **Verification:** Narrow regression passed before push for scenario classification and persistence/API metadata (`7 passed`)
+
 - [ ] **P1-ENH: Analyze TS 103 987 §5.3 — Enrichment Information Service**
   - **Priority:** P1-ENH
   - **Skill to use:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`
   - **Document:** `ORAN/docs/ts_103987v040300p.pdf` (v4.3.0)
   - **Section to analyze:** §5.3 (Enrichment Information Service)
   - **Expected output:** analysis notes, implementation impact, and TODO follow-ups for service models/routes/tests
+
+- [ ] **P1-ENH: Implement TS 103 989 §4.2.1 and §4.2.2 conformance setup coverage**
+  - **Priority:** P1-ENH
+  - **Source:** `ORAN/docs/ts_103989v040200p.pdf` (v4.2.0), sections §4.2.1 and §4.2.2
+  - **Objective:** Close pending implementation and verification gaps identified from Non-RT RIC conformance setup analysis.
+  - **Pending items:**
+    - Add explicit section traceability and test references for **both** §4.2.1 and §4.2.2 in ORAN test planning artifacts.
+    - Add DUT readiness checks for Non-RT RIC role behavior and agreed policy type and/or EI type preconditions.
+    - Add simulator capability verification for A1-P Producer and A1-EI Consumer behavior, including HTTP client/server handling, configurable request/response behavior, and message validation.
+    - Add mandatory execution evidence checks per test run (message logs, headers/body/code validation, deterministic verdict reason).
+    - Add or update a traceability mapping row in `ORAN/docs/feature_traceability_map.md` to explicitly include §4.2.1 and §4.2.2 source references and verification targets.
+  - **Expected output:**
+    - Updated test plan and quick reference entries with §4.2.1 + §4.2.2 coverage.
+    - New or updated tests for DUT preconditions, simulator capabilities, and evidence completeness.
+    - Traceability map update and regression impact-map update aligned with new tests.
 
 ### ✅ Phase 1: ORAN Foundation (Backend + Frontend)
 **Status:** ✅ COMPLETE (100%)  
