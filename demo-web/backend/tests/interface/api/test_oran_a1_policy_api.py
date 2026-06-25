@@ -74,3 +74,30 @@ def test_invalid_notification_destination_is_rejected(client: TestClient) -> Non
     )
 
     assert response.status_code == 422
+
+
+# --- Section 5.2.3 contract tests ---
+
+def test_list_policy_types_returns_200_with_empty_array_when_no_types_registered(
+    client: TestClient,
+) -> None:
+    """GET /policytypes MUST return 200 with empty array, never 404, per TS 103 987 §5.2.3.2."""
+    oran.a1_policy_service._policy_types.clear()
+
+    response = client.get("/api/oran/a1/policytypes")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_get_unknown_policy_type_returns_404(
+    client: TestClient,
+) -> None:
+    """GET /policytypes/{unknown} MUST return 404 per TS 103 987 §5.2.3.3."""
+    response = client.get("/api/oran/a1/policytypes/nonexistent-type")
+
+    assert response.status_code == 404
+    detail = response.json()["detail"]
+    assert detail["status"] == 404
+    assert detail["title"] == "Policy Type Not Found"
+    assert "nonexistent-type" in detail["instance"]

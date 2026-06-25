@@ -3,5 +3,5 @@
 cd C:\TestRepo\demo-web\backend
 python run.py
 
-
+"Analyze <section x, Y> from ORAN\docs\<document name>" to use skill to analyze documents and identify gaps in current implementation vs information from the document.
 "Use Test Harness skill to add tests for last commit" to use skill to create tests
