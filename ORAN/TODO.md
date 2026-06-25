@@ -66,6 +66,20 @@ Exit Criteria:
   - Validate backend script retrieval endpoint and test-id to script-file mapping.
   - Add regression check so View Script works for both MVP-sized catalogs and larger catalogs.
 
+### 🔁 Traceability and Quality Follow-up
+**Status:** Pending  
+**Priority:** High
+
+- [ ] Add unit and module-level tests for newly added A1 service selection and service modules.
+  - Scope: `backend/app/services/a1_service_registry.py`, `backend/app/services/a1_policy_service.py`, `backend/app/services/a1_enrichment_service.py`, `backend/app/api/oran.py`, and related model updates.
+  - Add API tests for `/api/oran/services` and service-aware flows (`extract-methodology`, `upload-specs`, `generate`, `generate-from-selection`).
+  - Add regression tests for service metadata propagation in generated catalogs and test cases.
+
+- [ ] Add non-code metadata mapping for feature/module/component traceability to TODO sections and document skills.
+  - Create and maintain a metadata artifact outside source code (no inline code comments): `ORAN/docs/feature_traceability_map.md`.
+  - For each feature/module/component, map to one or more TODO sections plus one or more skills used for document interpretation.
+  - Include document and section references (for example, TS/section identifiers) and ownership/status fields.
+
 ### ✅ Phase 1: ORAN Foundation (Backend + Frontend)
 **Status:** ✅ COMPLETE (100%)  
 **Estimated:** 5-6 days  

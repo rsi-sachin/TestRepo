@@ -2,3 +2,6 @@
 2. start server: 
 cd C:\TestRepo\demo-web\backend
 python run.py
+
+
+"Use Test Harness skill to add tests for last commit" to use skill to create tests

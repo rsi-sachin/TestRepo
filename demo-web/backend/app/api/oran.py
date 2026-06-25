@@ -3,7 +3,7 @@ ORAN API Endpoints
 Handles O-RAN test catalog management, test generation, and execution
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, UploadFile, File, Depends, Request
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, UploadFile, File, Depends, Request, Response
 from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 from pathlib import Path
@@ -12,6 +12,13 @@ import json
 from datetime import datetime
 
 from app.models.a1_service import A1ServiceRegistryResponse
+from app.models.a1_policy_models import (
+    CreateOrReplacePolicyRequest,
+    PolicyObject,
+    PolicyStatusObject,
+    PolicyTypeObject,
+    ProblemDetails,
+)
 from app.models.oran import (
     OranTestCatalog,
     OranTestCase,
@@ -69,6 +76,22 @@ SPEC_METADATA = {
 }
 
 
+def _problem(status_code: int, title: str, detail: str, instance: str | None = None) -> Dict[str, object]:
+    return ProblemDetails(
+        status=status_code,
+        title=title,
+        detail=detail,
+        instance=instance,
+    ).model_dump(mode="json")
+
+
+def _raise_problem(status_code: int, title: str, detail: str, instance: str | None = None) -> None:
+    raise HTTPException(
+        status_code=status_code,
+        detail=_problem(status_code=status_code, title=title, detail=detail, instance=instance),
+    )
+
+
 @router.get("/services", response_model=A1ServiceRegistryResponse)
 async def list_a1_services():
     """List supported A1 services and their role definitions."""
@@ -88,6 +111,101 @@ async def get_a1_service(service_type: str):
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/a1/policytypes", response_model=List[str])
+async def list_policy_types() -> List[str]:
+    """List available policy type identifiers."""
+    return a1_policy_service.list_policy_type_ids()
+
+
+@router.get("/a1/policytypes/{policy_type_id}", response_model=PolicyTypeObject)
+async def get_policy_type(policy_type_id: str):
+    """Get a single policy type object."""
+    try:
+        return a1_policy_service.get_policy_type(policy_type_id)
+    except KeyError as e:
+        _raise_problem(404, "Policy Type Not Found", str(e), instance=f"/a1/policytypes/{policy_type_id}")
+
+
+@router.put(
+    "/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+    response_model=PolicyObject,
+    status_code=201,
+)
+async def create_or_replace_policy(
+    policy_type_id: str,
+    policy_id: str,
+    request: CreateOrReplacePolicyRequest,
+):
+    """Create or replace a policy and register callback destination for status notifications."""
+    try:
+        return a1_policy_service.create_or_replace_policy(
+            policy_type_id=policy_type_id,
+            policy_id=policy_id,
+            policy=request.policy,
+            notification_destination=str(request.notification_destination),
+        )
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "Policy Type Not Found",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+        )
+    except ValueError as e:
+        _raise_problem(
+            400,
+            "Invalid Policy Request",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+        )
+
+
+@router.get("/a1/policytypes/{policy_type_id}/policies/{policy_id}", response_model=PolicyObject)
+async def get_policy(policy_type_id: str, policy_id: str):
+    """Get one policy object."""
+    try:
+        return a1_policy_service.get_policy(policy_type_id, policy_id)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "Policy Not Found",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+        )
+
+
+@router.delete("/a1/policytypes/{policy_type_id}/policies/{policy_id}", status_code=204)
+async def delete_policy(policy_type_id: str, policy_id: str):
+    """Delete one policy object."""
+    try:
+        a1_policy_service.delete_policy(policy_type_id, policy_id)
+        return Response(status_code=204)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "Policy Not Found",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+        )
+
+
+@router.get(
+    "/a1/policytypes/{policy_type_id}/policies/{policy_id}/status",
+    response_model=PolicyStatusObject,
+)
+async def get_policy_status(policy_type_id: str, policy_id: str):
+    """Get policy status resource."""
+    try:
+        return a1_policy_service.get_policy_status(policy_type_id, policy_id)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "Policy Status Not Found",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/policies/{policy_id}/status",
+        )
 
 
 def _get_docs_path() -> Optional[Path]:
