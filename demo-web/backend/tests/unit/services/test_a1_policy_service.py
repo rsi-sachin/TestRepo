@@ -70,3 +70,23 @@ def test_delete_unknown_policy_raises_key_error() -> None:
 
     with pytest.raises(KeyError):
         service.delete_policy("default", "missing-policy")
+
+
+# --- §5.2.3 unit coverage ---
+
+def test_list_policy_type_ids_returns_empty_list_when_store_is_cleared() -> None:
+    """list_policy_type_ids() must return [] (not raise) when _policy_types is empty."""
+    service = A1PolicyService()
+    service._policy_types.clear()
+
+    result = service.list_policy_type_ids()
+
+    assert result == []
+
+
+def test_get_policy_type_raises_key_error_for_unknown_type_id() -> None:
+    """get_policy_type() must raise KeyError for an unregistered policyTypeId per §5.2.3.3."""
+    service = A1PolicyService()
+
+    with pytest.raises(KeyError, match="Policy type not found"):
+        service.get_policy_type("nonexistent-type")

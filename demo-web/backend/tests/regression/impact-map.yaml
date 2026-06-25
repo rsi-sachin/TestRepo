@@ -2,9 +2,12 @@ changed_artifacts:
   demo-web/backend/app/api/oran.py:
     tests:
       - tests/component/api/test_problem_details_component.py::test_problem_details_component_shape
+      - tests/component/api/test_problem_details_component.py::test_problem_details_component_shape_for_policy_type_not_found
       - tests/interface/api/test_oran_a1_policy_api.py::test_list_a1_services_contract
       - tests/interface/api/test_oran_a1_policy_api.py::test_policy_lifecycle_endpoints
       - tests/interface/api/test_oran_a1_policy_api.py::test_policy_not_found_returns_problem_details_shape
+      - tests/interface/api/test_oran_a1_policy_api.py::test_list_policy_types_returns_200_with_empty_array_when_no_types_registered
+      - tests/interface/api/test_oran_a1_policy_api.py::test_get_unknown_policy_type_returns_404
       - tests/feature/test_a1_service_selection_feature.py::test_service_selection_metadata_for_a1_p_and_a1_ei
       - tests/e2e/test_a1_policy_workflow_e2e.py::test_a1_policy_workflow_e2e
     perspectives: [component, interface, feature, e2e, parameter, fault]
@@ -12,10 +15,13 @@ changed_artifacts:
   demo-web/backend/app/services/a1_policy_service.py:
     tests:
       - tests/unit/services/test_a1_policy_service.py::test_create_get_status_and_delete_policy
+      - tests/unit/services/test_a1_policy_service.py::test_list_policy_type_ids_returns_empty_list_when_store_is_cleared
+      - tests/unit/services/test_a1_policy_service.py::test_get_policy_type_raises_key_error_for_unknown_type_id
+      - tests/nonfunctional/parameter/test_a1_policy_parameter_passing.py::test_get_policy_type_raises_for_unregistered_boundary_ids
       - tests/nonfunctional/load/test_a1_policy_load.py::test_policy_service_handles_moderate_load_create_and_status_reads
       - tests/nonfunctional/stress/test_a1_policy_stress.py::test_policy_service_handles_repeated_replace_stress
       - tests/nonfunctional/memory/test_a1_policy_memory_behavior.py::test_policy_service_cleans_up_internal_state_after_delete_cycles
-    perspectives: [unit, load, stress, memory, fault]
+    perspectives: [unit, load, stress, memory, fault, parameter]
 
   demo-web/backend/app/services/a1_service_registry.py:
     tests:
