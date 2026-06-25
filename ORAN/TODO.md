@@ -80,6 +80,30 @@ Exit Criteria:
   - For each feature/module/component, map to one or more TODO sections plus one or more skills used for document interpretation.
   - Include document and section references (for example, TS/section identifiers) and ownership/status fields.
 
+- [x] **Analyze TS 103 987 §5.2.1–§5.2.2 — Policy management service (introduction and service description)**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** inline
+  - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`
+  - **Document:** `ORAN/docs/ts_103987v040300p.pdf` (v4.3.0)
+  - **Sections analyzed:** §5.2.1 (Introduction), §5.2.2.1 (Functional elements), §5.2.2.2 (Policy representation), §5.2.2.3 (Representation objects), §5.2.2.4 (Resource identifiers)
+  - **Key findings:**
+    - A1-P service operations tied to policy types defined in A1TD; schema-driven behavior.
+    - Policy is a REST resource (PolicyObject) with scope identifier + at least one policy statement.
+    - policyId assigned by A1-P Consumer at creation; producer cannot modify/delete policies.
+    - PolicyObject excludes internal NF routing details; decoupled ownership model.
+    - Status/feedback notifications subscribed at policy creation via callback URI (notificationDestination).
+    - Policy type governance: producer advertises supported types; consumer cannot CRUD policy types.
+    - Required representation objects: PolicyTypeObject, PolicyObject, PolicyStatusObject, ProblemDetails.
+    - Required URIs: `/policytypes`, `/policytypes/{policyTypeId}`, `/policytypes/{policyTypeId}/policies`, `/policytypes/{policyTypeId}/policies/{policyId}`, `/policytypes/{policyTypeId}/policies/{policyId}/status`.
+  - **Implementation verdict:** A1-P models and initial API routes implemented; callback URI validation and schema-driven policy enforcement ready for Phase 2 persistence integration.
+  - **Actions taken:**
+    - Created skill-based analysis document: `ORAN/docs/section_5_2_1_5_2_2_skill_analysis.md` (architectural patterns, code-level gaps, concrete implementation blueprint)
+    - Added A1-P representation models: `demo-web/backend/app/models/a1_policy_models.py` — ProblemDetails, PolicyTypeObject, PolicyObject, PolicyStatusObject, CreateOrReplacePolicyRequest
+    - Extended A1PolicyService: `demo-web/backend/app/services/a1_policy_service.py` — in-memory store for policy types/policies/status; methods: list_policy_type_ids(), get_policy_type(), create_or_replace_policy(), get_policy(), delete_policy(), get_policy_status()
+    - Wired initial A1-P API routes: `demo-web/backend/app/api/oran.py` — GET/PUT/DELETE /a1/policytypes(/{id})/policies/{id}(/status) with ProblemDetails error payloads (404, 400, error instance tracking)
+    - Updated custom instructions: `ORAN/docs/feature_traceability_map.md` rule trigger added to always invoke document-analysis workflow skill for "analyze <sections> from <document>" pattern
+    - Added preference memory: `/memories/preferences.md` for persistent skill-trigger guidance
+  - **Next steps:** Database persistence layer, policy-type schema validation (A1TD integration), callback URI event stream, full lifecycle tests, ownership constraint enforcement tests
+
 - [x] **Analyze TS 103 987 §5.2.3 — Service operations for A1 policy types**
   - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** `5f8f299`, `f5623bd`
   - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`
