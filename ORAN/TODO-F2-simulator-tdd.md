@@ -24,6 +24,22 @@ See upstream: [Feature 1 TODO](TODO-F1-spec-ingestion.md)
 
 ---
 
+## Priority Next Item
+
+### P1-ENH: Dedicated ORAN Spec Discovery + Version Resolution
+Priority: High
+Status: NOT STARTED
+
+- [ ] Add dedicated backend module to uniquely identify each required spec in ORAN/docs (TS_103_989, TS_103_987, TS_103_988, TS_103_983).
+- [ ] Add latest-version selection logic per spec when multiple versions are present in ORAN/docs.
+- [ ] Expose API endpoint to return resolved newest files and candidate versions per spec.
+- [ ] Add CLI wrapper command to print resolved spec mapping and selected latest versions in terminal.
+
+Success criteria:
+- Exactly one selected file per required spec is returned when available.
+- Newer versions in folder are automatically preferred over older versions.
+- CLI output is human-readable and can be used as Feature-1 precheck before generating test list.
+
 ## Core TDD Workstream
 
 - [ ] Define simulator acceptance test template mapped to test_id.
