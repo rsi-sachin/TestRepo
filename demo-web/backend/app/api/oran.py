@@ -532,6 +532,26 @@ async def get_section_options():
         raise HTTPException(status_code=500, detail=f"Failed to load section options: {str(e)}")
 
 
+# ==================== CONFLICTS ====================
+
+@router.get("/conflicts")
+async def get_conflicts():
+    """
+    Return all spec conflicts detected during the last catalog generation.
+    Conflicts are stored in ``data/oran_catalogs/spec_conflicts.json``.
+    """
+    conflicts_path = catalogs_dir / "spec_conflicts.json"
+    if not conflicts_path.exists():
+        return {"conflicts": [], "total": 0}
+    try:
+        with open(conflicts_path, "r", encoding="utf-8") as fh:
+            conflicts = json.load(fh)
+        return {"conflicts": conflicts, "total": len(conflicts)}
+    except Exception as e:
+        logger.error(f"Failed to load conflicts: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to load conflicts: {str(e)}")
+
+
 # ==================== SCRIPT VIEWING ====================
 
 @router.get("/scripts/{test_id}")
@@ -542,9 +562,9 @@ async def get_test_script(test_id: str):
     Returns the Python script as plain text
     """
     try:
-        scripts_dir = settings.oran_generated_tests_path or (settings.tts_path / "generated_tests")
+        scripts_dir = catalogs_dir.parent / "generated_tests"
         script_file = scripts_dir / f"{test_id}.py"
-        
+
         if not script_file.exists():
             raise HTTPException(status_code=404, detail=f"Script for test {test_id} not found")
         
@@ -574,7 +594,7 @@ async def download_test_script(test_id: str):
     from fastapi.responses import FileResponse
     
     try:
-        scripts_dir = settings.oran_generated_tests_path or (settings.tts_path / "generated_tests")
+        scripts_dir = catalogs_dir.parent / "generated_tests"
         script_file = scripts_dir / f"{test_id}.py"
         
         if not script_file.exists():
@@ -659,7 +679,17 @@ async def generate_test_catalog(
         # Save catalog JSON
         catalog_path = catalog_generator.save_catalog(catalog)
         logger.info(f"Saved catalog to {catalog_path}")
-        
+
+        # Generate pytest script and YAML config (Phase 3)
+        script_path: Optional[Path] = None
+        config_path: Optional[Path] = None
+        try:
+            script_path = catalog_generator.generate_pytest_script(catalog)
+            config_path = catalog_generator.generate_test_config(catalog)
+            logger.info(f"Generated script: {script_path}, config: {config_path}")
+        except Exception as e:
+            logger.warning(f"Script generation skipped: {e}")
+
         # Save test cases to database (Phase 3) - use deduplicated list
         try:
             saved_count = catalog_generator.save_to_database(
@@ -686,6 +716,7 @@ async def generate_test_catalog(
             "total_tests": str(catalog.total_tests),
             "total_clauses_parsed": str(total_clauses),
             "conflicts_detected": str(len(conflicts)),
+            "script_generated": script_path is not None,
             "service_type": service_definition.service_type.value,
             "service_name": service_definition.name,
         }
@@ -836,7 +867,17 @@ async def generate_from_selection(
         # Save catalog JSON
         catalog_path = catalog_generator.save_catalog(catalog)
         logger.info(f"Saved catalog to {catalog_path}")
-        
+
+        # Generate pytest script and YAML config
+        script_path: Optional[Path] = None
+        config_path: Optional[Path] = None
+        try:
+            script_path = catalog_generator.generate_pytest_script(catalog)
+            config_path = catalog_generator.generate_test_config(catalog)
+            logger.info(f"Generated script: {script_path}, config: {config_path}")
+        except Exception as e:
+            logger.warning(f"Script generation skipped: {e}")
+
         # Save test cases to database
         try:
             saved_count = catalog_generator.save_to_database(
@@ -854,6 +895,7 @@ async def generate_from_selection(
             "message": f"Successfully generated catalog with {catalog.total_tests} test cases from selected sections",
             "total_tests": str(catalog.total_tests),
             "total_selected_sections": str(total_selected),
+            "script_generated": script_path is not None,
             "service_type": service_definition.service_type.value,
             "service_name": service_definition.name,
         }

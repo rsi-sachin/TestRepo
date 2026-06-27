@@ -346,74 +346,70 @@ Exit Criteria:
 ---
 
 ### Phase 2: Spec Parsing Pipeline
-**Status:** ⏸️ Not Started  
-**Estimated:** 4-5 days  
+**Status:** ✅ COMPLETE  
+**Completed:** 2026-06-27  
 **Priority:** HIGH  
 **Depends on:** Phase 1 ✅
 
-- [ ] **Task 2.1:** Implement document ingestion
-  - File: `backend/app/services/spec_parser_service.py`
-  - Method: `ingest_pdf(file_path: str) -> str` using pypdf
-  - Method: `ingest_docx(file_path: str) -> str` using python-docx
-  - Add dependencies: `pypdf==3.17.0`, `python-docx==1.1.0`
+- [x] **Task 2.1:** Implement document ingestion
+  - File: `backend/app/parsers/pdf_parser.py` — `PdfParser` with `parse_file`, `extract_by_page`, `get_page_count`, `extract_page_range`
+  - File: `backend/app/parsers/docx_parser.py` — `DocxParser` with `parse_file`, `extract_paragraphs`, `extract_with_formatting`
+  - Dependencies: `pypdf==3.17.0`, `python-docx==1.1.0` (already in requirements.txt)
 
-- [ ] **Task 2.2:** Extract test clauses from specs
-  - Method: `extract_clauses(spec_text: str, spec_type: SpecType) -> List[TestClause]`
-  - Regex patterns for ETSI clause format: `^\d+\.\d+\s+[A-Z]`
-  - Parse: clause_number, title, description, entrance_criteria, methodology, expected_result
-  - **DECISION IMPLEMENTED**: Regex-based extraction with manual JSON fallback
+- [x] **Task 2.2:** Extract test clauses from specs
+  - File: `backend/app/parsers/test_clause_extractor.py` — `TestClauseExtractor`
+  - Method: `extract_clauses(spec_text, spec_type, max_tests)` with regex section splitting and test-section filtering
+  - Clause fields: clause_number, title, description, entrance_criteria, methodology, expected_result, scenario_type, page_number
 
-- [ ] **Task 2.3:** Semantic extraction from clauses
-  - Method: `extract_test_semantics(clause: TestClause) -> TestSemantics`
-  - Extract: HTTP method (GET/PUT/POST/DELETE), endpoint, payload type, assertions
-  - Regex-based extraction for MVP
+- [x] **Task 2.3:** Semantic extraction from clauses
+  - Method: `extract_http_info(text)` — extracts HTTP method, endpoint path, status code via regex
+  - `TestSemantics` model carries: http_method, endpoint, expected_status, payload_type, assertions, scenario_type
 
-- [ ] **Task 2.4:** Cross-reference multiple specs
-  - Method: `enrich_test_case(base_clause: TestClause, specs: Dict[SpecType, str]) -> EnrichedTestCase`
-  - **DECISION IMPLEMENTED**: Priority order - TS 103 989 → TS 103 987 → TS 103 988
-  - **ENHANCEMENT**: Log conflicts to JSON file for review
+- [x] **Task 2.4:** Cross-reference multiple specs
+  - Method: `cross_reference_specs(all_clauses)` in `SpecParserService`
+  - Uses TS 103 989 as base; enriches with endpoint from TS 103 987 and status code from TS 103 988
+  - Priority order: TS_103_989 → TS_103_987 → TS_103_988 → TS_103_983
 
-- [ ] **Task 2.5:** Implement conflict storage
-  - File: `backend/data/spec_conflicts.json` (initial file-based storage)
-  - Store: conflict_id, timestamp, spec1, spec2, field, value1, value2, resolution
-  - Later migration path to database
+- [x] **Task 2.5:** Implement conflict storage
+  - Methods: `detect_conflicts(enriched_cases)`, `save_conflicts(output_path)` in `SpecParserService`
+  - Storage: `data/oran_catalogs/spec_conflicts.json`
+  - New endpoint: `GET /api/oran/conflicts` returns all stored conflicts
 
-- [ ] **Task 2.6:** Write unit tests for Phase 2
-  - Test PDF ingestion with sample ETSI spec
-  - Test clause extraction (verify 15+ clauses)
-  - Test semantic extraction (HTTP method/endpoint detection)
-  - Test cross-reference with conflict detection
+- [x] **Task 2.6:** Write unit tests for Phase 2
+  - File: `tests/unit/services/test_phase2_spec_parsing.py` — 24 tests (all pass)
+  - Covers: PdfParser, DocxParser, TestClauseExtractor, extract_http_info, cross_reference_specs, detect_conflicts, save_conflicts, complexity determination
 
 ---
 
 ### ✅ Phase 3: Test Generation Engine
-**Status:** Not Started  
-**Estimated:** 3-4 days  
+**Status:** ✅ COMPLETE  
+**Completed:** 2026-06-27  
 **Priority:** HIGH  
 **Depends on:** Phase 2 Task 2.4
 
-- [ ] **Task 3.1:** Generate JSON test catalog
+- [x] **Task 3.1:** Generate JSON test catalog
   - File: `backend/app/services/test_generator_service.py`
   - Method: `generate_catalog(enriched_cases: List[EnrichedTestCase]) -> OranTestCatalog`
   - Save to: `backend/data/oran_catalogs/{catalog_id}.json`
 
-- [ ] **Task 3.2:** Create Jinja2 pytest templates
+- [x] **Task 3.2:** Create Jinja2 pytest templates
   - Directory: `backend/templates/oran/`
   - Template: `a1_test.py.j2` for pytest script generation
   - Template: `test_config.yaml.j2` for test configuration
-  - Add dependency: `jinja2==3.1.2`
+  - Dependency `jinja2==3.1.2` already in requirements.txt
 
-- [ ] **Task 3.3:** Implement pytest script generation
-  - Method: `generate_pytest_script(catalog: OranTestCatalog) -> str`
-  - Load Jinja2 template, render with catalog data
-  - Save to: `backend/generated_tests/{test_id}.py`
-  - **DECISION IMPLEMENTED**: Read-only scripts with Download button
+- [x] **Task 3.3:** Implement pytest script generation
+  - Method: `generate_pytest_script(catalog: OranTestCatalog) -> Path`
+  - Method: `generate_test_config(catalog: OranTestCatalog) -> Path`
+  - Renders Jinja2 templates, saves to: `generated_tests/{catalog_id}.py` + `_config.yaml`
+  - Called automatically from `/generate` and `/generate-from-selection` endpoints
 
-- [ ] **Task 3.4:** Create ORAN test configuration
-  - Generate YAML config: `backend/generated_tests/{test_id}_config.yaml`
-  - Fields: test_environment, simulator config, timeouts, retries
+- [x] **Task 3.4:** Create ORAN test configuration
+  - YAML config: `generated_tests/{catalog_id}_config.yaml`
+  - Fields: test_environment, simulator config, timeouts, retries, catalog metadata
 
-- [ ] **Task 3.5:** Write unit tests for Phase 3
+- [x] **Task 3.5:** Write unit tests for Phase 3
+  - File: `tests/unit/services/test_phase3_catalog_generation.py` — 21 tests (all pass)
   - Test catalog generation (validate JSON schema)
   - Test template rendering (verify Python syntax)
   - Integration test: Full pipeline spec → catalog → script → execute

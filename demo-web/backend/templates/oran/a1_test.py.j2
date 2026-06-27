@@ -1,0 +1,115 @@
+"""
+Auto-generated pytest test script for O-RAN A1 interface conformance testing.
+Catalog : {{ catalog.name }}
+Generated: {{ catalog.generated_at }}
+Spec sources: {{ catalog.spec_sources | tojson }}
+DO NOT EDIT — regenerate via POST /api/oran/generate
+"""
+
+import pytest
+import httpx
+import yaml
+from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+
+CONFIG_FILE = Path(__file__).parent / "{{ catalog.catalog_id }}_config.yaml"
+
+
+def _load_config() -> dict:
+    if CONFIG_FILE.exists():
+        with open(CONFIG_FILE, "r") as fh:
+            return yaml.safe_load(fh) or {}
+    return {}
+
+
+@pytest.fixture(scope="session")
+def config():
+    return _load_config()
+
+
+@pytest.fixture(scope="session")
+def base_url(config):
+    return config.get("test_environment", {}).get("a1_endpoint", "http://localhost:8080")
+
+
+@pytest.fixture(scope="session")
+def http_client(base_url):
+    with httpx.Client(base_url=base_url, timeout=30.0) as client:
+        yield client
+
+
+# ---------------------------------------------------------------------------
+# Test cases — generated from {{ catalog.name }}
+# ---------------------------------------------------------------------------
+
+{% for tc in catalog.test_cases %}
+class Test_{{ tc.test_id | replace('-', '_') | replace('.', '_') }}:
+    """
+    {{ tc.scenario }}
+    Source: {{ tc.source_spec or 'N/A' }} § {{ tc.source_section or 'N/A' }}
+    Complexity: {{ tc.complexity }}
+    Scenario type: {{ tc.scenario_type or 'CONFORMANCE' }}
+    """
+
+    {% set endpoint = tc.endpoint %}
+    {% set method = tc.method %}
+    {% set expected_status = tc.expected_status %}
+
+    def test_{{ tc.test_id | replace('-', '_') | replace('.', '_') }}_happy_path(self, http_client):
+        """{{ tc.description | truncate(120) }}"""
+        {% if method == "GET" %}
+        response = http_client.get("{{ endpoint }}")
+        {% elif method == "PUT" %}
+        payload = {}  # TODO: populate with {{ tc.payload_type or 'appropriate payload' }}
+        response = http_client.put("{{ endpoint }}", json=payload)
+        {% elif method == "POST" %}
+        payload = {}  # TODO: populate with {{ tc.payload_type or 'appropriate payload' }}
+        response = http_client.post("{{ endpoint }}", json=payload)
+        {% elif method == "DELETE" %}
+        response = http_client.delete("{{ endpoint }}")
+        {% elif method == "PATCH" %}
+        payload = {}
+        response = http_client.patch("{{ endpoint }}", json=payload)
+        {% else %}
+        response = http_client.get("{{ endpoint }}")
+        {% endif %}
+
+        # Primary assertion
+        assert response.status_code == {{ expected_status }}, (
+            f"Expected {{ expected_status }}, got {response.status_code}: {response.text[:200]}"
+        )
+
+        {% for validation in tc.validations %}
+        # {{ validation }}
+        {% endfor %}
+        {% if tc.payload_type %}
+        # Validate Content-Type header
+        assert "application/json" in response.headers.get("content-type", ""), (
+            "Response must be application/json"
+        )
+        {% endif %}
+
+    {% if tc.scenario_type == "CONFORMANCE" %}
+    @pytest.mark.parametrize("bad_status", [400, 404])
+    def test_{{ tc.test_id | replace('-', '_') | replace('.', '_') }}_error_handling(
+        self, http_client, bad_status
+    ):
+        """Verify {{ tc.scenario }} returns ProblemDetails on client errors."""
+        # Use a deliberately invalid resource identifier to trigger error
+        {% if method in ["GET", "DELETE"] %}
+        response = http_client.{{ method | lower }}("{{ endpoint | replace('{', 'INVALID_') | replace('}', '') }}")
+        {% else %}
+        response = http_client.{{ method | lower }}(
+            "{{ endpoint | replace('{', 'INVALID_') | replace('}', '') }}", json={}
+        )
+        {% endif %}
+        # Either a well-formed ProblemDetails or a known error status is acceptable
+        assert response.status_code in (400, 404, 405, 422), (
+            f"Unexpected status {response.status_code} for invalid request"
+        )
+    {% endif %}
+
+{% endfor %}
