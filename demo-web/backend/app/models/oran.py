@@ -25,12 +25,21 @@ class HttpMethod(str, Enum):
     PATCH = "PATCH"
 
 
+class ScenarioType(str, Enum):
+    """High-level scenario classification derived from TS 103 989 methodology."""
+    CONFORMANCE = "CONFORMANCE"
+    INTEROPERABILITY = "INTEROPERABILITY"
+
+
 class OranTestCase(BaseModel):
     """Individual O-RAN A1 test case"""
     test_id: str = Field(..., description="Unique test identifier (e.g., A1_TC_001)")
     scenario: str = Field(..., description="Test scenario name")
     description: str = Field(..., description="Test description")
     service_type: Optional[str] = Field(None, description="A1 service type (A1-P or A1-EI)")
+    scenario_type: Optional[ScenarioType] = Field(None, description="High-level test classification")
+    simulator_required: bool = Field(default=False, description="Whether simulator-backed execution is required")
+    configurable_request_parts: List[str] = Field(default_factory=list, description="Request parts the test harness must allow the simulator to configure")
     
     # Request specification
     method: HttpMethod = Field(..., description="HTTP method")
@@ -58,6 +67,9 @@ class OranTestCase(BaseModel):
                 "test_id": "A1_TC_001",
                 "scenario": "Create A1 Policy",
                 "description": "Test creation of A1 policy via PUT request",
+                "scenario_type": "CONFORMANCE",
+                "simulator_required": True,
+                "configurable_request_parts": ["uri", "headers", "body"],
                 "method": "PUT",
                 "endpoint": "/policies/{policy_id}",
                 "payload_type": "PolicyObject",
@@ -202,6 +214,7 @@ class TestClause(BaseModel):
     entrance_criteria: Optional[str] = Field(None, description="Pre-conditions")
     methodology: Optional[str] = Field(None, description="Test execution steps")
     expected_result: Optional[str] = Field(None, description="Expected outcome")
+    scenario_type: Optional[ScenarioType] = Field(None, description="Scenario classification inferred from methodology")
     spec_type: SpecType = Field(..., description="Source specification")
     page_number: Optional[int] = Field(None, description="Page number in source spec")
     raw_text: Optional[str] = Field(None, description="Raw extracted text (first 1000 chars)")
@@ -215,6 +228,7 @@ class TestClause(BaseModel):
                 "entrance_criteria": "A1 interface available",
                 "methodology": "Send PUT request to /policies/{id}",
                 "expected_result": "HTTP 201 Created response",
+                "scenario_type": "CONFORMANCE",
                 "spec_type": "TS_103_989",
                 "page_number": 45,
                 "raw_text": "..."
@@ -224,6 +238,9 @@ class TestClause(BaseModel):
 
 class TestSemantics(BaseModel):
     """Semantic information extracted from test clause"""
+    scenario_type: Optional[ScenarioType] = Field(None, description="Scenario classification propagated to semantics")
+    simulator_required: bool = Field(default=False, description="Whether simulator-backed execution is required")
+    configurable_request_parts: List[str] = Field(default_factory=list, description="Request parts the simulator must support")
     http_method: Optional[HttpMethod] = Field(None, description="Extracted HTTP method")
     endpoint: Optional[str] = Field(None, description="Extracted API endpoint")
     payload_type: Optional[str] = Field(None, description="Extracted payload type")
@@ -233,6 +250,9 @@ class TestSemantics(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
+                "scenario_type": "CONFORMANCE",
+                "simulator_required": True,
+                "configurable_request_parts": ["uri", "headers", "body"],
                 "http_method": "PUT",
                 "endpoint": "/policies/{policy_id}",
                 "payload_type": "PolicyObject",
@@ -246,6 +266,7 @@ class EnrichedTestCase(BaseModel):
     """Test case enriched with data from multiple specifications"""
     base_clause: TestClause = Field(..., description="Base test clause from test spec")
     semantics: TestSemantics = Field(..., description="Extracted semantic information")
+    scenario_type: Optional[ScenarioType] = Field(None, description="Scenario classification carried through enrichment")
     complexity: str = Field(default="BASIC", description="Test complexity level")
     enrichment_sources: Dict[str, str] = Field(default_factory=dict, description="Sources of enrichment data")
     
@@ -263,6 +284,7 @@ class EnrichedTestCase(BaseModel):
             "example": {
                 "base_clause": {},
                 "semantics": {},
+                "scenario_type": "CONFORMANCE",
                 "complexity": "BASIC",
                 "enrichment_sources": {"base": "TS_103_989 Section 5.3.1", "endpoint": "TS_103_987"},
                 "api_definition": {"endpoint": "/policies/{id}", "method": "PUT"},

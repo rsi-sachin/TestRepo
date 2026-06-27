@@ -1,4 +1,4 @@
-# Regression Selectors for Commit 94006fa
+# Regression Selectors for Commit 5f8f299
 
 ## Targeted smoke run
 

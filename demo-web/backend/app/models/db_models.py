@@ -2,13 +2,13 @@
 Database ORM models for ORAN test cases
 """
 
-from sqlalchemy import Column, Integer, String, Text, Enum, DateTime, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, String, Text, Enum, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
 
 from app.database import Base
-from app.models.oran import SpecType, HttpMethod
+from app.models.oran import SpecType, HttpMethod, ScenarioType
 
 
 class TestCase(Base):
@@ -29,6 +29,9 @@ class TestCase(Base):
     source_spec = Column(Enum(SpecType), nullable=False, index=True)
     source_section = Column(String(50), nullable=False, index=True)
     source_page = Column(Integer)
+    scenario_type = Column(Enum(ScenarioType), nullable=True, index=True)
+    simulator_required = Column(Boolean, nullable=False, default=False)
+    configurable_request_parts = Column(Text, nullable=False, default="[]")
     
     # HTTP API details
     http_method = Column(Enum(HttpMethod), nullable=False, index=True)

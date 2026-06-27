@@ -12,7 +12,7 @@ import uuid
 
 from app.models.oran import (
     OranTestCatalog, OranTestCase, EnrichedTestCase,
-    SpecType, HttpMethod
+    SpecType, HttpMethod, ScenarioType
 )
 from app.models.hierarchy_tree import HierarchyTree, HierarchyNode
 
@@ -192,6 +192,9 @@ class CatalogGeneratorService:
             scenario=node.title,
             description=node.content_text[:200] if node.content_text else node.title,
             service_type=service_type,
+            scenario_type=self._infer_scenario_type_from_text(node.title, node.content_text),
+            simulator_required=self._infer_scenario_type_from_text(node.title, node.content_text) == ScenarioType.CONFORMANCE,
+            configurable_request_parts=self._infer_configurable_request_parts(self._infer_scenario_type_from_text(node.title, node.content_text)),
             method=http_method,
             endpoint=endpoint,
             expected_status=200,  # Default, should be extracted from content
@@ -482,6 +485,9 @@ class CatalogGeneratorService:
             scenario=base.title,
             description=base.description or base.title,
             service_type=service_type,
+            scenario_type=enriched.scenario_type or sem.scenario_type,
+            simulator_required=sem.simulator_required,
+            configurable_request_parts=sem.configurable_request_parts,
             method=sem.http_method,
             endpoint=sem.endpoint,
             expected_status=sem.expected_status,
@@ -493,6 +499,19 @@ class CatalogGeneratorService:
         )
         
         return test_case
+
+    def _infer_scenario_type_from_text(self, title: str, content_text: Optional[str]) -> ScenarioType:
+        """Infer scenario type for hierarchy-derived test cases."""
+        text = f"{title}\n{content_text or ''}".lower()
+        if "interoperability" in text:
+            return ScenarioType.INTEROPERABILITY
+        return ScenarioType.CONFORMANCE
+
+    def _infer_configurable_request_parts(self, scenario_type: ScenarioType) -> List[str]:
+        """Infer configurable request parts for hierarchy-derived cases."""
+        if scenario_type == ScenarioType.CONFORMANCE:
+            return ['uri', 'headers', 'body']
+        return ['uri', 'headers', 'body']
     
     def _get_spec_sources(
         self, enriched_cases: List[EnrichedTestCase]

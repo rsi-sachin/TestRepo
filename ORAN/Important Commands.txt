@@ -3,7 +3,6 @@
 cd C:\TestRepo\demo-web\backend
 python run.py
 
-
 How to use skill
 Open the skill doc once to see contract and expected outputs:
 SKILL.md
@@ -40,3 +39,6 @@ Improve it after each run:
 Add what worked or failed in:
 run_improvement_log.md
 If rules change materially, create a new versioned rules file (v2, v3) and keep v1 unchanged.
+
+"Analyze <section x, Y> from ORAN\docs\<document name>" to use skill to analyze documents and identify gaps in current implementation vs information from the document.
+"Use Test Harness skill to add tests for last commit" to use skill to create tests

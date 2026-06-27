@@ -1,7 +1,7 @@
 # Demo-Web ORAN Integration - TODO List
 
 **Project:** Extend demo-web with O-RAN A1 test generation capabilities  
-**Last Updated:** January 2026  
+**Last Updated:** 2026-06-25  
 **Status:** Phase 1 Complete (Backend + Frontend), Phase 2-4 Pending
 
 ## P1-ENH: Python 3.13 Migration Readiness and Implementation
@@ -104,6 +104,134 @@ Exit Criteria:
   - Verify frontend handler wiring in ORAN catalog table and script modal open path.
   - Validate backend script retrieval endpoint and test-id to script-file mapping.
   - Add regression check so View Script works for both MVP-sized catalogs and larger catalogs.
+
+### 🔁 Traceability and Quality Follow-up
+**Status:** Pending  
+**Priority:** High
+
+- [ ] Add unit and module-level tests for newly added A1 service selection and service modules.
+  - Scope: `backend/app/services/a1_service_registry.py`, `backend/app/services/a1_policy_service.py`, `backend/app/services/a1_enrichment_service.py`, `backend/app/api/oran.py`, and related model updates.
+  - Add API tests for `/api/oran/services` and service-aware flows (`extract-methodology`, `upload-specs`, `generate`, `generate-from-selection`).
+  - Add regression tests for service metadata propagation in generated catalogs and test cases.
+
+- [ ] Add non-code metadata mapping for feature/module/component traceability to TODO sections and document skills.
+  - Create and maintain a metadata artifact outside source code (no inline code comments): `ORAN/docs/feature_traceability_map.md`.
+  - For each feature/module/component, map to one or more TODO sections plus one or more skills used for document interpretation.
+  - Include document and section references (for example, TS/section identifiers) and ownership/status fields.
+
+- [x] **Analyze TS 103 987 §5.2.1–§5.2.2 — Policy management service (introduction and service description)**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** inline
+  - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`
+  - **Document:** `ORAN/docs/ts_103987v040300p.pdf` (v4.3.0)
+  - **Sections analyzed:** §5.2.1 (Introduction), §5.2.2.1 (Functional elements), §5.2.2.2 (Policy representation), §5.2.2.3 (Representation objects), §5.2.2.4 (Resource identifiers)
+  - **Key findings:**
+    - A1-P service operations tied to policy types defined in A1TD; schema-driven behavior.
+    - Policy is a REST resource (PolicyObject) with scope identifier + at least one policy statement.
+    - policyId assigned by A1-P Consumer at creation; producer cannot modify/delete policies.
+    - PolicyObject excludes internal NF routing details; decoupled ownership model.
+    - Status/feedback notifications subscribed at policy creation via callback URI (notificationDestination).
+    - Policy type governance: producer advertises supported types; consumer cannot CRUD policy types.
+    - Required representation objects: PolicyTypeObject, PolicyObject, PolicyStatusObject, ProblemDetails.
+    - Required URIs: `/policytypes`, `/policytypes/{policyTypeId}`, `/policytypes/{policyTypeId}/policies`, `/policytypes/{policyTypeId}/policies/{policyId}`, `/policytypes/{policyTypeId}/policies/{policyId}/status`.
+  - **Implementation verdict:** A1-P models and initial API routes implemented; callback URI validation and schema-driven policy enforcement ready for Phase 2 persistence integration.
+  - **Actions taken:**
+    - Created skill-based analysis document: `ORAN/docs/section_5_2_1_5_2_2_skill_analysis.md` (architectural patterns, code-level gaps, concrete implementation blueprint)
+    - Added A1-P representation models: `demo-web/backend/app/models/a1_policy_models.py` — ProblemDetails, PolicyTypeObject, PolicyObject, PolicyStatusObject, CreateOrReplacePolicyRequest
+    - Extended A1PolicyService: `demo-web/backend/app/services/a1_policy_service.py` — in-memory store for policy types/policies/status; methods: list_policy_type_ids(), get_policy_type(), create_or_replace_policy(), get_policy(), delete_policy(), get_policy_status()
+    - Wired initial A1-P API routes: `demo-web/backend/app/api/oran.py` — GET/PUT/DELETE /a1/policytypes(/{id})/policies/{id}(/status) with ProblemDetails error payloads (404, 400, error instance tracking)
+    - Updated custom instructions: `ORAN/docs/feature_traceability_map.md` rule trigger added to always invoke document-analysis workflow skill for "analyze <sections> from <document>" pattern
+    - Added preference memory: `/memories/preferences.md` for persistent skill-trigger guidance
+  - **Next steps:** Database persistence layer, policy-type schema validation (A1TD integration), callback URI event stream, full lifecycle tests, ownership constraint enforcement tests
+
+- [x] **Analyze TS 103 987 §5.2.4 — Service operations for A1 policies**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** `007c971`, `2110bbd`
+  - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lenses: `document-analysis-a1tp`, `document-analysis-a1td`
+  - **Trace IDs:** ORAN-FTM-002, ORAN-FTM-004
+  - **Sections analyzed:** §5.2.4.1 (HTTP mapping table), §5.2.4.2 (Query policy identifiers), §5.2.4.3 (Create policy), §5.2.4.4 (Update policy), §5.2.4.5 (Query policy), §5.2.4.6 (Delete policy), §5.2.4.7 (Query policy status), §5.2.4.8 (Notify policy status)
+  - **Key findings:**
+    - Create and Update both use `PUT`; upsert semantics — existence of resource determines 201 vs 200.
+    - `policyId` is consumer-generated (not server-assigned); included in PUT URI.
+    - `notificationDestination` is a query parameter on PUT (not request body); omitting it cancels existing subscription (§5.2.4.4.1).
+    - Notify policy status (§5.2.4.8) reverses HTTP roles: A1-P Producer acts as HTTP Client, Consumer exposes callback HTTP Server endpoint.
+    - `policyTypeId` drives server-side JSON schema selection for `PolicyObject` and `PolicyStatusObject` validation.
+    - "Query all" patterns are client-side iteration, not single server endpoints.
+  - **Implementation verdict:** Spec-compliant implementation delivered; `notificationDestination` moved to query param, upsert status codes corrected, missing routes and service methods added.
+  - **Actions taken:**
+    - Added `list_policy_ids(policy_type_id)` to `A1PolicyService` for §5.2.4.2 query policy identifiers
+    - Changed `create_or_replace_policy()` return to `(PolicyObject, was_created: bool)` for 201 vs 200 differentiation
+    - Made `notification_destination` Optional in `create_or_replace_policy()`; omission cancels subscription
+    - Added `async notify_policy_status(destination, status_obj)` — outbound HTTP POST via `httpx` (§5.2.4.8)
+    - Added `GET /a1/policytypes/{policyTypeId}/policies` route to `oran.py` (§5.2.4.2)
+    - Fixed `PUT` route: `notificationDestination` as query param, returns 201+`Location` for create / 200 for update
+    - Updated `ORAN/docs/feature_traceability_map.md` — ORAN-FTM-002 source reference extended to include §5.2.4
+    - Updated `tests/unit/services/test_a1_policy_service.py` — unpack `(policy, was_created)` tuple
+  - **Test results:** 7 unit + 15 nonfunctional tests — all pass
+
+- [x] **Analyze TS 103 987 §5.2.3 — Service operations for A1 policy types**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** `5f8f299`, `f5623bd`
+  - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`
+  - **Trace IDs:** ORAN-FTM-002, ORAN-FTM-004
+  - **Sections analyzed:** §5.2.3.1 (HTTP mapping table), §5.2.3.2 (Query policy type identifiers), §5.2.3.3.1–5.2.3.3.4 (Query policy type — single/multiple/all procedures)
+  - **Key findings:**
+    - Policy type operations are read-only (GET only); no POST/PUT/DELETE on policy types.
+    - `GET /policytypes` MUST return `200 []` (not 404) when no types are registered.
+    - `GET /policytypes/{policyTypeId}` MUST return `404` (normative SHALL) for unknown ids.
+    - "Query all policy types" is a client-side iteration pattern, not a server endpoint.
+  - **Implementation verdict:** Current code in `demo-web/backend/app/api/oran.py` is conformant; no structural changes required.
+  - **Actions taken:**
+    - Added interface contract tests: `test_list_policy_types_returns_200_with_empty_array_when_no_types_registered`, `test_get_unknown_policy_type_returns_404` → `tests/interface/api/test_oran_a1_policy_api.py`
+    - Added unit tests: `test_list_policy_type_ids_returns_empty_list_when_store_is_cleared`, `test_get_policy_type_raises_key_error_for_unknown_type_id` → `tests/unit/services/test_a1_policy_service.py`
+    - Added component test: `test_problem_details_component_shape_for_policy_type_not_found` → `tests/component/api/test_problem_details_component.py`
+    - Added 6 parameter boundary tests for `policyTypeId` → `tests/nonfunctional/parameter/test_a1_policy_parameter_passing.py`
+    - Updated `ORAN/docs/feature_traceability_map.md` — ORAN-FTM-002 source reference extended to include §5.2.3
+    - Updated `tests/regression/impact-map.yaml` and `tests/regression/selectors.md`
+  - **Analysis artifact:** `ORAN/docs/section_5_2_3_analysis.md` (not created — analysis delivered inline per session)
+
+- [x] **Analyze TS 103 989 §4.1 — General test methodology for A1 interface**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** inline
+  - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`, support lens: `document-rule-learning`
+  - **Trace IDs:** ORAN-FTM-005, ORAN-FTM-006, ORAN-FTM-007, ORAN-FTM-008
+  - **Document:** `ORAN/docs/ts_103989v040200p.pdf` (v4.2.0)
+  - **Section analyzed:** §4.1 (General)
+  - **Key findings:**
+    - Test methodology is split into conformance testing and interoperability testing for the A1 interface between Non-RT RIC and Near-RT RIC.
+    - Conformance testing is simulator-driven and requires configurable HTTP `GET`, `PUT`, `POST`, and `DELETE` behavior.
+    - URI, headers, and body must remain configurable to derive multiple test cases from common A1 procedures.
+    - Interoperability testing assumes real devices under test, with surrounding systems allowed to be real or simulated.
+    - The spec favors scenario-driven validation of A1 behavior, which supports a strict TDD-first implementation flow.
+  - **Implementation verdict:** The current ORAN prototype plan should treat simulator-backed conformance tests as the entry point for all new A1 feature work, with interoperability scenarios promoted only after conformance is green.
+  - **Actions taken:**
+    - Created analysis artifact: `ORAN/docs/section_4_1_analysis.md`
+    - Updated `ORAN/IMPLEMENTATION_PLAN.md` with a TS 103 989 §4.1-driven TDD development approach and verification additions
+  - **Next steps:** Add scenario classification for conformance vs interoperability, add simulator capability tests for configurable HTTP operations, and keep new A1 route/service work gated on failing spec-derived conformance tests.
+
+- [x] **Commit and push TS 103 989 §4.1 analysis and scenario-classification implementation**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commit:** `f010d8e`
+  - **Scope:** ORAN analysis artifact, TDD planning updates, parser/catalog scenario classification, persistence metadata, and `/test-cases` API metadata support
+  - **Remote:** `origin/feature/ORAN_MVP_1_Py3_13`
+  - **Verification:** Narrow regression passed before push for scenario classification and persistence/API metadata (`7 passed`)
+
+- [ ] **P1-ENH: Analyze TS 103 987 §5.3 — Enrichment Information Service**
+  - **Priority:** P1-ENH
+  - **Skill to use:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`
+  - **Document:** `ORAN/docs/ts_103987v040300p.pdf` (v4.3.0)
+  - **Section to analyze:** §5.3 (Enrichment Information Service)
+  - **Expected output:** analysis notes, implementation impact, and TODO follow-ups for service models/routes/tests
+
+- [ ] **P1-ENH: Implement TS 103 989 §4.2.1 and §4.2.2 conformance setup coverage**
+  - **Priority:** P1-ENH
+  - **Source:** `ORAN/docs/ts_103989v040200p.pdf` (v4.2.0), sections §4.2.1 and §4.2.2
+  - **Objective:** Close pending implementation and verification gaps identified from Non-RT RIC conformance setup analysis.
+  - **Pending items:**
+    - Add explicit section traceability and test references for **both** §4.2.1 and §4.2.2 in ORAN test planning artifacts.
+    - Add DUT readiness checks for Non-RT RIC role behavior and agreed policy type and/or EI type preconditions.
+    - Add simulator capability verification for A1-P Producer and A1-EI Consumer behavior, including HTTP client/server handling, configurable request/response behavior, and message validation.
+    - Add mandatory execution evidence checks per test run (message logs, headers/body/code validation, deterministic verdict reason).
+    - Add or update a traceability mapping row in `ORAN/docs/feature_traceability_map.md` to explicitly include §4.2.1 and §4.2.2 source references and verification targets.
+  - **Expected output:**
+    - Updated test plan and quick reference entries with §4.2.1 + §4.2.2 coverage.
+    - New or updated tests for DUT preconditions, simulator capabilities, and evidence completeness.
+    - Traceability map update and regression impact-map update aligned with new tests.
 
 ### ✅ Phase 1: ORAN Foundation (Backend + Frontend)
 **Status:** ✅ COMPLETE (100%)  
