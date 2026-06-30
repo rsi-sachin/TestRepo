@@ -1,7 +1,7 @@
 # Demo-Web ORAN Integration - TODO List
 
 **Project:** Extend demo-web with O-RAN A1 test generation capabilities  
-**Last Updated:** 2026-06-25  
+**Last Updated:** 2026-06-30  
 **Status:** Phase 1 Complete (Backend + Frontend), Phase 2-4 Pending
 
 ## P1-ENH: Python 3.13 Migration Readiness and Implementation
@@ -241,6 +241,23 @@ Exit Criteria:
     - Simulator matrix: `ORAN/docs/simulator_capability_matrix.md`
     - Evidence spec: `ORAN/docs/execution_evidence_specification.md`
     - Traceability row: ORAN-FTM-013 in `feature_traceability_map.md`
+
+- [ ] **P1-ENH: Process TS 103 989 §4.4 interoperability using correct protocol skill** (**IN PROGRESS**)
+  - **Priority:** P1-ENH
+  - **Date:** 2026-06-30
+  - **Source:** `ORAN/docs/ts_103989v040200p.pdf` (v4.2.0), section §4.4
+  - **Status:** IN PROGRESS
+  - **Context:** Initial §4.4 analysis and conformance implementation was completed, but protocol-centric analysis flow did not explicitly invoke `document-analysis-a1tp` as primary skill.
+  - **Completed in this cycle:**
+    - [x] Added interoperability conformance categories and execution paths in backend (`interoperability-a1p`, `interoperability-a1ei`)
+    - [x] Added §4.4 conformance and readiness tests
+    - [x] Executed focused regression (`31 passed`)
+    - [x] Added fail-closed skill-routing guardrails in:
+      - `.github/copilot-instructions.md`
+      - `.github/skills/document-cross-reference-analysis/SKILL.md`
+      - `.github/skills/document-analysis-a1tp/SKILL.md`
+  - **Next step (mandatory):**
+    - [ ] Re-run §4.4 analysis with `document-analysis-a1tp` explicitly selected as the **primary** skill, then produce a delta report against implemented tests and apply any required corrections.
 
 - [ ] **P1-ENH: Create Conformance Test Dashboard UI** (Design Complete; Implementation Pending)
   - **Priority:** P1-ENH
