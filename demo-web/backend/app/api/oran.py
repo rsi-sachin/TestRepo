@@ -39,6 +39,13 @@ from app.services.rule_learner_service import RuleLearnerService
 from app.repositories.rule_pack_repository import RulePackRepository
 from app.models.rule_pack import RulePack, RulePackSummary
 from app.models.hierarchy_tree import HierarchyTree
+from app.modules.o1_interface.service import O1InterfaceService
+from app.modules.o1_interface.validators import validate_o1_request
+from app.modules.o1_interface.models import O1Request, O1Response
+from app.modules.e2_interface.service import E2InterfaceService
+from app.modules.e2_interface.validators import validate_e2_message
+from app.modules.e2_interface.models import E2Request, E2Response
+from app.modules.conformance_harness.service import ConformanceHarnessService
 from app.database import get_db
 from app.config import settings
 import logging
@@ -65,6 +72,9 @@ hierarchical_extractor = HierarchicalExtractorService()
 sections_options_dir = Path("./data/oran_sections")
 sections_options_dir.mkdir(parents=True, exist_ok=True)
 sections_options_file = sections_options_dir / "sections_by_spec.json"
+o1_interface_service = O1InterfaceService()
+e2_interface_service = E2InterfaceService()
+conformance_harness_service = ConformanceHarnessService()
 
 # TS spec metadata: canonical map used by resolve-specs endpoint
 SPEC_METADATA = {
@@ -267,6 +277,102 @@ def _resolve_spec_file(spec_type: str) -> Optional[Path]:
     if docs_path:
         return _find_spec_in_docs(spec_type, docs_path)
     return None
+
+
+@router.get("/o1/health")
+async def get_o1_health() -> Dict[str, str]:
+    """Step 2: O1 production-capable contract health endpoint."""
+    return o1_interface_service.health()
+
+
+@router.post("/o1/validate", response_model=O1Response)
+async def post_o1_validate(payload: O1Request):
+    """Step 2: O1 contract validator endpoint."""
+    is_valid, message = validate_o1_request(payload)
+    if not is_valid:
+        _raise_problem(400, "Invalid O1 Request", message, instance="/o1/validate")
+    return O1Response(
+        transaction_id=payload.transaction_id,
+        status="accepted",
+        message=message,
+        errors=[],
+    )
+
+
+@router.get("/e2/health")
+async def get_e2_health() -> Dict[str, str]:
+    """Step 2: E2 production-capable contract health endpoint."""
+    return e2_interface_service.health()
+
+
+@router.post("/e2/validate", response_model=E2Response)
+async def post_e2_validate(payload: E2Request):
+    """Step 2: E2 contract validator endpoint."""
+    is_valid, message = validate_e2_message(payload)
+    if not is_valid:
+        _raise_problem(400, "Invalid E2 Message", message, instance="/e2/validate")
+    return E2Response(
+        transaction_id=payload.transaction_id,
+        status="accepted",
+        message=message,
+        errors=[],
+    )
+
+
+@router.get("/conformance/dut-readiness")
+async def get_dut_readiness() -> Dict[str, object]:
+    """Step 1: conformance DUT readiness endpoint."""
+    return conformance_harness_service.get_dut_readiness(
+        service_registry=a1_service_registry,
+        policy_service=a1_policy_service,
+        ric_endpoint=settings.oran_ric_endpoint,
+    )
+
+
+@router.get("/conformance/simulator-capability")
+async def get_simulator_capability() -> Dict[str, object]:
+    """Step 1: conformance simulator capability endpoint."""
+    return conformance_harness_service.get_simulator_capability()
+
+
+@router.get("/conformance/categories")
+async def get_conformance_categories() -> List[Dict[str, object]]:
+    """List currently implemented conformance categories."""
+    return conformance_harness_service.list_conformance_categories()
+
+
+@router.get("/conformance/tests")
+async def get_conformance_tests(category_id: str = Query("policy-type-query")) -> List[Dict[str, object]]:
+    """List executable conformance tests for a category."""
+    normalized = category_id.strip().lower()
+    if normalized == "policy-type-query":
+        return conformance_harness_service.list_policy_type_query_tests()
+    if normalized in {"policy-operations", "policy-crud-operations"}:
+        return conformance_harness_service.list_policy_operations_tests()
+    _raise_problem(400, "Unsupported Conformance Category", f"Unsupported category_id: {category_id}")
+
+
+@router.post("/conformance/run")
+async def run_conformance_category(payload: Optional[Dict[str, object]] = None) -> Dict[str, object]:
+    """Run the first implemented TS 103 989 conformance category."""
+    payload = payload or {}
+    category_id = str(payload.get("category_id", "policy-type-query")).strip().lower()
+    if category_id == "policy-type-query":
+        return conformance_harness_service.run_policy_type_query_tests(
+            policy_service=a1_policy_service,
+            service_registry=a1_service_registry,
+        )
+    if category_id in {"policy-operations", "policy-crud-operations"}:
+        return conformance_harness_service.run_policy_operations_tests(
+            policy_service=a1_policy_service,
+        )
+    _raise_problem(400, "Unsupported Conformance Category", f"Unsupported category_id: {category_id}")
+
+
+@router.post("/conformance/evidence/validate")
+async def post_evidence_validate(payload: Dict[str, object]) -> Dict[str, object]:
+    """Step 1: conformance evidence validation endpoint."""
+    return conformance_harness_service.validate_evidence(payload)
 
 
 def _save_sections_options(all_clauses: Dict[SpecType, List]) -> None:
