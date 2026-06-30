@@ -44,6 +44,12 @@ Always consider these perspectives when selecting/authoring tests:
 - Feature/e2e flow: user-visible end-to-end workflows.
 - Fault behavior: retries, partial failures, external dependency errors.
 
+## Specification Reference Rule
+- For every new or modified test case, include an explicit specification reference in the test case itself.
+- Prefer an assertion message, test name, docstring, or test metadata field that names the governing spec and section(s).
+- If a test case spans multiple source sections, include all relevant section references in the same test case.
+- Apply this rule to any test added or updated as part of the current change, including ORAN conformance and simulator smoke tests.
+
 ## Test Taxonomy and Structure
 Prefer this hierarchy (adapt to language/project conventions):
 
