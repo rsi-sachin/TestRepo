@@ -86,7 +86,9 @@ Full requirements: `C:\testrepo\docs\requirements.txt`
 
 - When a user request matches the pattern `analyze <sections> from <document>`, always invoke the document-analysis workflow skill first.
 - Prefer `document-cross-reference-analysis` as the workflow entry skill, and choose `single` mode unless the user asks for dependency or multi-document expansion.
-- For protocol-centric content (HTTP/REST/resources), include `document-analysis-a1tp` extraction patterns in the analysis output.
+- For protocol-centric content (HTTP/REST/resources/status-codes/authentication), invoke `document-analysis-a1tp` as the primary analysis skill before extraction or mapping.
+- Do not proceed with protocol-centric analysis using only `document-cross-reference-analysis`; `document-analysis-a1tp` selection is mandatory.
+- Missing required skill invocation is a blocker, not a warning.
 - When a user request includes `Use Test Harness skill to add unit/component/module/interface/feature and e2e tests for a given commit or change summary`, invoke `test-harness-regression` first.
 - For test harness requests, include perspectives for memory, load, stress, parameter passing, and fault/error handling where applicable, and maintain regression mapping artifacts for changed files/modules.
 

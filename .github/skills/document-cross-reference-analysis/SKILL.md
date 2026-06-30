@@ -27,6 +27,24 @@ configuration:
   section-selection-defaults:
     skip-first-section-match: true
     rationale: "The first section-name/ID match is often from Table of Contents; prefer body headings by default."
+  routing-gate:
+    protocol-markers:
+      - http
+      - rest
+      - endpoint
+      - uri
+      - resource
+      - status code
+      - authentication
+      - authorization
+    required-sub-skill: document-analysis-a1tp
+    fail-closed: true
+    failure-action: "Stop and report missing required sub-skill selection before continuing analysis."
+  required-analysis-output-fields:
+    - selected_primary_skill
+    - selected_secondary_skills
+    - why_selected
+    - protocol_markers_detected
 traceability:
   required-artifact: "ORAN/docs/feature_traceability_map.md"
   required-before-code-generation: true
@@ -76,6 +94,23 @@ verification_targets:
 Hard gate:
 
 - Do not emit source code unless `selected_trace_ids` is non-empty and resolved against `ORAN/docs/feature_traceability_map.md`.
+
+## Required Skill Routing Gate
+
+Before analysis begins, this skill must classify request content and select sub-skills with fail-closed behavior.
+
+- If protocol markers are detected (HTTP/REST/endpoints/resources/status codes/authentication), `document-analysis-a1tp` is mandatory.
+- Cross-reference orchestration may continue only after the mandatory sub-skill is selected.
+- If mandatory selection is missing, stop and report routing failure rather than continuing with partial analysis.
+
+Required routing audit fields in every analysis response:
+
+```yaml
+selected_primary_skill: "document-analysis-a1tp"
+selected_secondary_skills: ["document-cross-reference-analysis"]
+why_selected: "Protocol markers detected in request and document section"
+protocol_markers_detected: ["HTTP", "REST", "resource"]
+```
 
 ## Document Ecosystem
 

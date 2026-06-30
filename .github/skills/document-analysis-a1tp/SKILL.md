@@ -22,6 +22,17 @@ configuration:
     dependencies: "Include request/response schemas and procedure triggers from related documents"
     full-suite: "Complete analysis with all related A1 documents and ETSI standards"
     version-evolution: "Track API changes and breaking changes across document versions"
+  mandatory-invocation-when:
+    - request contains protocol markers (http, rest, endpoint, resource, uri, status code, authentication)
+    - target document is technical protocol oriented
+  fail-closed-if-not-invoked: true
+  required-analysis-output-fields:
+    - selected_primary_skill
+    - selected_secondary_skills
+    - why_selected
+    - protocol_markers_detected
+    - section_target_validation
+    - pre_response_checklist
 traceability:
   required-artifact: "ORAN/docs/feature_traceability_map.md"
   required-before-code-generation: true
@@ -88,6 +99,35 @@ Hard gate:
 - Mapping protocol requirements to code modules
 - Processing version diffs to identify breaking changes
 - Resolving cross-references from other A1-related documents
+
+## Invocation Requirements
+
+- This skill is mandatory as the primary skill for protocol-centric technical analysis.
+- If protocol markers are present and this skill is not selected, analysis must stop and report a routing error.
+- `document-cross-reference-analysis` can be used as orchestrator, but does not replace mandatory primary selection of this skill for protocol-centric requests.
+
+Required routing audit fields in every analysis response:
+
+```yaml
+selected_primary_skill: "document-analysis-a1tp"
+selected_secondary_skills: ["document-cross-reference-analysis"]
+why_selected: "Protocol markers detected in user request/document section"
+protocol_markers_detected: ["HTTP", "REST", "status code"]
+section_target_validation:
+  requested_section: "4.4"
+  toc_match_skipped: true
+  body_section_used: true
+```
+
+## Pre-Response Checklist
+
+Before finalizing an analysis response, confirm all items below:
+
+- Body section target validated (TOC match skipped when duplicate heading is found).
+- Protocol markers extracted and listed.
+- HTTP/REST/auth/data/error handling extraction performed when applicable.
+- Test or module impact mapping provided.
+- Required routing audit fields populated.
 
 ## Key Extraction Patterns
 
