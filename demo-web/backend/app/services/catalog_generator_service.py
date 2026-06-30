@@ -10,11 +10,16 @@ import json
 from datetime import datetime
 import uuid
 
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+
 from app.models.oran import (
     OranTestCatalog, OranTestCase, EnrichedTestCase,
-    SpecType, HttpMethod
+    SpecType, HttpMethod, ScenarioType
 )
 from app.models.hierarchy_tree import HierarchyTree, HierarchyNode
+
+# Default templates directory (relative to this file's package root)
+_TEMPLATES_DIR = Path(__file__).parent.parent.parent / "templates" / "oran"
 
 logger = logging.getLogger(__name__)
 
@@ -22,15 +27,34 @@ logger = logging.getLogger(__name__)
 class CatalogGeneratorService:
     """Service for generating O-RAN test catalogs"""
     
-    def __init__(self, output_dir: Path):
+    def __init__(self, output_dir: Path, templates_dir: Optional[Path] = None):
         """
         Initialize catalog generator
-        
+
         Args:
-            output_dir: Directory to save generated catalogs
+            output_dir: Directory to save generated catalogs and scripts
+            templates_dir: Optional override for Jinja2 templates directory
         """
         self.output_dir = output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
+
+        templates_path = templates_dir or _TEMPLATES_DIR
+        if templates_path.exists():
+            self._jinja_env = Environment(
+                loader=FileSystemLoader(str(templates_path)),
+                autoescape=select_autoescape(disabled_extensions=("py.j2", "yaml.j2")),
+                trim_blocks=True,
+                lstrip_blocks=True,
+            )
+        else:
+            logger.warning(
+                f"Templates directory not found: {templates_path}. "
+                "Script generation will be unavailable."
+            )
+            self._jinja_env = None
+
+        self._scripts_dir = output_dir.parent / "generated_tests"
+        self._scripts_dir.mkdir(parents=True, exist_ok=True)
     
     def generate_catalog(
         self,
@@ -192,6 +216,9 @@ class CatalogGeneratorService:
             scenario=node.title,
             description=node.content_text[:200] if node.content_text else node.title,
             service_type=service_type,
+            scenario_type=self._infer_scenario_type_from_text(node.title, node.content_text),
+            simulator_required=self._infer_scenario_type_from_text(node.title, node.content_text) == ScenarioType.CONFORMANCE,
+            configurable_request_parts=self._infer_configurable_request_parts(self._infer_scenario_type_from_text(node.title, node.content_text)),
             method=http_method,
             endpoint=endpoint,
             expected_status=200,  # Default, should be extracted from content
@@ -482,6 +509,9 @@ class CatalogGeneratorService:
             scenario=base.title,
             description=base.description or base.title,
             service_type=service_type,
+            scenario_type=enriched.scenario_type or sem.scenario_type,
+            simulator_required=sem.simulator_required,
+            configurable_request_parts=sem.configurable_request_parts,
             method=sem.http_method,
             endpoint=sem.endpoint,
             expected_status=sem.expected_status,
@@ -493,6 +523,19 @@ class CatalogGeneratorService:
         )
         
         return test_case
+
+    def _infer_scenario_type_from_text(self, title: str, content_text: Optional[str]) -> ScenarioType:
+        """Infer scenario type for hierarchy-derived test cases."""
+        text = f"{title}\n{content_text or ''}".lower()
+        if "interoperability" in text:
+            return ScenarioType.INTEROPERABILITY
+        return ScenarioType.CONFORMANCE
+
+    def _infer_configurable_request_parts(self, scenario_type: ScenarioType) -> List[str]:
+        """Infer configurable request parts for hierarchy-derived cases."""
+        if scenario_type == ScenarioType.CONFORMANCE:
+            return ['uri', 'headers', 'body']
+        return ['uri', 'headers', 'body']
     
     def _get_spec_sources(
         self, enriched_cases: List[EnrichedTestCase]
@@ -517,6 +560,63 @@ class CatalogGeneratorService:
         
         return sources
     
+    def generate_pytest_script(self, catalog: OranTestCatalog) -> Path:
+        """
+        Render a Jinja2 pytest script from the catalog and save it under
+        ``generated_tests/{catalog_id}.py``.
+
+        Args:
+            catalog: The OranTestCatalog to render.
+
+        Returns:
+            Path to the generated ``.py`` file.
+
+        Raises:
+            RuntimeError: If the Jinja2 environment could not be initialised
+                          (templates directory missing).
+        """
+        if self._jinja_env is None:
+            raise RuntimeError(
+                "Jinja2 templates directory not found. "
+                "Cannot generate pytest script."
+            )
+
+        template = self._jinja_env.get_template("a1_test.py.j2")
+        script_content = template.render(catalog=catalog)
+
+        script_path = self._scripts_dir / f"{catalog.catalog_id}.py"
+        script_path.write_text(script_content, encoding="utf-8")
+        logger.info(f"Generated pytest script: {script_path}")
+        return script_path
+
+    def generate_test_config(self, catalog: OranTestCatalog) -> Path:
+        """
+        Render a YAML test configuration file for the catalog and save it under
+        ``generated_tests/{catalog_id}_config.yaml``.
+
+        Args:
+            catalog: The OranTestCatalog to render.
+
+        Returns:
+            Path to the generated ``.yaml`` file.
+
+        Raises:
+            RuntimeError: If the Jinja2 environment could not be initialised.
+        """
+        if self._jinja_env is None:
+            raise RuntimeError(
+                "Jinja2 templates directory not found. "
+                "Cannot generate test configuration."
+            )
+
+        template = self._jinja_env.get_template("test_config.yaml.j2")
+        config_content = template.render(catalog=catalog)
+
+        config_path = self._scripts_dir / f"{catalog.catalog_id}_config.yaml"
+        config_path.write_text(config_content, encoding="utf-8")
+        logger.info(f"Generated test config: {config_path}")
+        return config_path
+
     def save_catalog(self, catalog: OranTestCatalog) -> Path:
         """
         Save catalog to JSON file

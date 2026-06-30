@@ -1,0 +1,50 @@
+# Auto-generated O-RAN A1 test configuration
+# Catalog : {{ catalog.name }}
+# Generated: {{ catalog.generated_at }}
+# DO NOT EDIT — regenerate via POST /api/oran/generate
+
+test_environment:
+  # Target A1 interface endpoint (Non-RT RIC or simulator)
+  a1_endpoint: "http://localhost:8080"
+  # Base path prefix (leave empty if none)
+  base_path: ""
+  # TLS verification (set to false when using self-signed certs in lab)
+  verify_tls: false
+
+simulator:
+  # Enable A1 simulator-backed execution (required for conformance tests)
+  enabled: true
+  host: "localhost"
+  port: 8090
+  # Configurable request parts the simulator must support
+  configurable_request_parts:
+    - uri
+    - headers
+    - body
+
+timeouts:
+  # Per-request timeout in seconds
+  request_timeout: 30
+  # Total test suite timeout in seconds
+  suite_timeout: 600
+
+retries:
+  # Number of retries on transient failures
+  max_retries: 3
+  # Delay between retries in seconds
+  retry_delay: 1.0
+
+logging:
+  level: "INFO"
+  output_dir: "test_results"
+
+# Catalog metadata (read-only reference)
+catalog:
+  catalog_id: "{{ catalog.catalog_id }}"
+  name: "{{ catalog.name }}"
+  total_tests: {{ catalog.total_tests }}
+  service_type: "{{ catalog.service_type or 'A1-P' }}"
+  spec_sources:
+{% for spec, src in catalog.spec_sources.items() %}
+    {{ spec }}: "{{ src }}"
+{% endfor %}

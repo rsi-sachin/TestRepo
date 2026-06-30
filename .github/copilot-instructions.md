@@ -89,3 +89,11 @@ Full requirements: `C:\testrepo\docs\requirements.txt`
 - For protocol-centric content (HTTP/REST/resources), include `document-analysis-a1tp` extraction patterns in the analysis output.
 - When a user request includes `Use Test Harness skill to add unit/component/module/interface/feature and e2e tests for a given commit or change summary`, invoke `test-harness-regression` first.
 - For test harness requests, include perspectives for memory, load, stress, parameter passing, and fault/error handling where applicable, and maintain regression mapping artifacts for changed files/modules.
+
+## Traceability Gate for Document-to-Code Conversion
+
+- Mandatory pre-code step: before generating or modifying source code from document analysis, read `ORAN/docs/feature_traceability_map.md`.
+- Resolve implementation to existing Trace IDs (for example, `ORAN-FTM-001`) and map each change to its `Code Scope` and `Verification` fields.
+- If no matching Trace ID exists, do not proceed to code generation; first propose or add a new traceability row in `ORAN/docs/feature_traceability_map.md` and get alignment.
+- Include selected Trace IDs and source section references in the implementation summary for every document-driven code change.
+- Treat missing traceability mapping as a blocker, not as a warning.

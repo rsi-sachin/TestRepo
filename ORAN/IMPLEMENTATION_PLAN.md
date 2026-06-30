@@ -238,6 +238,7 @@ Extend demo-web (existing FastAPI + Vanilla JS TTS execution platform) to add O-
 3. **Semantic Analysis**: Test clause "Test Case 5.3.1: Create Policy via PUT /policies/{id}" → assert extracts method=PUT, endpoint=/policies/{id}
 4. **Cross-Reference**: Provide 4 mock spec texts, generate enriched test case, verify payload schema from TS 103 988 merged into test definition
 5. **Integration Test**: Full pipeline with sample specs → assert JSON catalog generated with 3+ test cases
+6. **Conformance Classification**: Verify TS 103 989 methodology-derived scenarios can be tagged as conformance vs interoperability with preserved HTTP configurability metadata
 
 ### **Phase 3 Verification**
 1. **Catalog Generation**: Generate catalog from 3 enriched cases, assert JSON valid, conforms to schema
@@ -245,6 +246,7 @@ Extend demo-web (existing FastAPI + Vanilla JS TTS execution platform) to add O-
 3. **Script Generation**: Generate pytest script for test_id=A1_TC_001, verify file created at `backend/generated_tests/A1_TC_001.py`
 4. **End-to-End**: Generate script → execute with `pytest A1_TC_001.py` → parse results → assert statistics match expected
 5. **Manual Review**: Call `/api/oran/scripts/A1_TC_001` → inspect generated code for readability, correct assertions
+6. **Simulator Conformance Coverage**: Verify generated conformance cases can exercise configurable `GET`, `PUT`, `POST`, and `DELETE` request shapes before interoperability profiles are enabled
 
 ### **Phase 4 Verification**
 1. **UI Load**: Open `http://localhost:8000`, verify ORAN tab visible, upload form renders correctly
@@ -276,6 +278,14 @@ Extend demo-web (existing FastAPI + Vanilla JS TTS execution platform) to add O-
 - **Log Parsing**: Parse pytest's JSON report plugin output (not console text). Rationale: Structured data easier to parse than regex on console output.
 - **Template Engine**: Jinja2 for pytest script generation. Rationale: Industry standard, powerful, mature Python integration.
 - **Spec Parsing Approach**: Regex-based clause extraction from text (not ML/NLP). Rationale: ETSI spec format is consistent, regex sufficient for MVP. AI/ML extraction can be Phase 2 enhancement.
+- **TDD Development Approach**: Apply TS 103 989 §4.1 as the governing delivery model. Rationale: the spec defines simulator-driven conformance testing with configurable HTTP `GET`, `PUT`, `POST`, and `DELETE` primitives before broader interoperability validation, so new A1 prototype slices should start with failing spec-derived conformance tests and only then expand to topology-level interoperability checks.
+
+### **TDD Approach from TS 103 989 §4.1**
+- Start each A1 feature slice with a spec-derived failing conformance test that encodes HTTP method, URI, headers, body, and expected result.
+- Keep conformance and interoperability as separate execution layers: conformance for fast TDD cycles, interoperability for slower end-to-end validation between Non-RT RIC and Near-RT RIC roles.
+- Treat simulator capabilities as first-class infrastructure, with reusable fixtures for configurable request/response behavior across `GET`, `PUT`, `POST`, and `DELETE`.
+- Use a normalized scenario artifact as the handoff between clause extraction, semantic enrichment, generated catalogs, pytest script generation, and regression selection.
+- Do not add new A1 route or service logic without a failing scenario-based conformance test first.
 
 ### **Scope Decisions**
 - **Included**:

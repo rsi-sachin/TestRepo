@@ -22,6 +22,15 @@ configuration:
     dependencies: "Include API endpoints that use these models and procedures that modify them"
     full-suite: "Complete analysis with all related A1 documents and ETSI standards"
     version-evolution: "Track schema changes and breaking changes across data model versions"
+traceability:
+  required-artifact: "ORAN/docs/feature_traceability_map.md"
+  required-before-code-generation: true
+  required-output-fields:
+    - selected_trace_ids
+    - mapped_todo_sections
+    - mapped_code_scope
+    - verification_targets
+  code-generation-gate: "Do not generate source code unless selected_trace_ids is non-empty and resolved against ORAN/docs/feature_traceability_map.md."
 ---
 
 # A1 Technical Data Model (A1TD) Analysis Skill
@@ -34,6 +43,32 @@ Extract and interpret A1TD specification content to:
 - Generate Pydantic models and database schemas
 - Track schema evolution across versions
 - Resolve data model references in API specifications
+
+## Traceability Requirements
+
+Before converting extracted data-model knowledge to source code, this skill must:
+
+1. Read `ORAN/docs/feature_traceability_map.md`.
+2. Resolve extracted entities/fields/constraints to one or more Trace IDs.
+3. Restrict generated file targets to mapped `Code Scope` entries.
+4. Produce verification work from mapped `Verification` entries.
+5. Block code generation if no traceable mapping exists.
+
+Required conversion payload fields:
+
+```yaml
+selected_trace_ids: ["ORAN-FTM-002"]
+mapped_todo_sections:
+  - "Traceability and Quality Follow-up"
+mapped_code_scope:
+  - "demo-web/backend/app/services/a1_policy_service.py"
+verification_targets:
+  - "Unit tests for policy operations and constraints"
+```
+
+Hard gate:
+
+- Do not emit source code unless `selected_trace_ids` is non-empty and resolved against `ORAN/docs/feature_traceability_map.md`.
 
 ## Document Context
 **Document:** A1 Technical Data Model (A1TD)  

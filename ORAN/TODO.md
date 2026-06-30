@@ -1,7 +1,7 @@
 # Demo-Web ORAN Integration - TODO List
 
 **Project:** Extend demo-web with O-RAN A1 test generation capabilities  
-**Last Updated:** January 2026  
+**Last Updated:** 2026-06-25  
 **Status:** Phase 1 Complete (Backend + Frontend), Phase 2-4 Pending
 
 ## P1-ENH: Python 3.13 Migration Readiness and Implementation
@@ -104,6 +104,200 @@ Exit Criteria:
   - Verify frontend handler wiring in ORAN catalog table and script modal open path.
   - Validate backend script retrieval endpoint and test-id to script-file mapping.
   - Add regression check so View Script works for both MVP-sized catalogs and larger catalogs.
+
+### 🔁 Traceability and Quality Follow-up
+**Status:** Pending  
+**Priority:** High
+
+- [ ] Add unit and module-level tests for newly added A1 service selection and service modules.
+  - Scope: `backend/app/services/a1_service_registry.py`, `backend/app/services/a1_policy_service.py`, `backend/app/services/a1_enrichment_service.py`, `backend/app/api/oran.py`, and related model updates.
+  - Add API tests for `/api/oran/services` and service-aware flows (`extract-methodology`, `upload-specs`, `generate`, `generate-from-selection`).
+  - Add regression tests for service metadata propagation in generated catalogs and test cases.
+
+- [ ] Add non-code metadata mapping for feature/module/component traceability to TODO sections and document skills.
+  - Create and maintain a metadata artifact outside source code (no inline code comments): `ORAN/docs/feature_traceability_map.md`.
+  - For each feature/module/component, map to one or more TODO sections plus one or more skills used for document interpretation.
+  - Include document and section references (for example, TS/section identifiers) and ownership/status fields.
+
+- [x] **Analyze TS 103 987 §5.2.1–§5.2.2 — Policy management service (introduction and service description)**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** inline
+  - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`
+  - **Document:** `ORAN/docs/ts_103987v040300p.pdf` (v4.3.0)
+  - **Sections analyzed:** §5.2.1 (Introduction), §5.2.2.1 (Functional elements), §5.2.2.2 (Policy representation), §5.2.2.3 (Representation objects), §5.2.2.4 (Resource identifiers)
+  - **Key findings:**
+    - A1-P service operations tied to policy types defined in A1TD; schema-driven behavior.
+    - Policy is a REST resource (PolicyObject) with scope identifier + at least one policy statement.
+    - policyId assigned by A1-P Consumer at creation; producer cannot modify/delete policies.
+    - PolicyObject excludes internal NF routing details; decoupled ownership model.
+    - Status/feedback notifications subscribed at policy creation via callback URI (notificationDestination).
+    - Policy type governance: producer advertises supported types; consumer cannot CRUD policy types.
+    - Required representation objects: PolicyTypeObject, PolicyObject, PolicyStatusObject, ProblemDetails.
+    - Required URIs: `/policytypes`, `/policytypes/{policyTypeId}`, `/policytypes/{policyTypeId}/policies`, `/policytypes/{policyTypeId}/policies/{policyId}`, `/policytypes/{policyTypeId}/policies/{policyId}/status`.
+  - **Implementation verdict:** A1-P models and initial API routes implemented; callback URI validation and schema-driven policy enforcement ready for Phase 2 persistence integration.
+  - **Actions taken:**
+    - Created skill-based analysis document: `ORAN/docs/section_5_2_1_5_2_2_skill_analysis.md` (architectural patterns, code-level gaps, concrete implementation blueprint)
+    - Added A1-P representation models: `demo-web/backend/app/models/a1_policy_models.py` — ProblemDetails, PolicyTypeObject, PolicyObject, PolicyStatusObject, CreateOrReplacePolicyRequest
+    - Extended A1PolicyService: `demo-web/backend/app/services/a1_policy_service.py` — in-memory store for policy types/policies/status; methods: list_policy_type_ids(), get_policy_type(), create_or_replace_policy(), get_policy(), delete_policy(), get_policy_status()
+    - Wired initial A1-P API routes: `demo-web/backend/app/api/oran.py` — GET/PUT/DELETE /a1/policytypes(/{id})/policies/{id}(/status) with ProblemDetails error payloads (404, 400, error instance tracking)
+    - Updated custom instructions: `ORAN/docs/feature_traceability_map.md` rule trigger added to always invoke document-analysis workflow skill for "analyze <sections> from <document>" pattern
+    - Added preference memory: `/memories/preferences.md` for persistent skill-trigger guidance
+  - **Next steps:** Database persistence layer, policy-type schema validation (A1TD integration), callback URI event stream, full lifecycle tests, ownership constraint enforcement tests
+
+- [x] **Analyze TS 103 987 §5.2.4 — Service operations for A1 policies**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** `007c971`, `2110bbd`
+  - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lenses: `document-analysis-a1tp`, `document-analysis-a1td`
+  - **Trace IDs:** ORAN-FTM-002, ORAN-FTM-004
+  - **Sections analyzed:** §5.2.4.1 (HTTP mapping table), §5.2.4.2 (Query policy identifiers), §5.2.4.3 (Create policy), §5.2.4.4 (Update policy), §5.2.4.5 (Query policy), §5.2.4.6 (Delete policy), §5.2.4.7 (Query policy status), §5.2.4.8 (Notify policy status)
+  - **Key findings:**
+    - Create and Update both use `PUT`; upsert semantics — existence of resource determines 201 vs 200.
+    - `policyId` is consumer-generated (not server-assigned); included in PUT URI.
+    - `notificationDestination` is a query parameter on PUT (not request body); omitting it cancels existing subscription (§5.2.4.4.1).
+    - Notify policy status (§5.2.4.8) reverses HTTP roles: A1-P Producer acts as HTTP Client, Consumer exposes callback HTTP Server endpoint.
+    - `policyTypeId` drives server-side JSON schema selection for `PolicyObject` and `PolicyStatusObject` validation.
+    - "Query all" patterns are client-side iteration, not single server endpoints.
+  - **Implementation verdict:** Spec-compliant implementation delivered; `notificationDestination` moved to query param, upsert status codes corrected, missing routes and service methods added.
+  - **Actions taken:**
+    - Added `list_policy_ids(policy_type_id)` to `A1PolicyService` for §5.2.4.2 query policy identifiers
+    - Changed `create_or_replace_policy()` return to `(PolicyObject, was_created: bool)` for 201 vs 200 differentiation
+    - Made `notification_destination` Optional in `create_or_replace_policy()`; omission cancels subscription
+    - Added `async notify_policy_status(destination, status_obj)` — outbound HTTP POST via `httpx` (§5.2.4.8)
+    - Added `GET /a1/policytypes/{policyTypeId}/policies` route to `oran.py` (§5.2.4.2)
+    - Fixed `PUT` route: `notificationDestination` as query param, returns 201+`Location` for create / 200 for update
+    - Updated `ORAN/docs/feature_traceability_map.md` — ORAN-FTM-002 source reference extended to include §5.2.4
+    - Updated `tests/unit/services/test_a1_policy_service.py` — unpack `(policy, was_created)` tuple
+  - **Test results:** 7 unit + 15 nonfunctional tests — all pass
+
+- [x] **Analyze TS 103 987 §5.2.3 — Service operations for A1 policy types**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** `5f8f299`, `f5623bd`
+  - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`
+  - **Trace IDs:** ORAN-FTM-002, ORAN-FTM-004
+  - **Sections analyzed:** §5.2.3.1 (HTTP mapping table), §5.2.3.2 (Query policy type identifiers), §5.2.3.3.1–5.2.3.3.4 (Query policy type — single/multiple/all procedures)
+  - **Key findings:**
+    - Policy type operations are read-only (GET only); no POST/PUT/DELETE on policy types.
+    - `GET /policytypes` MUST return `200 []` (not 404) when no types are registered.
+    - `GET /policytypes/{policyTypeId}` MUST return `404` (normative SHALL) for unknown ids.
+    - "Query all policy types" is a client-side iteration pattern, not a server endpoint.
+  - **Implementation verdict:** Current code in `demo-web/backend/app/api/oran.py` is conformant; no structural changes required.
+  - **Actions taken:**
+    - Added interface contract tests: `test_list_policy_types_returns_200_with_empty_array_when_no_types_registered`, `test_get_unknown_policy_type_returns_404` → `tests/interface/api/test_oran_a1_policy_api.py`
+    - Added unit tests: `test_list_policy_type_ids_returns_empty_list_when_store_is_cleared`, `test_get_policy_type_raises_key_error_for_unknown_type_id` → `tests/unit/services/test_a1_policy_service.py`
+    - Added component test: `test_problem_details_component_shape_for_policy_type_not_found` → `tests/component/api/test_problem_details_component.py`
+    - Added 6 parameter boundary tests for `policyTypeId` → `tests/nonfunctional/parameter/test_a1_policy_parameter_passing.py`
+    - Updated `ORAN/docs/feature_traceability_map.md` — ORAN-FTM-002 source reference extended to include §5.2.3
+    - Updated `tests/regression/impact-map.yaml` and `tests/regression/selectors.md`
+  - **Analysis artifact:** `ORAN/docs/section_5_2_3_analysis.md` (not created — analysis delivered inline per session)
+
+- [x] **Analyze TS 103 989 §4.1 — General test methodology for A1 interface**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** inline
+  - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`, support lens: `document-rule-learning`
+  - **Trace IDs:** ORAN-FTM-005, ORAN-FTM-006, ORAN-FTM-007, ORAN-FTM-008
+  - **Document:** `ORAN/docs/ts_103989v040200p.pdf` (v4.2.0)
+  - **Section analyzed:** §4.1 (General)
+  - **Key findings:**
+    - Test methodology is split into conformance testing and interoperability testing for the A1 interface between Non-RT RIC and Near-RT RIC.
+    - Conformance testing is simulator-driven and requires configurable HTTP `GET`, `PUT`, `POST`, and `DELETE` behavior.
+    - URI, headers, and body must remain configurable to derive multiple test cases from common A1 procedures.
+    - Interoperability testing assumes real devices under test, with surrounding systems allowed to be real or simulated.
+    - The spec favors scenario-driven validation of A1 behavior, which supports a strict TDD-first implementation flow.
+  - **Implementation verdict:** The current ORAN prototype plan should treat simulator-backed conformance tests as the entry point for all new A1 feature work, with interoperability scenarios promoted only after conformance is green.
+  - **Actions taken:**
+    - Created analysis artifact: `ORAN/docs/section_4_1_analysis.md`
+    - Updated `ORAN/IMPLEMENTATION_PLAN.md` with a TS 103 989 §4.1-driven TDD development approach and verification additions
+  - **Next steps:** Add scenario classification for conformance vs interoperability, add simulator capability tests for configurable HTTP operations, and keep new A1 route/service work gated on failing spec-derived conformance tests.
+
+- [x] **Commit and push TS 103 989 §4.1 analysis and scenario-classification implementation**
+  - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commit:** `f010d8e`
+  - **Scope:** ORAN analysis artifact, TDD planning updates, parser/catalog scenario classification, persistence metadata, and `/test-cases` API metadata support
+  - **Remote:** `origin/feature/ORAN_MVP_1_Py3_13`
+  - **Verification:** Narrow regression passed before push for scenario classification and persistence/API metadata (`7 passed`)
+
+- [ ] **P1-ENH: Analyze TS 103 987 §5.3 — Enrichment Information Service**
+  - **Priority:** P1-ENH
+  - **Skill to use:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`
+  - **Document:** `ORAN/docs/ts_103987v040300p.pdf` (v4.3.0)
+  - **Section to analyze:** §5.3 (Enrichment Information Service)
+  - **Expected output:** analysis notes, implementation impact, and TODO follow-ups for service models/routes/tests
+
+- [x] **P1-ENH: Implement TS 103 989 §4.2.1 and §4.2.2 conformance setup coverage** (Analysis + Implementation Complete)
+  - **Priority:** P1-ENH
+  - **Date:** Analysis completed 2026-06-30; implementation completed 2026-06-30
+  - **Source:** `ORAN/docs/ts_103989v040200p.pdf` (v4.2.0), sections §4.2.1 and §4.2.2
+  - **Objective:** Close pending implementation and verification gaps identified from Non-RT RIC conformance setup analysis.
+  - **Completed items:**
+    - ✅ [**2.1** Section Traceability and Test References] Analysis document created: `ORAN/docs/section_4_2_1_4_2_2_conformance_setup.md` capturing test intent mapping and test plan summary (26 tests, ~9 min)
+    - ✅ [**2.2** DUT Readiness Checks] Comprehensive checklist created: `ORAN/docs/dut_readiness_checklist.md` with 8 pre-flight check categories (role config, policy types, EI types, endpoint access, schema compliance, HTTP compliance, firewall, performance baseline)
+    - ✅ [**2.3** Simulator Capability Verification] Capability matrix created: `ORAN/docs/simulator_capability_matrix.md` documenting 8 A1-P Producer simulator capabilities and Phase 2 A1-EI capabilities
+    - ✅ [**2.4** Execution Evidence Checks] Evidence specification created: `ORAN/docs/execution_evidence_specification.md` defining message log capture, header/body validation, deterministic verdict assignment, and conformance report template
+    - ✅ [**2.5** Traceability Mapping] Row ORAN-FTM-013 added to `ORAN/docs/feature_traceability_map.md` with §4.2.1–4.2.2 source references and verification targets
+  - **Implementation and verification items completed:**
+    - [x] Created pytest test suites: `demo-web/backend/tests/conformance/test_a1_policy_conformance_4_2_1.py` and `test_a1_policy_conformance_4_2_2.py` with 26 test cases
+    - [x] Added simulator capability verification tests: `demo-web/backend/tests/conformance/simulator_capability_verification.py`
+    - [x] Implemented `demo-web/backend/app/services/conformance_service.py` with TS 103 989 §4.2.2 DUT readiness check methods
+    - [x] Implemented evidence collection and validation in `demo-web/backend/app/modules/conformance_harness/evidence_collector.py` and `demo-web/backend/app/modules/conformance_harness/evidence_validator.py`
+    - [x] Executed conformance test suite on Python 3.13 (`30 passed`)
+  - **Analysis artifacts:**
+    - Main analysis: `ORAN/docs/section_4_2_1_4_2_2_conformance_setup.md`
+    - DUT checklist: `ORAN/docs/dut_readiness_checklist.md`
+    - Simulator matrix: `ORAN/docs/simulator_capability_matrix.md`
+    - Evidence spec: `ORAN/docs/execution_evidence_specification.md`
+    - Traceability row: ORAN-FTM-013 in `feature_traceability_map.md`
+
+- [ ] **P1-ENH: Create Conformance Test Dashboard UI** (Design Complete; Implementation Pending)
+  - **Priority:** P1-ENH
+  - **Date:** Design completed 2026-06-30
+  - **Source:** `ORAN/docs/UI_DESIGN_REQ.md` (comprehensive UI requirements)
+  - **Objective:** Implement frontend UI to display and execute all 26 conformance tests defined in TS 103 989 §4.2.1–4.2.2.
+  - **Design Reference:** See [UI_DESIGN_REQ.md](docs/UI_DESIGN_REQ.md) for complete feature specifications
+  - **Scope: Frontend Components**
+    - [ ] **New Tab:** "Conformance Tests" tab added to main navigation (after History)
+    - [ ] **Test Summary Card:** Display overall conformance metrics (status, DUT connectivity, simulator readiness, quick-start actions)
+    - [ ] **Test Category Panels:** 5 expandable sections (Policy Type Query, Policy CRUD, Error Handling, Header/Body Validation, Evidence Completeness)
+    - [ ] **Individual Test Cards:** Per-test details (description, spec reference, checks, status, last result)
+    - [ ] **Batch Actions:** Select/filter tests, run selected/all, clear selection
+    - [ ] **Live Execution View:** Real-time progress bar, scrollable HTTP message log, current test indicator
+    - [ ] **Results Summary:** Post-run conformance verdict (PASS/FAIL/INCONCLUSIVE), category breakdown, pass rate
+    - [ ] **Evidence Viewer:** Full HTTP exchange details, schema validation results, execution logs
+    - [ ] **DUT Readiness Checklist:** Pre-run validation (connectivity, policy types, schema compliance, etc.)
+    - [ ] **Settings Panel:** Configure DUT endpoint, simulator, evidence capture, timeout/retry
+    - [ ] **Export Options:** Download results as PDF, JSON, CSV, HTML
+    - [ ] **Help Sidebar:** Conformance test intro, category descriptions, troubleshooting guide
+  - **Scope: Backend Extensions**
+    - [ ] **New API Endpoints:**
+      - `GET /api/oran/conformance/tests` — list all 26 conformance tests
+      - `GET /api/oran/conformance/categories` — list 5 test categories
+      - `POST /api/oran/conformance/run` — start conformance test run
+      - `GET /api/oran/conformance/status/{runId}` — get run progress
+      - `GET /api/oran/conformance/results/{runId}` — get final results
+      - `GET /api/oran/conformance/evidence/{testId}` — get full evidence for test
+      - `GET /api/oran/conformance/dut-readiness` — get DUT readiness check results
+      - `GET /api/oran/conformance/export/{runId}` — export results (PDF/JSON/CSV)
+      - `WS /api/oran/conformance/ws/{runId}` — WebSocket for live streaming
+    - [ ] **New Pydantic Models:** ConformanceTest, ConformanceRun, ConformanceSummary, ConformanceEvidence
+    - [ ] **Backend Service Methods:** Get test metadata, run conformance suite, aggregate results, generate reports
+  - **UI/UX Features:**
+    - ✅ [Spec section 18–19] Success criteria and accessibility (WCAG 2.1 AA)
+    - ✅ [Spec section 15] Responsive design (desktop, tablet, mobile)
+    - ✅ [Spec section 14] Performance considerations (lazy load, virtualization, WebSocket)
+    - ✅ [Spec section 16] Accessibility (color contrast, keyboard navigation, screen reader support)
+  - **Expected Output:**
+    - New UI tab "Conformance Tests" with full test management and execution
+    - 26 conformance tests organized in 5 categories, runnable with live progress
+    - Comprehensive evidence viewer and export capabilities
+    - DUT readiness checks integrated into pre-run flow
+    - Backend API supporting conformance test operations
+  - **Success Criteria:**
+    - All 26 tests display and can be executed from UI
+    - Progress updates in real-time via WebSocket
+    - Test results show HTTP exchanges, schema validation, spec references
+    - DUT readiness checklist passes before test run
+    - Conformance verdict clearly indicates PASS/FAIL/INCONCLUSIVE
+    - Evidence artifacts (logs, reports) downloadable in multiple formats
+    - UI responsive on desktop, tablet, mobile
+    - WCAG 2.1 AA accessibility compliance
+  - **Dependencies:**
+    - Conformance pytest test suites must be implemented (related P1-ENH task)
+    - Backend service layer for test execution (conformance_service.py)
+    - Evidence collection/validation infrastructure
 
 ### ✅ Phase 1: ORAN Foundation (Backend + Frontend)
 **Status:** ✅ COMPLETE (100%)  
@@ -218,74 +412,70 @@ Exit Criteria:
 ---
 
 ### Phase 2: Spec Parsing Pipeline
-**Status:** ⏸️ Not Started  
-**Estimated:** 4-5 days  
+**Status:** ✅ COMPLETE  
+**Completed:** 2026-06-27  
 **Priority:** HIGH  
 **Depends on:** Phase 1 ✅
 
-- [ ] **Task 2.1:** Implement document ingestion
-  - File: `backend/app/services/spec_parser_service.py`
-  - Method: `ingest_pdf(file_path: str) -> str` using pypdf
-  - Method: `ingest_docx(file_path: str) -> str` using python-docx
-  - Add dependencies: `pypdf==3.17.0`, `python-docx==1.1.0`
+- [x] **Task 2.1:** Implement document ingestion
+  - File: `backend/app/parsers/pdf_parser.py` — `PdfParser` with `parse_file`, `extract_by_page`, `get_page_count`, `extract_page_range`
+  - File: `backend/app/parsers/docx_parser.py` — `DocxParser` with `parse_file`, `extract_paragraphs`, `extract_with_formatting`
+  - Dependencies: `pypdf==3.17.0`, `python-docx==1.1.0` (already in requirements.txt)
 
-- [ ] **Task 2.2:** Extract test clauses from specs
-  - Method: `extract_clauses(spec_text: str, spec_type: SpecType) -> List[TestClause]`
-  - Regex patterns for ETSI clause format: `^\d+\.\d+\s+[A-Z]`
-  - Parse: clause_number, title, description, entrance_criteria, methodology, expected_result
-  - **DECISION IMPLEMENTED**: Regex-based extraction with manual JSON fallback
+- [x] **Task 2.2:** Extract test clauses from specs
+  - File: `backend/app/parsers/test_clause_extractor.py` — `TestClauseExtractor`
+  - Method: `extract_clauses(spec_text, spec_type, max_tests)` with regex section splitting and test-section filtering
+  - Clause fields: clause_number, title, description, entrance_criteria, methodology, expected_result, scenario_type, page_number
 
-- [ ] **Task 2.3:** Semantic extraction from clauses
-  - Method: `extract_test_semantics(clause: TestClause) -> TestSemantics`
-  - Extract: HTTP method (GET/PUT/POST/DELETE), endpoint, payload type, assertions
-  - Regex-based extraction for MVP
+- [x] **Task 2.3:** Semantic extraction from clauses
+  - Method: `extract_http_info(text)` — extracts HTTP method, endpoint path, status code via regex
+  - `TestSemantics` model carries: http_method, endpoint, expected_status, payload_type, assertions, scenario_type
 
-- [ ] **Task 2.4:** Cross-reference multiple specs
-  - Method: `enrich_test_case(base_clause: TestClause, specs: Dict[SpecType, str]) -> EnrichedTestCase`
-  - **DECISION IMPLEMENTED**: Priority order - TS 103 989 → TS 103 987 → TS 103 988
-  - **ENHANCEMENT**: Log conflicts to JSON file for review
+- [x] **Task 2.4:** Cross-reference multiple specs
+  - Method: `cross_reference_specs(all_clauses)` in `SpecParserService`
+  - Uses TS 103 989 as base; enriches with endpoint from TS 103 987 and status code from TS 103 988
+  - Priority order: TS_103_989 → TS_103_987 → TS_103_988 → TS_103_983
 
-- [ ] **Task 2.5:** Implement conflict storage
-  - File: `backend/data/spec_conflicts.json` (initial file-based storage)
-  - Store: conflict_id, timestamp, spec1, spec2, field, value1, value2, resolution
-  - Later migration path to database
+- [x] **Task 2.5:** Implement conflict storage
+  - Methods: `detect_conflicts(enriched_cases)`, `save_conflicts(output_path)` in `SpecParserService`
+  - Storage: `data/oran_catalogs/spec_conflicts.json`
+  - New endpoint: `GET /api/oran/conflicts` returns all stored conflicts
 
-- [ ] **Task 2.6:** Write unit tests for Phase 2
-  - Test PDF ingestion with sample ETSI spec
-  - Test clause extraction (verify 15+ clauses)
-  - Test semantic extraction (HTTP method/endpoint detection)
-  - Test cross-reference with conflict detection
+- [x] **Task 2.6:** Write unit tests for Phase 2
+  - File: `tests/unit/services/test_phase2_spec_parsing.py` — 24 tests (all pass)
+  - Covers: PdfParser, DocxParser, TestClauseExtractor, extract_http_info, cross_reference_specs, detect_conflicts, save_conflicts, complexity determination
 
 ---
 
 ### ✅ Phase 3: Test Generation Engine
-**Status:** Not Started  
-**Estimated:** 3-4 days  
+**Status:** ✅ COMPLETE  
+**Completed:** 2026-06-27  
 **Priority:** HIGH  
 **Depends on:** Phase 2 Task 2.4
 
-- [ ] **Task 3.1:** Generate JSON test catalog
+- [x] **Task 3.1:** Generate JSON test catalog
   - File: `backend/app/services/test_generator_service.py`
   - Method: `generate_catalog(enriched_cases: List[EnrichedTestCase]) -> OranTestCatalog`
   - Save to: `backend/data/oran_catalogs/{catalog_id}.json`
 
-- [ ] **Task 3.2:** Create Jinja2 pytest templates
+- [x] **Task 3.2:** Create Jinja2 pytest templates
   - Directory: `backend/templates/oran/`
   - Template: `a1_test.py.j2` for pytest script generation
   - Template: `test_config.yaml.j2` for test configuration
-  - Add dependency: `jinja2==3.1.2`
+  - Dependency `jinja2==3.1.2` already in requirements.txt
 
-- [ ] **Task 3.3:** Implement pytest script generation
-  - Method: `generate_pytest_script(catalog: OranTestCatalog) -> str`
-  - Load Jinja2 template, render with catalog data
-  - Save to: `backend/generated_tests/{test_id}.py`
-  - **DECISION IMPLEMENTED**: Read-only scripts with Download button
+- [x] **Task 3.3:** Implement pytest script generation
+  - Method: `generate_pytest_script(catalog: OranTestCatalog) -> Path`
+  - Method: `generate_test_config(catalog: OranTestCatalog) -> Path`
+  - Renders Jinja2 templates, saves to: `generated_tests/{catalog_id}.py` + `_config.yaml`
+  - Called automatically from `/generate` and `/generate-from-selection` endpoints
 
-- [ ] **Task 3.4:** Create ORAN test configuration
-  - Generate YAML config: `backend/generated_tests/{test_id}_config.yaml`
-  - Fields: test_environment, simulator config, timeouts, retries
+- [x] **Task 3.4:** Create ORAN test configuration
+  - YAML config: `generated_tests/{catalog_id}_config.yaml`
+  - Fields: test_environment, simulator config, timeouts, retries, catalog metadata
 
-- [ ] **Task 3.5:** Write unit tests for Phase 3
+- [x] **Task 3.5:** Write unit tests for Phase 3
+  - File: `tests/unit/services/test_phase3_catalog_generation.py` — 21 tests (all pass)
   - Test catalog generation (validate JSON schema)
   - Test template rendering (verify Python syntax)
   - Integration test: Full pipeline spec → catalog → script → execute

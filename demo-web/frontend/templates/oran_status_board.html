@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ORAN Feature Status Board</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        .status-board-wrap {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 20px;
+        }
+
+        .status-board-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .status-board-header h1 {
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(180px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0 1.5rem;
+        }
+
+        .summary-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+            box-shadow: var(--shadow);
+        }
+
+        .summary-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .summary-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-top: 0.25rem;
+        }
+
+        .next-best-item {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .next-best-item strong {
+            display: block;
+            margin-bottom: 0.35rem;
+        }
+
+        .status-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .status-table th,
+        .status-table td {
+            text-align: left;
+            padding: 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        .status-table th {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .status-pill {
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-pill.complete {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-pill.in-progress {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-pill.tbd {
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        @media (max-width: 900px) {
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .status-table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="status-board-wrap">
+        <div class="status-board-header">
+            <div>
+                <h1>ORAN Feature Plan Status Board</h1>
+                <div class="meta">Last Updated in Plan: __LAST_UPDATED__</div>
+                <div class="meta">Generated: __GENERATED_AT__</div>
+            </div>
+            <a href="/" class="btn-secondary" style="text-decoration:none; padding:0.5rem 0.85rem; border-radius:8px;">Back to Main UI</a>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-label">Complete</div>
+                <div class="summary-value">__SUMMARY_COMPLETE__</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">In Progress</div>
+                <div class="summary-value">__SUMMARY_IN_PROGRESS__</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">TBD</div>
+                <div class="summary-value">__SUMMARY_TBD__</div>
+            </div>
+        </div>
+
+        <div class="next-best-item">
+            <strong>Next Best Item to Implement</strong>
+            <span>__NEXT_BEST_ITEM__</span>
+        </div>
+
+        <table class="status-table">
+            <thead>
+                <tr>
+                    <th>Module</th>
+                    <th>Status</th>
+                    <th>Conformance Coverage</th>
+                    <th>Evidence Anchor</th>
+                </tr>
+            </thead>
+            <tbody>
+                __STATUS_ROWS__
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

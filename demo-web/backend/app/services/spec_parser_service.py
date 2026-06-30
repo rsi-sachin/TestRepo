@@ -12,7 +12,7 @@ from datetime import datetime
 
 from app.models.oran import (
     TestClause, TestSemantics, EnrichedTestCase,
-    SpecType, HttpMethod, SpecConflict
+    SpecType, HttpMethod, SpecConflict, ScenarioType
 )
 from app.parsers.pdf_parser import PdfParser
 from app.parsers.docx_parser import DocxParser
@@ -621,9 +621,15 @@ class SpecParserService:
             method = HttpMethod[method_str]
         except KeyError:
             method = HttpMethod.GET
+
+        scenario_type = self._determine_scenario_type(base_clause)
+        configurable_request_parts = self._determine_configurable_request_parts(scenario_type)
         
         # Create test semantics
         semantics = TestSemantics(
+            scenario_type=scenario_type,
+            simulator_required=scenario_type == ScenarioType.CONFORMANCE,
+            configurable_request_parts=configurable_request_parts,
             http_method=method,
             endpoint=endpoint or '/a1-p/policytypes',  # Default A1 endpoint
             expected_status=status_code or 200,
@@ -638,6 +644,7 @@ class SpecParserService:
         enriched = EnrichedTestCase(
             base_clause=base_clause,
             semantics=semantics,
+            scenario_type=scenario_type,
             complexity=complexity,
             enrichment_sources={
                 'base': f"{base_clause.spec_type} Section {base_clause.clause_number}",
@@ -686,6 +693,22 @@ class SpecParserService:
         # Check for common keywords
         common = keywords1 & keywords2
         return len(common) >= 2
+
+    def _determine_scenario_type(self, clause: TestClause) -> ScenarioType:
+        """Determine whether a clause is a conformance or interoperability scenario."""
+        if clause.scenario_type is not None:
+            return clause.scenario_type
+
+        text = " ".join(filter(None, [clause.title, clause.description, clause.methodology, clause.expected_result])).lower()
+        if "interoperability" in text:
+            return ScenarioType.INTEROPERABILITY
+        return ScenarioType.CONFORMANCE
+
+    def _determine_configurable_request_parts(self, scenario_type: ScenarioType) -> List[str]:
+        """Return request parts that the harness must keep configurable for the scenario type."""
+        if scenario_type == ScenarioType.CONFORMANCE:
+            return ['uri', 'headers', 'body']
+        return ['uri', 'headers', 'body']
     
     def _determine_complexity(self, clause: TestClause) -> str:
         """Determine test complexity based on clause content"""

@@ -27,6 +27,7 @@ Capture three reusable rule groups:
 - Confidence weighting signals
 - Ranking and tie-break strategy
 - Deduplication thresholds and normalization
+- Section target disambiguation (skip first section-name match by default to avoid TOC hits)
 
 3. Domain rules
 - Keyword-to-module mappings
@@ -42,6 +43,7 @@ Capture three reusable rule groups:
 
 3. Apply learned rule pack
 - Run extraction and scoring using selected rule groups.
+- For section-based prompts, ignore the first heading match when duplicates exist and prefer body-content matches.
 
 4. Validate extraction quality
 - Compare section/module/title output volume and confidence against expected ranges.

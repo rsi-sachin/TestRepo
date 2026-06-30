@@ -20,7 +20,7 @@ def test_list_policy_type_ids_contains_default() -> None:
 def test_create_get_status_and_delete_policy() -> None:
     service = A1PolicyService()
 
-    created = service.create_or_replace_policy(
+    created, was_created = service.create_or_replace_policy(
         policy_type_id="default",
         policy_id="policy-1",
         policy=_sample_policy(),
@@ -30,6 +30,7 @@ def test_create_get_status_and_delete_policy() -> None:
     status = service.get_policy_status("default", "policy-1")
 
     assert created.policy_statements[0]["action"] == "allow"
+    assert was_created is True
     assert fetched.scope["scope_type"] == "cell"
     assert status.enforcement_status == "ACCEPTED"
 
@@ -70,3 +71,23 @@ def test_delete_unknown_policy_raises_key_error() -> None:
 
     with pytest.raises(KeyError):
         service.delete_policy("default", "missing-policy")
+
+
+# --- §5.2.3 unit coverage ---
+
+def test_list_policy_type_ids_returns_empty_list_when_store_is_cleared() -> None:
+    """list_policy_type_ids() must return [] (not raise) when _policy_types is empty."""
+    service = A1PolicyService()
+    service._policy_types.clear()
+
+    result = service.list_policy_type_ids()
+
+    assert result == []
+
+
+def test_get_policy_type_raises_key_error_for_unknown_type_id() -> None:
+    """get_policy_type() must raise KeyError for an unregistered policyTypeId per §5.2.3.3."""
+    service = A1PolicyService()
+
+    with pytest.raises(KeyError, match="Policy type not found"):
+        service.get_policy_type("nonexistent-type")

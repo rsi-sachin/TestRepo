@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
     
     <!-- App Scripts -->
-    <script type="module" src="/static/js/app.js?v=7" defer></script>
+    <script type="module" src="/static/js/app.js?v=8" defer></script>
 </head>
 <body>
     <!-- Header -->
@@ -31,7 +31,9 @@
                 <button class="nav-btn" data-tab="test-management">Manage Tests</button>
                 <button class="nav-btn" data-tab="execution">Execution</button>
                 <button class="nav-btn" data-tab="history">History</button>
+                <button class="nav-btn" data-tab="feature-status">Feature Status</button>
             </nav>
+            <a class="status-board-link" href="/oran/status-board">Feature Status Board</a>
             <div class="status-indicator">
                 <span class="status-dot" id="connection-status"></span>
                 <span id="connection-text">Connecting...</span>
@@ -494,6 +496,53 @@
                 </div>
                 <div id="history-list" class="history-list">
                     <!-- Dynamically populated -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature Status Tab -->
+        <section id="feature-status-tab" class="tab-content">
+            <div class="container">
+                <div class="feature-status-header">
+                    <h2>FEATURE_PLAN Status Board</h2>
+                    <button id="refresh-feature-status-btn" class="btn-secondary">Refresh</button>
+                </div>
+
+                <div class="feature-status-meta" id="feature-status-meta">Loading status board...</div>
+
+                <div class="feature-status-summary" id="feature-status-summary">
+                    <div class="feature-status-card">
+                        <span class="feature-status-label">Complete</span>
+                        <span class="feature-status-value" id="summary-complete">0</span>
+                    </div>
+                    <div class="feature-status-card">
+                        <span class="feature-status-label">In Progress</span>
+                        <span class="feature-status-value" id="summary-in-progress">0</span>
+                    </div>
+                    <div class="feature-status-card">
+                        <span class="feature-status-label">TBD</span>
+                        <span class="feature-status-value" id="summary-tbd">0</span>
+                    </div>
+                </div>
+
+                <div class="feature-status-next-item" id="feature-status-next-item"></div>
+
+                <div class="feature-status-table-wrap">
+                    <table class="feature-status-table">
+                        <thead>
+                            <tr>
+                                <th>Module</th>
+                                <th>Status</th>
+                                <th>Conformance Coverage</th>
+                                <th>Evidence Anchor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="feature-status-tbody">
+                            <tr>
+                                <td colspan="4">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </section>

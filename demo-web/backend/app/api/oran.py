@@ -3,7 +3,7 @@ ORAN API Endpoints
 Handles O-RAN test catalog management, test generation, and execution
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, UploadFile, File, Depends, Request
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, UploadFile, File, Depends, Request, Response
 from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 from pathlib import Path
@@ -12,6 +12,12 @@ import json
 from datetime import datetime
 
 from app.models.a1_service import A1ServiceRegistryResponse
+from app.models.a1_policy_models import (
+    PolicyObject,
+    PolicyStatusObject,
+    PolicyTypeObject,
+    ProblemDetails,
+)
 from app.models.oran import (
     OranTestCatalog,
     OranTestCase,
@@ -33,6 +39,13 @@ from app.services.rule_learner_service import RuleLearnerService
 from app.repositories.rule_pack_repository import RulePackRepository
 from app.models.rule_pack import RulePack, RulePackSummary
 from app.models.hierarchy_tree import HierarchyTree
+from app.modules.o1_interface.service import O1InterfaceService
+from app.modules.o1_interface.validators import validate_o1_request
+from app.modules.o1_interface.models import O1Request, O1Response
+from app.modules.e2_interface.service import E2InterfaceService
+from app.modules.e2_interface.validators import validate_e2_message
+from app.modules.e2_interface.models import E2Request, E2Response
+from app.modules.conformance_harness.service import ConformanceHarnessService
 from app.database import get_db
 from app.config import settings
 import logging
@@ -59,6 +72,9 @@ hierarchical_extractor = HierarchicalExtractorService()
 sections_options_dir = Path("./data/oran_sections")
 sections_options_dir.mkdir(parents=True, exist_ok=True)
 sections_options_file = sections_options_dir / "sections_by_spec.json"
+o1_interface_service = O1InterfaceService()
+e2_interface_service = E2InterfaceService()
+conformance_harness_service = ConformanceHarnessService()
 
 # TS spec metadata: canonical map used by resolve-specs endpoint
 SPEC_METADATA = {
@@ -67,6 +83,22 @@ SPEC_METADATA = {
     "TS_103_988": {"ts_number": "TS 103 988", "title": "A1 Type Definitions"},
     "TS_103_983": {"ts_number": "TS 103 983", "title": "A1 General Principles"},
 }
+
+
+def _problem(status_code: int, title: str, detail: str, instance: str | None = None) -> Dict[str, object]:
+    return ProblemDetails(
+        status=status_code,
+        title=title,
+        detail=detail,
+        instance=instance,
+    ).model_dump(mode="json")
+
+
+def _raise_problem(status_code: int, title: str, detail: str, instance: str | None = None) -> None:
+    raise HTTPException(
+        status_code=status_code,
+        detail=_problem(status_code=status_code, title=title, detail=detail, instance=instance),
+    )
 
 
 @router.get("/services", response_model=A1ServiceRegistryResponse)
@@ -88,6 +120,130 @@ async def get_a1_service(service_type: str):
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/a1/policytypes", response_model=List[str])
+async def list_policy_types() -> List[str]:
+    """List available policy type identifiers."""
+    return a1_policy_service.list_policy_type_ids()
+
+
+@router.get("/a1/policytypes/{policy_type_id}", response_model=PolicyTypeObject)
+async def get_policy_type(policy_type_id: str):
+    """Get a single policy type object."""
+    try:
+        return a1_policy_service.get_policy_type(policy_type_id)
+    except KeyError as e:
+        _raise_problem(404, "Policy Type Not Found", str(e), instance=f"/a1/policytypes/{policy_type_id}")
+
+
+@router.get("/a1/policytypes/{policy_type_id}/policies", response_model=List[str])
+async def list_policy_ids(policy_type_id: str) -> List[str]:
+    """List all policy identifiers for a given policy type (§5.2.4.2)."""
+    try:
+        return a1_policy_service.list_policy_ids(policy_type_id)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "Policy Type Not Found",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/policies",
+        )
+
+
+@router.put(
+    "/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+    response_model=PolicyObject,
+)
+async def create_or_replace_policy(
+    policy_type_id: str,
+    policy_id: str,
+    policy: PolicyObject,
+    response: Response,
+    notification_destination: Optional[str] = Query(None, alias="notificationDestination"),
+):
+    """Create or update a policy (§5.2.4.3/5.2.4.4).
+
+    Returns 201 Created (+ Location header) when the policy is new;
+    returns 200 OK when an existing policy is replaced.
+    Pass notificationDestination as a query parameter to subscribe to status
+    notifications; omit it to cancel an existing subscription.
+    """
+    try:
+        result, was_created = a1_policy_service.create_or_replace_policy(
+            policy_type_id=policy_type_id,
+            policy_id=policy_id,
+            policy=policy,
+            notification_destination=notification_destination,
+        )
+        if was_created:
+            response.status_code = 201
+            response.headers["Location"] = (
+                f"/api/oran/a1/policytypes/{policy_type_id}/policies/{policy_id}"
+            )
+        else:
+            response.status_code = 200
+        return result
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "Policy Type Not Found",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+        )
+    except ValueError as e:
+        _raise_problem(
+            400,
+            "Invalid Policy Request",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+        )
+
+
+@router.get("/a1/policytypes/{policy_type_id}/policies/{policy_id}", response_model=PolicyObject)
+async def get_policy(policy_type_id: str, policy_id: str):
+    """Get one policy object."""
+    try:
+        return a1_policy_service.get_policy(policy_type_id, policy_id)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "Policy Not Found",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+        )
+
+
+@router.delete("/a1/policytypes/{policy_type_id}/policies/{policy_id}", status_code=204)
+async def delete_policy(policy_type_id: str, policy_id: str):
+    """Delete one policy object."""
+    try:
+        a1_policy_service.delete_policy(policy_type_id, policy_id)
+        return Response(status_code=204)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "Policy Not Found",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+        )
+
+
+@router.get(
+    "/a1/policytypes/{policy_type_id}/policies/{policy_id}/status",
+    response_model=PolicyStatusObject,
+)
+async def get_policy_status(policy_type_id: str, policy_id: str):
+    """Get policy status resource."""
+    try:
+        return a1_policy_service.get_policy_status(policy_type_id, policy_id)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "Policy Status Not Found",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/policies/{policy_id}/status",
+        )
 
 
 def _get_docs_path() -> Optional[Path]:
@@ -121,6 +277,102 @@ def _resolve_spec_file(spec_type: str) -> Optional[Path]:
     if docs_path:
         return _find_spec_in_docs(spec_type, docs_path)
     return None
+
+
+@router.get("/o1/health")
+async def get_o1_health() -> Dict[str, str]:
+    """Step 2: O1 production-capable contract health endpoint."""
+    return o1_interface_service.health()
+
+
+@router.post("/o1/validate", response_model=O1Response)
+async def post_o1_validate(payload: O1Request):
+    """Step 2: O1 contract validator endpoint."""
+    is_valid, message = validate_o1_request(payload)
+    if not is_valid:
+        _raise_problem(400, "Invalid O1 Request", message, instance="/o1/validate")
+    return O1Response(
+        transaction_id=payload.transaction_id,
+        status="accepted",
+        message=message,
+        errors=[],
+    )
+
+
+@router.get("/e2/health")
+async def get_e2_health() -> Dict[str, str]:
+    """Step 2: E2 production-capable contract health endpoint."""
+    return e2_interface_service.health()
+
+
+@router.post("/e2/validate", response_model=E2Response)
+async def post_e2_validate(payload: E2Request):
+    """Step 2: E2 contract validator endpoint."""
+    is_valid, message = validate_e2_message(payload)
+    if not is_valid:
+        _raise_problem(400, "Invalid E2 Message", message, instance="/e2/validate")
+    return E2Response(
+        transaction_id=payload.transaction_id,
+        status="accepted",
+        message=message,
+        errors=[],
+    )
+
+
+@router.get("/conformance/dut-readiness")
+async def get_dut_readiness() -> Dict[str, object]:
+    """Step 1: conformance DUT readiness endpoint."""
+    return conformance_harness_service.get_dut_readiness(
+        service_registry=a1_service_registry,
+        policy_service=a1_policy_service,
+        ric_endpoint=settings.oran_ric_endpoint,
+    )
+
+
+@router.get("/conformance/simulator-capability")
+async def get_simulator_capability() -> Dict[str, object]:
+    """Step 1: conformance simulator capability endpoint."""
+    return conformance_harness_service.get_simulator_capability()
+
+
+@router.get("/conformance/categories")
+async def get_conformance_categories() -> List[Dict[str, object]]:
+    """List currently implemented conformance categories."""
+    return conformance_harness_service.list_conformance_categories()
+
+
+@router.get("/conformance/tests")
+async def get_conformance_tests(category_id: str = Query("policy-type-query")) -> List[Dict[str, object]]:
+    """List executable conformance tests for a category."""
+    normalized = category_id.strip().lower()
+    if normalized == "policy-type-query":
+        return conformance_harness_service.list_policy_type_query_tests()
+    if normalized in {"policy-operations", "policy-crud-operations"}:
+        return conformance_harness_service.list_policy_operations_tests()
+    _raise_problem(400, "Unsupported Conformance Category", f"Unsupported category_id: {category_id}")
+
+
+@router.post("/conformance/run")
+async def run_conformance_category(payload: Optional[Dict[str, object]] = None) -> Dict[str, object]:
+    """Run the first implemented TS 103 989 conformance category."""
+    payload = payload or {}
+    category_id = str(payload.get("category_id", "policy-type-query")).strip().lower()
+    if category_id == "policy-type-query":
+        return conformance_harness_service.run_policy_type_query_tests(
+            policy_service=a1_policy_service,
+            service_registry=a1_service_registry,
+        )
+    if category_id in {"policy-operations", "policy-crud-operations"}:
+        return conformance_harness_service.run_policy_operations_tests(
+            policy_service=a1_policy_service,
+        )
+    _raise_problem(400, "Unsupported Conformance Category", f"Unsupported category_id: {category_id}")
+
+
+@router.post("/conformance/evidence/validate")
+async def post_evidence_validate(payload: Dict[str, object]) -> Dict[str, object]:
+    """Step 1: conformance evidence validation endpoint."""
+    return conformance_harness_service.validate_evidence(payload)
 
 
 def _save_sections_options(all_clauses: Dict[SpecType, List]) -> None:
@@ -386,6 +638,26 @@ async def get_section_options():
         raise HTTPException(status_code=500, detail=f"Failed to load section options: {str(e)}")
 
 
+# ==================== CONFLICTS ====================
+
+@router.get("/conflicts")
+async def get_conflicts():
+    """
+    Return all spec conflicts detected during the last catalog generation.
+    Conflicts are stored in ``data/oran_catalogs/spec_conflicts.json``.
+    """
+    conflicts_path = catalogs_dir / "spec_conflicts.json"
+    if not conflicts_path.exists():
+        return {"conflicts": [], "total": 0}
+    try:
+        with open(conflicts_path, "r", encoding="utf-8") as fh:
+            conflicts = json.load(fh)
+        return {"conflicts": conflicts, "total": len(conflicts)}
+    except Exception as e:
+        logger.error(f"Failed to load conflicts: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to load conflicts: {str(e)}")
+
+
 # ==================== SCRIPT VIEWING ====================
 
 @router.get("/scripts/{test_id}")
@@ -396,9 +668,9 @@ async def get_test_script(test_id: str):
     Returns the Python script as plain text
     """
     try:
-        scripts_dir = settings.oran_generated_tests_path or (settings.tts_path / "generated_tests")
+        scripts_dir = catalogs_dir.parent / "generated_tests"
         script_file = scripts_dir / f"{test_id}.py"
-        
+
         if not script_file.exists():
             raise HTTPException(status_code=404, detail=f"Script for test {test_id} not found")
         
@@ -428,7 +700,7 @@ async def download_test_script(test_id: str):
     from fastapi.responses import FileResponse
     
     try:
-        scripts_dir = settings.oran_generated_tests_path or (settings.tts_path / "generated_tests")
+        scripts_dir = catalogs_dir.parent / "generated_tests"
         script_file = scripts_dir / f"{test_id}.py"
         
         if not script_file.exists():
@@ -513,7 +785,17 @@ async def generate_test_catalog(
         # Save catalog JSON
         catalog_path = catalog_generator.save_catalog(catalog)
         logger.info(f"Saved catalog to {catalog_path}")
-        
+
+        # Generate pytest script and YAML config (Phase 3)
+        script_path: Optional[Path] = None
+        config_path: Optional[Path] = None
+        try:
+            script_path = catalog_generator.generate_pytest_script(catalog)
+            config_path = catalog_generator.generate_test_config(catalog)
+            logger.info(f"Generated script: {script_path}, config: {config_path}")
+        except Exception as e:
+            logger.warning(f"Script generation skipped: {e}")
+
         # Save test cases to database (Phase 3) - use deduplicated list
         try:
             saved_count = catalog_generator.save_to_database(
@@ -540,6 +822,7 @@ async def generate_test_catalog(
             "total_tests": str(catalog.total_tests),
             "total_clauses_parsed": str(total_clauses),
             "conflicts_detected": str(len(conflicts)),
+            "script_generated": script_path is not None,
             "service_type": service_definition.service_type.value,
             "service_name": service_definition.name,
         }
@@ -690,7 +973,17 @@ async def generate_from_selection(
         # Save catalog JSON
         catalog_path = catalog_generator.save_catalog(catalog)
         logger.info(f"Saved catalog to {catalog_path}")
-        
+
+        # Generate pytest script and YAML config
+        script_path: Optional[Path] = None
+        config_path: Optional[Path] = None
+        try:
+            script_path = catalog_generator.generate_pytest_script(catalog)
+            config_path = catalog_generator.generate_test_config(catalog)
+            logger.info(f"Generated script: {script_path}, config: {config_path}")
+        except Exception as e:
+            logger.warning(f"Script generation skipped: {e}")
+
         # Save test cases to database
         try:
             saved_count = catalog_generator.save_to_database(
@@ -708,6 +1001,7 @@ async def generate_from_selection(
             "message": f"Successfully generated catalog with {catalog.total_tests} test cases from selected sections",
             "total_tests": str(catalog.total_tests),
             "total_selected_sections": str(total_selected),
+            "script_generated": script_path is not None,
             "service_type": service_definition.service_type.value,
             "service_name": service_definition.name,
         }

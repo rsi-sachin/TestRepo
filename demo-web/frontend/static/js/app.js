@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // setupDemoList(); // Disabled for ORAN MVP
     // setupTrafficGenerator(); // Disabled for ORAN MVP
     setupHistory();
+    setupFeatureStatusBoard();
     setupConsoleControls();
     
     // Initialize ORAN UI
@@ -80,6 +81,10 @@ function switchTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.toggle('active', content.id === `${tabName}-tab`);
     });
+
+    if (tabName === 'feature-status') {
+        loadFeatureStatusBoard();
+    }
 }
 
 // Connection Status
@@ -481,6 +486,66 @@ async function loadHistory() {
 function renderHistory(history) {
     const container = document.getElementById('history-list');
     container.innerHTML = '<p>No history available yet</p>';
+}
+
+// Feature Status Board
+function setupFeatureStatusBoard() {
+    const refreshBtn = document.getElementById('refresh-feature-status-btn');
+    if (!refreshBtn) return;
+    refreshBtn.addEventListener('click', loadFeatureStatusBoard);
+}
+
+async function loadFeatureStatusBoard() {
+    const meta = document.getElementById('feature-status-meta');
+    const tbody = document.getElementById('feature-status-tbody');
+    if (!meta || !tbody) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/oran/feature-plan/status-board`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const payload = await response.json();
+        meta.textContent = `Last Updated in Plan: ${payload.last_updated} | Generated: ${payload.generated_at}`;
+
+        document.getElementById('summary-complete').textContent = payload.summary.Complete;
+        document.getElementById('summary-in-progress').textContent = payload.summary['In Progress'];
+        document.getElementById('summary-tbd').textContent = payload.summary.TBD;
+
+        const nextItem = document.getElementById('feature-status-next-item');
+        nextItem.innerHTML = `<strong>Next Best Item:</strong> ${escapeHtml(payload.next_best_item)}`;
+
+        if (!payload.modules || payload.modules.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4">No module status rows found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = payload.modules.map((module) => {
+            const statusClass = module.status.toLowerCase().replace(/\s+/g, '-');
+            return `
+                <tr>
+                    <td>${escapeHtml(module.module)}</td>
+                    <td><span class="feature-status-pill ${statusClass}">${escapeHtml(module.status)}</span></td>
+                    <td>${escapeHtml(module.conformance_coverage)}</td>
+                    <td>${escapeHtml(module.evidence_anchor)}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Failed to load feature status board:', error);
+        meta.textContent = 'Failed to load status board.';
+        tbody.innerHTML = '<tr><td colspan="4">Unable to load status board data.</td></tr>';
+    }
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 // Export functions for inline onclick handlers

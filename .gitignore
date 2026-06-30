@@ -239,3 +239,9 @@ marimo/_lsp/
 __marimo__/
 demo-tool/logs/
 .worktrees/
+
+# ORAN local notes (do not commit)
+ORAN/Important Commands.txt
+
+# ORAN tracker must remain versioned
+!ORAN/TODO.md
