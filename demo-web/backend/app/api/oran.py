@@ -349,6 +349,10 @@ async def get_conformance_tests(category_id: str = Query("policy-type-query")) -
         return conformance_harness_service.list_policy_type_query_tests()
     if normalized in {"policy-operations", "policy-crud-operations"}:
         return conformance_harness_service.list_policy_operations_tests()
+    if normalized == "interoperability-a1p":
+        return conformance_harness_service.list_interoperability_a1p_tests()
+    if normalized == "interoperability-a1ei":
+        return conformance_harness_service.list_interoperability_a1ei_tests()
     _raise_problem(400, "Unsupported Conformance Category", f"Unsupported category_id: {category_id}")
 
 
@@ -365,6 +369,15 @@ async def run_conformance_category(payload: Optional[Dict[str, object]] = None) 
     if category_id in {"policy-operations", "policy-crud-operations"}:
         return conformance_harness_service.run_policy_operations_tests(
             policy_service=a1_policy_service,
+        )
+    if category_id == "interoperability-a1p":
+        return conformance_harness_service.run_interoperability_a1p_tests(
+            policy_service=a1_policy_service,
+            service_registry=a1_service_registry,
+        )
+    if category_id == "interoperability-a1ei":
+        return conformance_harness_service.run_interoperability_a1ei_tests(
+            service_registry=a1_service_registry,
         )
     _raise_problem(400, "Unsupported Conformance Category", f"Unsupported category_id: {category_id}")
 

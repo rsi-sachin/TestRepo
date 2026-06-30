@@ -54,6 +54,22 @@ def test_conformance_categories_exposes_policy_operations_category():
     assert "policy-operations" in category_ids
 
 
+def test_conformance_categories_exposes_interoperability_a1p_category():
+    response = client.get("/api/oran/conformance/categories")
+    assert response.status_code == 200
+    payload = response.json()
+    category_ids = {item["category_id"] for item in payload}
+    assert "interoperability-a1p" in category_ids
+
+
+def test_conformance_categories_exposes_interoperability_a1ei_category():
+    response = client.get("/api/oran/conformance/categories")
+    assert response.status_code == 200
+    payload = response.json()
+    category_ids = {item["category_id"] for item in payload}
+    assert "interoperability-a1ei" in category_ids
+
+
 def test_conformance_run_executes_policy_type_query_category():
     response = client.post("/api/oran/conformance/run", json={"category_id": "policy-type-query"})
     assert response.status_code == 200
@@ -68,6 +84,22 @@ def test_conformance_run_executes_policy_operations_category():
     payload = response.json()
     assert payload["category_id"] == "policy-operations"
     assert payload["summary"]["total"] == 8
+
+
+def test_conformance_run_executes_interoperability_a1p_category():
+    response = client.post("/api/oran/conformance/run", json={"category_id": "interoperability-a1p"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["category_id"] == "interoperability-a1p"
+    assert payload["summary"]["total"] == 4
+
+
+def test_conformance_run_executes_interoperability_a1ei_category():
+    response = client.post("/api/oran/conformance/run", json={"category_id": "interoperability-a1ei"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["category_id"] == "interoperability-a1ei"
+    assert payload["summary"]["total"] == 4
 
 
 def test_o1_validate_requires_schema_fields():
