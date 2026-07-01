@@ -12,6 +12,25 @@ related-skills:
   - document-analysis-a1gap
 configuration:
   ask-user-for-mode: true
+  implicit-trigger-patterns:
+    - prompt-pattern: "Analyze sections <section-list> from <document-path>"
+      implied-primary-skill: document-analysis-a1tp
+      implied-orchestrator-skill: document-cross-reference-analysis
+      implied-mode: single
+      implied-extraction-focus:
+        - http
+        - rest
+        - resource
+        - status code
+        - authentication
+      implied-section-selection:
+        skip-first-section-match: true
+        use-body-section-text: true
+      implied-output-requirements:
+        - map findings to existing tests and code
+        - list new tests
+        - list modified tests
+        - list implementation and coverage gaps
   supported-modes:
     - single
     - dependencies
@@ -58,6 +77,8 @@ Extract and interpret A1TP specification content to:
 
 Before converting extracted protocol knowledge to source code, this skill must:
 
+0. Map findings to Trace IDs in `ORAN/docs/feature_traceability_map.md` before proposing code changes.
+
 1. Read `ORAN/docs/feature_traceability_map.md`.
 2. Resolve extracted endpoint/auth/data requirements to one or more Trace IDs.
 3. Restrict generated file targets to mapped `Code Scope` entries.
@@ -82,6 +103,7 @@ verification_targets:
 Hard gate:
 
 - Do not emit source code unless `selected_trace_ids` is non-empty and resolved against `ORAN/docs/feature_traceability_map.md`.
+- Do not propose code changes unless findings are mapped to Trace IDs in `ORAN/docs/feature_traceability_map.md`.
 
 ## Document Context
 **Document:** A1 Technical Protocol (A1TP)  
@@ -105,6 +127,8 @@ Hard gate:
 - This skill is mandatory as the primary skill for protocol-centric technical analysis.
 - If protocol markers are present and this skill is not selected, analysis must stop and report a routing error.
 - `document-cross-reference-analysis` can be used as orchestrator, but does not replace mandatory primary selection of this skill for protocol-centric requests.
+- For prompts matching `Analyze sections <section-list> from <document-path>`, this skill is implied as primary by default.
+- For that prompt pattern, `document-cross-reference-analysis` runs in `single` mode by default unless the user explicitly asks for a different mode.
 
 Required routing audit fields in every analysis response:
 
@@ -127,6 +151,7 @@ Before finalizing an analysis response, confirm all items below:
 - Protocol markers extracted and listed.
 - HTTP/REST/auth/data/error handling extraction performed when applicable.
 - Test or module impact mapping provided.
+- Existing tests/code mapping provided, with explicit lists for new tests, modified tests, and gaps.
 - Required routing audit fields populated.
 
 ## Key Extraction Patterns

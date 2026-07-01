@@ -14,6 +14,26 @@ orchestrates:
   - document-analysis-etsi-ts-132-158
 configuration:
   ask-user-for-mode: true
+  default-mode: single
+  implicit-prompt-routing:
+    - prompt-pattern: "Analyze sections <section-list> from <document-path>"
+      inferred-primary-skill: document-analysis-a1tp
+      inferred-orchestrator-skill: document-cross-reference-analysis
+      inferred-mode: single
+      inferred-extraction-focus:
+        - http
+        - rest
+        - resource
+        - status code
+        - authentication
+      inferred-section-selection:
+        skip-first-section-match: true
+        use-body-section-text: true
+      inferred-output-requirements:
+        - map findings to existing tests and code
+        - list new tests
+        - list modified tests
+        - list implementation and coverage gaps
   supported-modes:
     - single
     - dependencies
@@ -73,6 +93,8 @@ Orchestrate intelligent analysis of interconnected A1-related documents to:
 
 Before converting analysis knowledge into source code, this skill must:
 
+0. Map findings to Trace IDs in `ORAN/docs/feature_traceability_map.md` before proposing code changes.
+
 1. Read `ORAN/docs/feature_traceability_map.md`.
 2. Select one or more matching Trace IDs for the requested implementation.
 3. Map recommendations to TODO sections and code scopes listed in the traceability map.
@@ -94,6 +116,7 @@ verification_targets:
 Hard gate:
 
 - Do not emit source code unless `selected_trace_ids` is non-empty and resolved against `ORAN/docs/feature_traceability_map.md`.
+- Do not propose code changes unless findings are mapped to Trace IDs in `ORAN/docs/feature_traceability_map.md`.
 
 ## Required Skill Routing Gate
 
@@ -111,6 +134,19 @@ selected_secondary_skills: ["document-cross-reference-analysis"]
 why_selected: "Protocol markers detected in request and document section"
 protocol_markers_detected: ["HTTP", "REST", "resource"]
 ```
+
+## Implicit Prompt Defaults
+
+When the user prompt matches `Analyze sections <section-list> from <document-path>`:
+
+- Treat it as protocol-centric technical analysis by default.
+- Auto-select `document-analysis-a1tp` as primary skill.
+- Use `document-cross-reference-analysis` in `single` mode unless the user explicitly requests dependencies/full-suite/version-evolution.
+- Apply section-selection policy to skip TOC match and use body section text.
+- Always include mapping to existing tests/code and report:
+  - new tests,
+  - modified tests,
+  - implementation/coverage gaps.
 
 ## Document Ecosystem
 
