@@ -16,6 +16,8 @@ configuration:
     target-skill: post-analysis-test-policy-orchestration
     trigger: "after analysis completes and the user requests implementation, testing, or gap closure"
     fail-closed-if-skipped: true
+    confirmation-required: true
+    confirmation-rule: "Always set the handoff target to post-analysis-test-policy-orchestration, but do not dispatch the handoff until the user explicitly confirms."
   implicit-trigger-patterns:
     - prompt-pattern: "Analyze sections <section-list> from <document-path>"
       implied-primary-skill: document-analysis-a1tp
@@ -37,6 +39,25 @@ configuration:
         - list new tests
         - list modified tests
         - list implementation and coverage gaps
+    - prompt-pattern: "Implement Section <section-list> of <document-path>"
+      implied-primary-skill: document-analysis-a1tp
+      implied-orchestrator-skill: document-cross-reference-analysis
+      implied-mode: single
+      implied-extraction-focus:
+        - http
+        - rest
+        - resource
+        - status code
+        - authentication
+      implied-section-selection:
+        skip-first-section-match: true
+        use-body-section-text: true
+      implied-output-requirements:
+        - map findings to existing tests and code
+        - generate implementation-ready gaps and test needs
+        - list new tests
+        - list modified tests
+        - prepare confirmation-gated post-analysis handoff metadata
   supported-modes:
     - single
     - dependencies

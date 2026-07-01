@@ -16,6 +16,8 @@ configuration:
     target-skill: post-analysis-test-policy-orchestration
     trigger: "after analysis completes and the user requests implementation, testing, or coverage closure"
     fail-closed-if-skipped: true
+    confirmation-required: true
+    confirmation-rule: "Always set the handoff target to post-analysis-test-policy-orchestration, but do not dispatch the handoff until the user explicitly confirms."
   supported-modes:
     - single
     - dependencies

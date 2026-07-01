@@ -19,48 +19,14 @@ configuration:
     target-skill: post-analysis-test-policy-orchestration
     trigger: "after cross-reference analysis completes and follow-up implementation/testing is requested"
     fail-closed-if-skipped: true
-  implicit-prompt-routing:
-    - prompt-pattern: "Analyze sections <section-list> from <document-path>"
-      inferred-primary-skill: document-analysis-a1tp
-      inferred-orchestrator-skill: document-cross-reference-analysis
-      inferred-mode: single
-      inferred-extraction-focus:
-        - http
-        - rest
-        - resource
-        - status code
-        - authentication
-      inferred-section-selection:
-        skip-first-section-match: true
-        use-body-section-text: true
-      inferred-output-requirements:
-        - map findings to existing tests and code
-        - generate a trace-mapped implementation gap list for section 5
-        - generate a test matrix showing exactly which section 5 clauses are already covered and which are missing
-        - list new tests
-        - list modified tests
-        - list implementation and coverage gaps
-    - prompt-pattern: "Analyze section 6 from <document-path>"
-      inferred-primary-skill: document-analysis-a1tp
-      inferred-orchestrator-skill: document-cross-reference-analysis
-      inferred-mode: single
-      inferred-extraction-focus:
-        - http
-        - rest
-        - resource
-        - status code
-        - authentication
-        - conformance test cases
-      inferred-section-selection:
-        skip-first-section-match: true
-        use-body-section-text: true
-      inferred-output-requirements:
-        - map each section 6 subclause to existing ORAN trace IDs and test files
-        - generate a clause-to-test matrix for all analyzed section 6 clauses
-        - identify direct coverage, partial coverage, and coverage gaps
-        - list new tests
-        - list modified tests
-        - list implementation and coverage gaps
+    confirmation-required: true
+    confirmation-rule: "Always set the handoff target to post-analysis-test-policy-orchestration, but do not dispatch the handoff until the user explicitly confirms."
+  autonomous-output-rules:
+    - Treat implementation-oriented requests as analysis-plus-handoff workflows that must still use the protocol extraction skill where applicable.
+    - Treat protocol-centric requests as requiring the protocol extraction skill and cross-reference consolidation.
+    - When a clause-to-test or coverage mapping is requested, always produce a matrix that links clauses to existing trace IDs, tests, code, and gaps.
+    - Prefer substantive body content over navigation or index entries when duplicate headings or titles are detected.
+    - Always report direct coverage, partial coverage, missing coverage, new tests, modified tests, and implementation gaps when those are relevant to the request.
   supported-modes:
     - single
     - dependencies
@@ -71,9 +37,9 @@ configuration:
     dependencies: "Automatically resolve dependencies and gather context from referenced documents"
     full-suite: "Analyze all A1 documents (A1TP, A1TD, A1GAP) together with complete cross-referencing"
     version-evolution: "Compare document versions to identify breaking changes and schema evolution"
-  section-selection-defaults:
-    skip-first-section-match: true
-    rationale: "The first section-name/ID match is often from Table of Contents; prefer body headings by default."
+  content-selection-defaults:
+    prefer-body-content: true
+    rationale: "Prefer substantive body content over navigation or index entries when duplicate headings or titles are detected."
   routing-gate:
     protocol-markers:
       - http
@@ -173,18 +139,17 @@ Required routing audit fields in every analysis response:
 ```yaml
 selected_primary_skill: "document-analysis-a1tp"
 selected_secondary_skills: ["document-cross-reference-analysis"]
-why_selected: "Protocol markers detected in request and document section"
+why_selected: "Protocol markers detected in request context"
 protocol_markers_detected: ["HTTP", "REST", "resource"]
 ```
 
 ## Implicit Prompt Defaults
 
-When the user prompt matches `Analyze sections <section-list> from <document-path>`:
+When the user prompt requests analysis, mapping, or cross-reference consolidation:
 
-- Treat it as protocol-centric technical analysis by default.
-- Auto-select `document-analysis-a1tp` as primary skill.
+- Treat protocol-centric requests as primary-skill candidates for `document-analysis-a1tp`.
 - Use `document-cross-reference-analysis` in `single` mode unless the user explicitly requests dependencies/full-suite/version-evolution.
-- Apply section-selection policy to skip TOC match and use body section text.
+- Prefer body content over navigation/index entries when duplicate headings or titles exist.
 - Always include mapping to existing tests/code and report:
   - new tests,
   - modified tests,
@@ -547,9 +512,9 @@ result = analyze_document_with_references(
 )
 
 # Outputs:
-# - A1TP Section 4.1 analysis
-# - References found: [A1TD v1.2 section 5.2, A1GAP v1.2 section 3.4, ...]
-# - Suggestion: "Analyze A1TD and A1GAP for complete context"
+# - Requested analysis output
+# - References found: [related document references]
+# - Suggestion: "Analyze related references for complete context"
 # - Preliminary module suggestions (standalone)
 ```
 
