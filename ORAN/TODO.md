@@ -203,7 +203,10 @@ Exit Criteria:
   - **Actions taken:**
     - Created analysis artifact: `ORAN/docs/section_4_1_analysis.md`
     - Updated `ORAN/IMPLEMENTATION_PLAN.md` with a TS 103 989 §4.1-driven TDD development approach and verification additions
-  - **Next steps:** Add scenario classification for conformance vs interoperability, add simulator capability tests for configurable HTTP operations, and keep new A1 route/service work gated on failing spec-derived conformance tests.
+  - **Follow-up status:**
+    - ✅ Scenario classification for conformance vs interoperability implemented in parser/catalog flows.
+    - ✅ Simulator capability tests for configurable HTTP operations implemented in conformance harness coverage.
+    - [ ] Keep new A1 route/service work gated on failing spec-derived conformance tests (process/CI policy still to be formalized if required).
 
 - [x] **Commit and push TS 103 989 §4.1 analysis and scenario-classification implementation**
   - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commit:** `f010d8e`
