@@ -40,6 +40,27 @@ configuration:
         - list new tests
         - list modified tests
         - list implementation and coverage gaps
+    - prompt-pattern: "Analyze section 6 from <document-path>"
+      inferred-primary-skill: document-analysis-a1tp
+      inferred-orchestrator-skill: document-cross-reference-analysis
+      inferred-mode: single
+      inferred-extraction-focus:
+        - http
+        - rest
+        - resource
+        - status code
+        - authentication
+        - conformance test cases
+      inferred-section-selection:
+        skip-first-section-match: true
+        use-body-section-text: true
+      inferred-output-requirements:
+        - map each section 6 subclause to existing ORAN trace IDs and test files
+        - generate a clause-to-test matrix for all analyzed section 6 clauses
+        - identify direct coverage, partial coverage, and coverage gaps
+        - list new tests
+        - list modified tests
+        - list implementation and coverage gaps
   supported-modes:
     - single
     - dependencies
