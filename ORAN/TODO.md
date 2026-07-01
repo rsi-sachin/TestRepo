@@ -1,7 +1,7 @@
 # Demo-Web ORAN Integration - TODO List
 
 **Project:** Extend demo-web with O-RAN A1 test generation capabilities  
-**Last Updated:** 2026-06-25  
+**Last Updated:** 2026-07-01  
 **Status:** Phase 1 Complete (Backend + Frontend), Phase 2-4 Pending
 
 ## P1-ENH: Python 3.13 Migration Readiness and Implementation
@@ -239,6 +239,23 @@ Exit Criteria:
     - New conformance test suite: 35 tests covering DUT readiness, simulator capabilities, execution evidence (80%+ coverage §4.2.1–§4.2.2)
     - Analysis document with HTTP definitions, REST patterns, data formats, protocol semantics, implementation mapping, version notes, enhancement recommendations
     - Updated traceability and regression infrastructure aligned with new tests
+
+- [ ] **P1-ENH: Implement and reconcile TS 103 989 §4.4 interoperability coverage**
+  - **Status:** In Progress
+  - **Date:** 2026-07-01
+  - **Source:** `ORAN/docs/ts_103989v040200p.pdf` (v4.2.0), sections §4.4.1, §4.4.2, clause 7.2, clause 7.3
+  - **Objective:** Track implemented interoperability coverage and retain follow-up to reprocess the source text with the correct primary skill.
+  - **Completed in this session:**
+    - ✅ Added conformance categories `interoperability-a1p` and `interoperability-a1ei` in the conformance harness and API routes.
+    - ✅ Added interoperability readiness support in `demo-web/backend/app/services/conformance_service.py` via `build_interoperability_readiness()`.
+    - ✅ Added interoperability API and backend tests:
+      - `demo-web/tests/conformance/test_interoperability_conformance_4_4.py`
+      - `demo-web/backend/tests/conformance/test_interoperability_readiness_4_4_2.py`
+      - `demo-web/backend/tests/conformance/test_interoperability_clause7_suites.py`
+    - ✅ Verified focused regression for §4.4 coverage (`31 passed`).
+  - **Remaining follow-up:**
+    - [ ] Re-run §4.4 analysis with `document-analysis-a1tp` explicitly as primary skill and `document-cross-reference-analysis` in `single` mode.
+    - [ ] Compare the skill-based extraction against the implemented interoperability tests and update any mismatched coverage or traceability.
 
 ### ✅ Phase 1: ORAN Foundation (Backend + Frontend)
 **Status:** ✅ COMPLETE (100%)  

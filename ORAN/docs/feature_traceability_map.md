@@ -1,6 +1,6 @@
 # ORAN Feature Traceability Map (Metadata Tracking)
 
-Last updated: 2026-06-30 (ORAN-FTM-013: added TS 103 989 §4.2.1 and §4.2.2 Non-RT RIC conformance setup coverage)
+Last updated: 2026-07-01 (ORAN-FTM-014: added TS 103 989 §4.4 interoperability coverage tracking and verification mapping)
 Scope: ORAN feature, module, and component traceability for planning, implementation, and verification.
 
 ## Purpose
@@ -46,6 +46,7 @@ This artifact provides non-code metadata mapping between:
 | ORAN-FTM-011 | Feature | ORAN Frontend Upload and Catalog UX | Phase 1 complete; Post-UI Simplification Follow-up | document-analysis-a1tp | TS 103 989/987/988/983 document upload and mapping workflow | demo-web/frontend/templates/index.html; demo-web/frontend/static/js/oran.js; demo-web/frontend/static/css/oran.css | ORAN frontend | In Progress | UI functional checks and script-view regression tests | Includes open issue for View Script modal behavior |
 | ORAN-FTM-012 | Feature | Metadata Mapping Artifact Governance | Traceability and Quality Follow-up | document-cross-reference-analysis, document-rule-learning | Internal governance requirement from TODO follow-up | ORAN/docs/feature_traceability_map.md | ORAN docs owner | In Progress | Manual review on each milestone update | Update after each phase or major requirement change |
 | ORAN-FTM-013 | Feature | Non-RT RIC Conformance Setup Coverage | P1-ENH: Implement TS 103 989 §4.2.1 and §4.2.2 conformance setup coverage | document-cross-reference-analysis, document-analysis-a1tp | TS 103 989 Sections 4.2.1, 4.2.2.0, 4.2.2.1, 4.2.2.2 | demo-web/backend/tests/conformance/ | ORAN backend | In Progress | Conformance test suite: DUT readiness, simulator capabilities, execution evidence checks | §4.2.1: Non-RT RIC as DUT; §4.2.2.1: agreed policy type and EI type preconditions; §4.2.2.2: A1-P Producer and A1-EI Consumer simulator capabilities including HTTP Client/Server, configurable messages, logging, schema validation |
+| ORAN-FTM-014 | Feature | Non-RT RIC and Near-RT RIC Interoperability Coverage | P1-ENH: Implement and reconcile TS 103 989 §4.4 interoperability coverage | document-cross-reference-analysis, document-analysis-a1tp | TS 103 989 Sections 4.4.1, 4.4.2, 4.4.2.1, 4.4.2.2; clause 7.2; clause 7.3 | demo-web/backend/app/api/oran.py; demo-web/backend/app/modules/conformance_harness/service.py; demo-web/backend/app/services/conformance_service.py; demo-web/tests/conformance/test_interoperability_conformance_4_4.py; demo-web/backend/tests/conformance/test_interoperability_readiness_4_4_2.py; demo-web/backend/tests/conformance/test_interoperability_clause7_suites.py | ORAN backend | In Progress | Interoperability categories, readiness checks, and focused regression (`31 passed`) | Implemented categories `interoperability-a1p` and `interoperability-a1ei`; remaining follow-up is to re-run §4.4 source analysis with `document-analysis-a1tp` as primary skill and reconcile any coverage gaps |
 
 ## Status Legend
 
