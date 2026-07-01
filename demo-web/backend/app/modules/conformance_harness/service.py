@@ -66,6 +66,14 @@ class ConformanceHarnessService:
                 "estimated_duration_seconds": 180,
                 "status": "implemented",
             },
+            {
+                "category_id": "ei-job-operations",
+                "title": "A1-EI Job Operations",
+                "spec_reference": "TS 103 989 section 5.3",
+                "test_count": 8,
+                "estimated_duration_seconds": 180,
+                "status": "implemented",
+            },
         ]
 
     def list_policy_type_query_tests(self) -> list[dict]:
@@ -232,6 +240,67 @@ class ConformanceHarnessService:
                 "name": "passive_protocol_capture_capability",
                 "description": "Verify passive A1 capture capability can be declared for validation",
                 "spec_reference": "TS 103 989 section 4.4.1 and 4.4.2.2.4",
+            },
+        ]
+
+    def list_ei_job_operations_tests(self) -> list[dict]:
+        """Return executable test metadata for TS 103 989 section 5.3 A1-EI coverage."""
+        return [
+            {
+                "test_id": "TC-A1-EI-001",
+                "category_id": "ei-job-operations",
+                "name": "ei_type_list_returns_list",
+                "description": "Verify EI type query returns a list payload",
+                "spec_reference": "TS 103 989 section 5.3.1",
+            },
+            {
+                "test_id": "TC-A1-EI-002",
+                "category_id": "ei-job-operations",
+                "name": "ei_type_query_unknown_returns_not_found",
+                "description": "Verify unknown EI type lookup returns not-found behavior",
+                "spec_reference": "TS 103 989 section 5.3.1",
+            },
+            {
+                "test_id": "TC-A1-EI-003",
+                "category_id": "ei-job-operations",
+                "name": "create_ei_job_returns_created",
+                "description": "Verify EI job create operation returns created state for a new job",
+                "spec_reference": "TS 103 989 section 5.3.2",
+            },
+            {
+                "test_id": "TC-A1-EI-004",
+                "category_id": "ei-job-operations",
+                "name": "query_ei_job_ids_contains_created_job",
+                "description": "Verify EI job identifier list contains the new job",
+                "spec_reference": "TS 103 989 section 5.3.3",
+            },
+            {
+                "test_id": "TC-A1-EI-005",
+                "category_id": "ei-job-operations",
+                "name": "query_ei_job_returns_job",
+                "description": "Verify EI job query returns the stored job payload",
+                "spec_reference": "TS 103 989 section 5.3.3",
+            },
+            {
+                "test_id": "TC-A1-EI-006",
+                "category_id": "ei-job-operations",
+                "name": "update_ei_job_returns_replaced",
+                "description": "Verify EI job update operation returns replaced state for an existing job",
+                "spec_reference": "TS 103 989 section 5.3.4",
+            },
+            {
+                "test_id": "TC-A1-EI-007",
+                "category_id": "ei-job-operations",
+                "name": "query_ei_job_status_returns_status",
+                "description": "Verify EI job status query returns a status object",
+                "spec_reference": "TS 103 989 section 5.3.6",
+            },
+            {
+                "test_id": "TC-A1-EI-008",
+                "category_id": "ei-job-operations",
+                "name": "delete_ei_job_succeeds",
+                "description": "Verify EI job delete operation succeeds for an existing job",
+                "spec_reference": "TS 103 989 section 5.3.5",
             },
         ]
 
@@ -583,6 +652,167 @@ class ConformanceHarnessService:
         return {
             "run_id": run_id,
             "category_id": "interoperability-a1ei",
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "summary": {
+                "total": len(results),
+                "passed": passed_count,
+                "failed": failed_count,
+                "verdict": "PASS" if failed_count == 0 else "FAIL",
+            },
+            "results": results,
+        }
+
+    def run_ei_job_operations_tests(self, ei_service, service_registry) -> dict:
+        """Execute deterministic section 5.3 A1-EI job operation checks."""
+        run_id = datetime.now(timezone.utc).strftime("eij-%Y%m%d%H%M%S")
+        results: list[dict] = []
+
+        ei_type_ids = ei_service.list_ei_type_ids()
+        results.append(
+            {
+                "test_id": "TC-A1-EI-001",
+                "status": "PASS" if isinstance(ei_type_ids, list) else "FAIL",
+                "detail": f"Returned {len(ei_type_ids)} EI type identifiers",
+            }
+        )
+
+        try:
+            ei_service.get_ei_type("unknown-ei-type")
+            results.append(
+                {
+                    "test_id": "TC-A1-EI-002",
+                    "status": "FAIL",
+                    "detail": "Expected KeyError was not raised",
+                }
+            )
+        except KeyError:
+            results.append(
+                {
+                    "test_id": "TC-A1-EI-002",
+                    "status": "PASS",
+                    "detail": "KeyError raised for unknown EI type",
+                }
+            )
+
+        ei_type_id = ei_type_ids[0] if ei_type_ids else "default"
+        ei_job_id = f"ei-job-{run_id}"
+        create_job = {"ei_payload": {"job": "demo"}}
+        update_job = {"ei_payload": {"job": "updated"}}
+
+        try:
+            _, was_created = ei_service.create_or_replace_ei_job(ei_type_id, ei_job_id, create_job)
+            results.append(
+                {
+                    "test_id": "TC-A1-EI-003",
+                    "status": "PASS" if was_created else "FAIL",
+                    "detail": "Create returned created state",
+                }
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            results.append(
+                {
+                    "test_id": "TC-A1-EI-003",
+                    "status": "FAIL",
+                    "detail": str(exc),
+                }
+            )
+
+        try:
+            job_ids = ei_service.list_ei_job_ids(ei_type_id)
+            results.append(
+                {
+                    "test_id": "TC-A1-EI-004",
+                    "status": "PASS" if ei_job_id in job_ids else "FAIL",
+                    "detail": "EI job identifier present in list",
+                }
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            results.append(
+                {
+                    "test_id": "TC-A1-EI-004",
+                    "status": "FAIL",
+                    "detail": str(exc),
+                }
+            )
+
+        try:
+            queried = ei_service.get_ei_job(ei_type_id, ei_job_id)
+            results.append(
+                {
+                    "test_id": "TC-A1-EI-005",
+                    "status": "PASS" if queried["ei_job"] == create_job else "FAIL",
+                    "detail": "Queried EI job matches latest create payload",
+                }
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            results.append(
+                {
+                    "test_id": "TC-A1-EI-005",
+                    "status": "FAIL",
+                    "detail": str(exc),
+                }
+            )
+
+        try:
+            _, was_created = ei_service.create_or_replace_ei_job(ei_type_id, ei_job_id, update_job)
+            results.append(
+                {
+                    "test_id": "TC-A1-EI-006",
+                    "status": "PASS" if was_created is False else "FAIL",
+                    "detail": "Update returned replace state",
+                }
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            results.append(
+                {
+                    "test_id": "TC-A1-EI-006",
+                    "status": "FAIL",
+                    "detail": str(exc),
+                }
+            )
+
+        try:
+            status_obj = ei_service.get_ei_job_status(ei_type_id, ei_job_id)
+            results.append(
+                {
+                    "test_id": "TC-A1-EI-007",
+                    "status": "PASS" if status_obj["ei_job_id"] == ei_job_id else "FAIL",
+                    "detail": "EI job status object returned",
+                }
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            results.append(
+                {
+                    "test_id": "TC-A1-EI-007",
+                    "status": "FAIL",
+                    "detail": str(exc),
+                }
+            )
+
+        try:
+            ei_service.delete_ei_job(ei_type_id, ei_job_id)
+            results.append(
+                {
+                    "test_id": "TC-A1-EI-008",
+                    "status": "PASS",
+                    "detail": "EI job deleted",
+                }
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            results.append(
+                {
+                    "test_id": "TC-A1-EI-008",
+                    "status": "FAIL",
+                    "detail": str(exc),
+                }
+            )
+
+        passed_count = len([item for item in results if item["status"] == "PASS"])
+        failed_count = len([item for item in results if item["status"] == "FAIL"])
+
+        return {
+            "run_id": run_id,
+            "category_id": "ei-job-operations",
             "started_at": datetime.now(timezone.utc).isoformat(),
             "summary": {
                 "total": len(results),

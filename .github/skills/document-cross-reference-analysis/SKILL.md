@@ -15,6 +15,10 @@ orchestrates:
 configuration:
   ask-user-for-mode: true
   default-mode: single
+  post-analysis-handoff:
+    target-skill: post-analysis-test-policy-orchestration
+    trigger: "after cross-reference analysis completes and follow-up implementation/testing is requested"
+    fail-closed-if-skipped: true
   implicit-prompt-routing:
     - prompt-pattern: "Analyze sections <section-list> from <document-path>"
       inferred-primary-skill: document-analysis-a1tp
@@ -31,6 +35,8 @@ configuration:
         use-body-section-text: true
       inferred-output-requirements:
         - map findings to existing tests and code
+        - generate a trace-mapped implementation gap list for section 5
+        - generate a test matrix showing exactly which section 5 clauses are already covered and which are missing
         - list new tests
         - list modified tests
         - list implementation and coverage gaps
@@ -65,6 +71,9 @@ configuration:
     - selected_secondary_skills
     - why_selected
     - protocol_markers_detected
+    - post_analysis_handoff_status
+    - post_analysis_handoff_target
+    - post_analysis_handoff_reason
 traceability:
   required-artifact: "ORAN/docs/feature_traceability_map.md"
   required-before-code-generation: true
@@ -73,6 +82,7 @@ traceability:
     - mapped_todo_sections
     - mapped_code_scope
     - verification_targets
+    - implementation_plan
   code-generation-gate: "Do not generate source code unless selected_trace_ids is non-empty and resolved against ORAN/docs/feature_traceability_map.md."
 ---
 
@@ -100,6 +110,17 @@ Before converting analysis knowledge into source code, this skill must:
 3. Map recommendations to TODO sections and code scopes listed in the traceability map.
 4. Produce explicit verification targets from the `Verification` column.
 5. Stop code generation if no Trace ID mapping is available.
+6. When the trace-mapped plan is complete, hand it off as the implementation input and do not start production code edits until that plan exists.
+7. After analysis completion, invoke `post-analysis-test-policy-orchestration` as a formal post-step whenever implementation, testing, or coverage closure is requested.
+
+## Post-Analysis Handoff Rules
+
+When this orchestrator finishes analysis and the request continues into implementation/testing, it must:
+
+1. Invoke `post-analysis-test-policy-orchestration` using the latest analysis artifact or trace-mapped implementation plan.
+2. Include selected Trace IDs, mapped TODO sections, mapped code scope, and verification targets in the handoff payload.
+3. Preserve fail-closed behavior: if the handoff cannot be dispatched, mark the analysis result as incomplete rather than complete.
+4. Emit `post_analysis_handoff_status`, `post_analysis_handoff_target`, and `post_analysis_handoff_reason` in the analysis output.
 
 Required conversion payload fields:
 

@@ -66,3 +66,7 @@ Capture three reusable rule groups:
 - Keep reusable rule metadata in version-controlled project files where possible.
 - Also persist runtime snapshots after each analysis for continuous learning.
 - Prefer deterministic rules first; use heuristic ranking as a secondary signal.
+
+## Mandatory Traceability Gate
+- Before proposing code changes from learned/document findings, map findings to Trace IDs in `ORAN/docs/feature_traceability_map.md`.
+- If no matching Trace ID exists, stop and request traceability mapping alignment first.

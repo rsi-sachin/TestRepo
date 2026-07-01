@@ -89,3 +89,7 @@ This skill is ORAN-first and optimized for Feature-2 simulator implementation.
 - Keep rules in mapping_rules.oran.v1.json.
 - Record each run delta in run_improvement_log.md.
 - When rules change materially, copy to next version file (v2, v3) with change note.
+
+## Mandatory Traceability Gate
+- Before proposing code changes from section-to-module mappings, map findings to Trace IDs in `ORAN/docs/feature_traceability_map.md`.
+- If no matching Trace ID exists, stop and request traceability mapping alignment first.

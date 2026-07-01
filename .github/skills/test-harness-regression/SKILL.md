@@ -50,6 +50,10 @@ Always consider these perspectives when selecting/authoring tests:
 - If a test case spans multiple source sections, include all relevant section references in the same test case.
 - Apply this rule to any test added or updated as part of the current change, including ORAN conformance and simulator smoke tests.
 
+## Mandatory Traceability Gate
+- Before proposing code changes or new test code, map findings to Trace IDs in `ORAN/docs/feature_traceability_map.md`.
+- If no matching Trace ID exists, stop and request traceability mapping alignment first.
+
 ## Test Taxonomy and Structure
 Prefer this hierarchy (adapt to language/project conventions):
 

@@ -277,6 +277,38 @@ def test_simulator_a1_ei_consumer_has_notifications_resource_domain() -> None:
     )
 
 
+def test_simulator_a1_ei_consumer_has_notify_ei_job_status_capability() -> None:
+    """A1-EI consumer helper exposes async callback-notification client capability."""
+    service = A1EnrichmentInformationService()
+
+    assert hasattr(service, "notify_ei_job_status"), (
+        "A1-EI Consumer simulator must expose notify_ei_job_status capability "
+        "(TS 103 989 §4.2.2.2)"
+    )
+    assert inspect.iscoroutinefunction(service.notify_ei_job_status), (
+        "notify_ei_job_status must be async (HTTP Client role per §4.2.2.2)"
+    )
+
+
+def test_simulator_a1_ei_notify_signature_accepts_destination_and_status_payload() -> None:
+    """notify_ei_job_status accepts destination URI and status payload."""
+    sig = inspect.signature(A1EnrichmentInformationService.notify_ei_job_status)
+    params = list(sig.parameters.keys())
+
+    assert "destination" in params, "notify_ei_job_status must accept callback destination"
+    assert "status_obj" in params, "notify_ei_job_status must accept EI status payload"
+
+
+def test_simulator_a1_ei_notify_uses_httpx_client() -> None:
+    """A1-EI notification capability is backed by httpx for outbound callback POSTs."""
+    src = inspect.getsource(A1EnrichmentInformationService.notify_ei_job_status)
+
+    assert "httpx" in src, (
+        "notify_ei_job_status must use httpx AsyncClient "
+        "for outbound callback delivery checks (TS 103 989 §4.2.2.2)"
+    )
+
+
 # ---------------------------------------------------------------------------
 # §4.2.2.2 — Both roles: HTTP Client and HTTP Server capability presence
 # ---------------------------------------------------------------------------

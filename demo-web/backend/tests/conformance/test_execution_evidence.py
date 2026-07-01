@@ -23,6 +23,7 @@ from fastapi.testclient import TestClient
 
 from app.api import oran
 from app.models.a1_policy_models import PolicyObject, PolicyStatusObject
+from app.services.a1_enrichment_service import A1EnrichmentInformationService
 from app.services.a1_policy_service import A1PolicyService
 
 
@@ -60,6 +61,18 @@ def test_a1_policy_service_logger_records_notification_warnings(caplog: pytest.L
 
     assert "logger.warning" in src, (
         "notify_policy_status must log a warning for unexpected notification responses "
+        "(TS 103 989 §4.2.2.2: logs all message content during testing)"
+    )
+
+
+def test_a1_ei_service_logger_records_notification_warnings() -> None:
+    """A1-EI notify method logs warning on unexpected callback response per §4.2.2.2."""
+    import textwrap, inspect
+
+    src = textwrap.dedent(inspect.getsource(A1EnrichmentInformationService.notify_ei_job_status))
+
+    assert "logger.warning" in src, (
+        "notify_ei_job_status must log a warning for unexpected notification responses "
         "(TS 103 989 §4.2.2.2: logs all message content during testing)"
     )
 

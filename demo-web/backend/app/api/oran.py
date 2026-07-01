@@ -246,6 +246,111 @@ async def get_policy_status(policy_type_id: str, policy_id: str):
         )
 
 
+@router.get("/a1/eitypes", response_model=List[str])
+async def list_ei_types() -> List[str]:
+    """List available EI type identifiers (§5.3.1)."""
+    return a1_ei_service.list_ei_type_ids()
+
+
+@router.get("/a1/eitypes/{ei_type_id}")
+async def get_ei_type(ei_type_id: str) -> Dict[str, object]:
+    """Get a single EI type definition (§5.3.1)."""
+    try:
+        return a1_ei_service.get_ei_type(ei_type_id)
+    except KeyError as e:
+        _raise_problem(404, "EI Type Not Found", str(e), instance=f"/a1/eitypes/{ei_type_id}")
+
+
+@router.get("/a1/eitypes/{ei_type_id}/eijobs", response_model=List[str])
+async def list_ei_job_ids(ei_type_id: str) -> List[str]:
+    """List EI job identifiers for a given EI type (§5.3.3)."""
+    try:
+        return a1_ei_service.list_ei_job_ids(ei_type_id)
+    except KeyError as e:
+        _raise_problem(404, "EI Type Not Found", str(e), instance=f"/a1/eitypes/{ei_type_id}/eijobs")
+
+
+@router.put("/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}")
+async def create_or_replace_ei_job(
+    ei_type_id: str,
+    ei_job_id: str,
+    ei_job: Dict[str, object],
+    response: Response,
+    notification_destination: Optional[str] = Query(None, alias="notificationDestination"),
+) -> Dict[str, object]:
+    """Create or update an EI job (§5.3.2/§5.3.4)."""
+    try:
+        result, was_created = a1_ei_service.create_or_replace_ei_job(
+            ei_type_id=ei_type_id,
+            ei_job_id=ei_job_id,
+            ei_job=ei_job,
+            notification_destination=notification_destination,
+        )
+        if was_created:
+            response.status_code = 201
+            response.headers["Location"] = f"/api/oran/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}"
+        else:
+            response.status_code = 200
+        return result
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "EI Type Not Found",
+            str(e),
+            instance=f"/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
+        )
+    except ValueError as e:
+        _raise_problem(
+            400,
+            "Invalid EI Job Request",
+            str(e),
+            instance=f"/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
+        )
+
+
+@router.get("/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}")
+async def get_ei_job(ei_type_id: str, ei_job_id: str) -> Dict[str, object]:
+    """Get one EI job (§5.3.3)."""
+    try:
+        return a1_ei_service.get_ei_job(ei_type_id, ei_job_id)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "EI Job Not Found",
+            str(e),
+            instance=f"/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
+        )
+
+
+@router.delete("/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}", status_code=204)
+async def delete_ei_job(ei_type_id: str, ei_job_id: str):
+    """Delete one EI job (§5.3.5)."""
+    try:
+        a1_ei_service.delete_ei_job(ei_type_id, ei_job_id)
+        return Response(status_code=204)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "EI Job Not Found",
+            str(e),
+            instance=f"/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
+        )
+
+
+@router.get("/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}/status")
+async def get_ei_job_status(ei_type_id: str, ei_job_id: str) -> Dict[str, object]:
+    """Get EI job status resource (§5.3.6)."""
+    try:
+        return a1_ei_service.get_ei_job_status(ei_type_id, ei_job_id)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "EI Job Status Not Found",
+            str(e),
+            instance=f"/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}/status",
+        )
+
+
 def _get_docs_path() -> Optional[Path]:
     """Return configured or default repository docs path."""
     if settings.oran_docs_path:
@@ -353,6 +458,8 @@ async def get_conformance_tests(category_id: str = Query("policy-type-query")) -
         return conformance_harness_service.list_interoperability_a1p_tests()
     if normalized == "interoperability-a1ei":
         return conformance_harness_service.list_interoperability_a1ei_tests()
+    if normalized == "ei-job-operations":
+        return conformance_harness_service.list_ei_job_operations_tests()
     _raise_problem(400, "Unsupported Conformance Category", f"Unsupported category_id: {category_id}")
 
 
@@ -377,6 +484,11 @@ async def run_conformance_category(payload: Optional[Dict[str, object]] = None) 
         )
     if category_id == "interoperability-a1ei":
         return conformance_harness_service.run_interoperability_a1ei_tests(
+            service_registry=a1_service_registry,
+        )
+    if category_id == "ei-job-operations":
+        return conformance_harness_service.run_ei_job_operations_tests(
+            ei_service=a1_ei_service,
             service_registry=a1_service_registry,
         )
     _raise_problem(400, "Unsupported Conformance Category", f"Unsupported category_id: {category_id}")
