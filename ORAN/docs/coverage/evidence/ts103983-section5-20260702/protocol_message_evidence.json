@@ -1,0 +1,26 @@
+{
+  "runId": "ts103983-section5-20260702",
+  "messageEvidence": [
+    {
+      "interface": "A1-P",
+      "resource": "/a1/policytypes/{policyTypeId}/policies/{policyId}",
+      "events": [
+        "create(201)",
+        "update(200)",
+        "delete(204)",
+        "status-after-delete(404)"
+      ]
+    },
+    {
+      "interface": "A1-EI",
+      "resource": "/a1/eitypes/{eiTypeId}/eijobs/{eiJobId}",
+      "events": [
+        "create(201)",
+        "invalid-update(400)",
+        "get(200)",
+        "delete(204)"
+      ]
+    }
+  ],
+  "notes": "Event status codes are validated by targeted section-5 suites for policy lifecycle and EI reconciliation paths."
+}

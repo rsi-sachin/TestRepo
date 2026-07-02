@@ -1,0 +1,28 @@
+{
+  "runId": "ts103983-section5-20260702",
+  "document": "ORAN/docs/ts_103983v040000p.pdf",
+  "sectionScope": "section5",
+  "traceIds": [
+    "ORAN-FTM-001",
+    "ORAN-FTM-002",
+    "ORAN-FTM-003",
+    "ORAN-FTM-004",
+    "ORAN-FTM-016"
+  ],
+  "branch": "feature/ORAN_MVP_1_Py3_13",
+  "environment": {
+    "os": "Windows",
+    "python": "3.13.13",
+    "interpreter": "c:/TestRepo/.venv/Scripts/python.exe"
+  },
+  "testCommandPlan": [
+    "pytest tests/conformance/test_ts103983_section5_a1_functions.py",
+    "pytest tests/module/oran/test_ts103983_section5_module_concurrency.py",
+    "pytest tests/e2e/test_ts103983_section5_reconciliation_e2e.py",
+    "pytest tests/nonfunctional/parameter/test_ts103983_section5_parameter_passing.py",
+    "pytest tests/nonfunctional/memory/test_ts103983_section5_ei_memory_behavior.py",
+    "pytest tests/nonfunctional/load/test_ts103983_section5_ei_load.py",
+    "pytest tests/nonfunctional/stress/test_ts103983_section5_ei_stress.py",
+    "pytest tests/interface/api/test_ts103983_section5_interface_faults.py"
+  ]
+}
