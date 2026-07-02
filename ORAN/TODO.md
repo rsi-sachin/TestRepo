@@ -38,6 +38,24 @@
   - Combined verification run: 107 passed, 0 failed.
   - completion_gate_status: pass
 
+## Task Update: TS 103 987 Annex A OpenAPI Alignment (Strict EI Mode)
+
+- Task: Analyze and implement Annex A of ORAN/docs/ts_103987v040300p.pdf with strict OpenAPI-aligned A1-EI payloads and canonical EI job resource handling.
+- Date completed: 2026-07-02
+- Status: Complete
+- Trace IDs: ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004
+- Implementation summary:
+  - Added canonical Annex A EI job endpoints under /api/oran/a1/eijobs/{ei_job_id} (+ status/delete) while retaining service-aware routing.
+  - Enforced strict Annex A EI payload contracts for EI create/update flows: eiTypeId, jobDefinition, and jobResultUri.
+  - Aligned EI status/result object handling to Annex A canonical fields (eiJobStatus, jobResult) and removed legacy alias behavior from EI model/service contract paths.
+  - Added OpenAPI callback metadata for policy and EI notification/result callbacks on relevant PUT operations.
+  - Updated EI interface, service, and conformance harness tests to validate strict canonical Annex A field usage.
+- Verification status:
+  - Strict-mode focused regression: 38 passed, 0 failed.
+  - completion_gate_status: pass
+- Residual gap:
+  - API deployment path remains application-prefixed (/api/oran/...) rather than exposing standalone server-root paths exactly matching Annex A server URL blocks.
+
 ## Important Document References (Repo Index)
 
 ### Program and planning documents

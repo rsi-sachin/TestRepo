@@ -44,7 +44,8 @@ def test_ei_type_and_job_lifecycle_endpoints() -> None:
     create_response = client.put(
         "/api/oran/a1/eitypes/default/eijobs/ei-job-42",
         json={
-            "ei_payload": {"workload": "baseline"},
+            "eiTypeId": "default",
+            "jobDefinition": {"workload": "baseline"},
             "jobStatusNotificationUri": "https://example.com/ei-status",
             "jobResultUri": "https://example.com/ei-result",
         },
@@ -57,7 +58,11 @@ def test_ei_type_and_job_lifecycle_endpoints() -> None:
     status_response = client.get("/api/oran/a1/eitypes/default/eijobs/ei-job-42/status")
     update_response = client.put(
         "/api/oran/a1/eitypes/default/eijobs/ei-job-42",
-        json={"ei_payload": {"workload": "updated"}},
+        json={
+            "eiTypeId": "default",
+            "jobDefinition": {"workload": "updated"},
+            "jobResultUri": "https://example.com/ei-result",
+        },
     )
     delete_response = client.delete("/api/oran/a1/eitypes/default/eijobs/ei-job-42")
     status_after_delete_response = client.get("/api/oran/a1/eitypes/default/eijobs/ei-job-42/status")
@@ -77,12 +82,43 @@ def test_ei_type_and_job_lifecycle_endpoints() -> None:
     assert list_jobs_response.status_code == 200
     assert "ei-job-42" in list_jobs_response.json()
     assert get_job_response.status_code == 200
-    assert get_job_response.json()["ei_job"]["ei_payload"]["workload"] == "baseline"
+    assert get_job_response.json()["ei_job"]["jobDefinition"]["workload"] == "baseline"
     assert status_response.status_code == 200
-    assert status_response.json()["delivery_status"] == "ACCEPTED"
+    assert status_response.json()["eiJobStatus"] == "ENABLED"
     assert update_response.status_code == 200
     assert delete_response.status_code == 204
     assert status_after_delete_response.status_code == 404
+
+
+def test_annex_a_canonical_ei_job_endpoints() -> None:
+    oran.a1_ei_service._ei_jobs.clear()
+    oran.a1_ei_service._notification_destinations.clear()
+
+    app = FastAPI()
+    app.include_router(oran.router, prefix="/api/oran")
+    client = TestClient(app)
+
+    create_response = client.put(
+        "/api/oran/a1/eijobs/annex-job-1",
+        json={
+            "eiTypeId": "default",
+            "jobDefinition": {"workload": "annex-a"},
+            "jobStatusNotificationUri": "https://example.com/annex-status",
+            "jobResultUri": "https://example.com/annex-result",
+        },
+    )
+    get_response = client.get("/api/oran/a1/eijobs/annex-job-1")
+    status_response = client.get("/api/oran/a1/eijobs/annex-job-1/status")
+    delete_response = client.delete("/api/oran/a1/eijobs/annex-job-1")
+
+    assert create_response.status_code == 201
+    assert create_response.json()["ei_job"]["eiTypeId"] == "default"
+    assert create_response.json()["ei_job"]["jobDefinition"]["workload"] == "annex-a"
+    assert get_response.status_code == 200
+    assert get_response.json()["ei_job"]["jobDefinition"]["workload"] == "annex-a"
+    assert status_response.status_code == 200
+    assert status_response.json()["eiJobStatus"] == "ENABLED"
+    assert delete_response.status_code == 204
 
 
 def test_ei_endpoints_return_problem_details_for_unknown_resources() -> None:
@@ -137,6 +173,11 @@ def test_section6_ei_openapi_definitions_include_problem_details_responses() -> 
     error_response = put_ei_job["responses"]["404"]
     assert "application/problem+json" in error_response["content"]
 
+    put_ei_job_annex = operations["/api/oran/a1/eijobs/{ei_job_id}"]["put"]
+    callbacks = put_ei_job_annex.get("callbacks", {})
+    assert "jobStatusNotification" in callbacks
+    assert "jobResult" in callbacks
+
 
 def test_ei_job_conflict_is_mapped_to_problem_details(monkeypatch) -> None:
     app = FastAPI()
@@ -151,7 +192,9 @@ def test_ei_job_conflict_is_mapped_to_problem_details(monkeypatch) -> None:
     response = client.put(
         "/api/oran/a1/eitypes/default/eijobs/ei-job-conflict",
         json={
-            "ei_payload": {"workload": "conflict"},
+            "eiTypeId": "default",
+            "jobDefinition": {"workload": "conflict"},
+            "jobResultUri": "https://example.com/conflict-result",
         },
     )
 

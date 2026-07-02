@@ -29,7 +29,8 @@ def test_ei_job_lifecycle_create_query_update_delete() -> None:
         "default",
         "job-001",
         {
-            "ei_payload": {"name": "initial"},
+            "eiTypeId": "default",
+            "jobDefinition": {"name": "initial"},
             "jobStatusNotificationUri": "https://consumer.example.com/status",
             "jobResultUri": "https://consumer.example.com/result",
         },
@@ -37,7 +38,11 @@ def test_ei_job_lifecycle_create_query_update_delete() -> None:
     updated_job, was_created_on_update = helper.create_or_replace_ei_job(
         "default",
         "job-001",
-        {"ei_payload": {"name": "updated"}},
+        {
+            "eiTypeId": "default",
+            "jobDefinition": {"name": "updated"},
+            "jobResultUri": "https://consumer.example.com/result",
+        },
     )
 
     assert was_created is True
@@ -45,11 +50,11 @@ def test_ei_job_lifecycle_create_query_update_delete() -> None:
     assert created_job["ei_job_id"] == "job-001"
     assert created_job["ei_job"]["jobStatusNotificationUri"] == "https://consumer.example.com/status"
     assert created_job["ei_job"]["jobResultUri"] == "https://consumer.example.com/result"
-    assert updated_job["ei_job"]["ei_payload"]["name"] == "updated"
+    assert updated_job["ei_job"]["jobDefinition"]["name"] == "updated"
     assert helper.list_ei_job_ids("default") == ["job-001"]
     assert helper.list_ei_job_ids() == ["job-001"]
-    assert helper.get_ei_job("default", "job-001")["ei_job"]["ei_payload"]["name"] == "updated"
-    assert helper.get_ei_job_status("default", "job-001")["delivery_status"] == "ACCEPTED"
+    assert helper.get_ei_job("default", "job-001")["ei_job"]["jobDefinition"]["name"] == "updated"
+    assert helper.get_ei_job_status("default", "job-001")["eiJobStatus"] == "ENABLED"
 
     helper.delete_ei_job("default", "job-001")
 
@@ -61,14 +66,22 @@ def test_ei_job_ids_can_be_listed_without_type_filter() -> None:
     helper._ei_types["secondary"] = {
         "ei_type_id": "secondary",
         "description": "Secondary enrichment job type",
-        "ei_schema": {"type": "object", "required": ["ei_payload"]},
-        "ei_status_schema": {"type": "object", "required": ["ei_job_id", "delivery_status"]},
-        "ei_result_schema": {"type": "object", "required": ["ei_job_id", "result_payload"]},
+        "ei_schema": {"type": "object", "required": ["eiTypeId", "jobDefinition", "jobResultUri"]},
+        "ei_status_schema": {"type": "object", "required": ["eiJobStatus"]},
+        "ei_result_schema": {"type": "object", "required": ["jobResult"]},
         "supports_ei_job_creation": True,
     }
 
-    helper.create_or_replace_ei_job("default", "job-a", {"ei_payload": {"name": "a"}})
-    helper.create_or_replace_ei_job("secondary", "job-b", {"ei_payload": {"name": "b"}})
+    helper.create_or_replace_ei_job(
+        "default",
+        "job-a",
+        {"eiTypeId": "default", "jobDefinition": {"name": "a"}, "jobResultUri": "https://c.example/a"},
+    )
+    helper.create_or_replace_ei_job(
+        "secondary",
+        "job-b",
+        {"eiTypeId": "secondary", "jobDefinition": {"name": "b"}, "jobResultUri": "https://c.example/b"},
+    )
 
     assert helper.list_ei_job_ids() == ["job-a", "job-b"]
     assert helper.list_ei_job_ids("default") == ["job-a"]
@@ -91,7 +104,11 @@ def test_ei_notification_destination_is_cleared_when_omitted_on_replace() -> Non
     helper.create_or_replace_ei_job(
         "default",
         "job-notify-clear",
-        {"ei_payload": {"name": "with-notify"}},
+        {
+            "eiTypeId": "default",
+            "jobDefinition": {"name": "with-notify"},
+            "jobResultUri": "https://consumer.example.com/ei-result",
+        },
         notification_destination="https://consumer.example.com/ei-status",
     )
     assert helper._notification_destinations[key] == "https://consumer.example.com/ei-status"
@@ -99,7 +116,11 @@ def test_ei_notification_destination_is_cleared_when_omitted_on_replace() -> Non
     helper.create_or_replace_ei_job(
         "default",
         "job-notify-clear",
-        {"ei_payload": {"name": "without-notify"}},
+        {
+            "eiTypeId": "default",
+            "jobDefinition": {"name": "without-notify"},
+            "jobResultUri": "https://consumer.example.com/ei-result",
+        },
     )
 
     assert key not in helper._notification_destinations
@@ -132,7 +153,7 @@ def test_notify_ei_job_status_logs_warning_for_non_success_status(
         asyncio.run(
             helper.notify_ei_job_status(
                 "https://consumer.example.com/ei-status",
-                {"ei_job_id": "job-001", "delivery_status": "FAILED"},
+                {"eiJobStatus": "DISABLED"},
             )
         )
 
@@ -163,14 +184,14 @@ def test_notify_ei_job_status_propagates_timeout(
         asyncio.run(
             helper.notify_ei_job_status(
                 "https://consumer.example.com/ei-status",
-                {"ei_job_id": "job-001", "delivery_status": "PENDING"},
+                {"eiJobStatus": "ENABLED"},
             )
         )
 
     assert post_call_count["value"] == 1
 
 
-def test_create_ei_job_rejects_payload_without_required_ei_payload_field() -> None:
+def test_create_ei_job_rejects_payload_without_required_annex_a_fields() -> None:
     helper = A1EnrichmentInformationService(A1ServiceRegistry())
 
     with pytest.raises(ValueError, match="missing required fields"):
@@ -180,8 +201,8 @@ def test_create_ei_job_rejects_payload_without_required_ei_payload_field() -> No
 def test_notify_ei_job_status_rejects_payload_missing_required_fields() -> None:
     helper = A1EnrichmentInformationService(A1ServiceRegistry())
 
-    with pytest.raises(ValueError, match="must include ei_job_id and delivery_status"):
-        asyncio.run(helper.notify_ei_job_status("https://consumer.example.com/ei-status", {"ei_job_id": "x"}))
+    with pytest.raises(ValueError, match="must include eiJobStatus"):
+        asyncio.run(helper.notify_ei_job_status("https://consumer.example.com/ei-status", {"status": "x"}))
 
 
 def test_deliver_ei_job_result_logs_warning_for_non_success_status(
@@ -211,7 +232,7 @@ def test_deliver_ei_job_result_logs_warning_for_non_success_status(
         asyncio.run(
             helper.deliver_ei_job_result(
                 "https://consumer.example.com/ei-result",
-                {"ei_job_id": "job-001", "result_payload": {"quality": "good"}},
+                {"jobResult": {"quality": "good"}},
             )
         )
 
@@ -242,7 +263,7 @@ def test_deliver_ei_job_result_propagates_timeout(
         asyncio.run(
             helper.deliver_ei_job_result(
                 "https://consumer.example.com/ei-result",
-                {"ei_job_id": "job-001", "result_payload": {"quality": "pending"}},
+                {"jobResult": {"quality": "pending"}},
             )
         )
 
@@ -252,5 +273,5 @@ def test_deliver_ei_job_result_propagates_timeout(
 def test_deliver_ei_job_result_rejects_payload_missing_required_fields() -> None:
     helper = A1EnrichmentInformationService(A1ServiceRegistry())
 
-    with pytest.raises(ValueError, match="must include ei_job_id and result_payload"):
-        asyncio.run(helper.deliver_ei_job_result("https://consumer.example.com/ei-result", {"ei_job_id": "x"}))
+    with pytest.raises(ValueError, match="must include jobResult"):
+        asyncio.run(helper.deliver_ei_job_result("https://consumer.example.com/ei-result", {"wrong": "x"}))

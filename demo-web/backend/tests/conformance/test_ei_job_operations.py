@@ -63,7 +63,15 @@ def test_ei_job_operations_unknown_type_check_passes() -> None:
 
 def test_ei_job_operations_deleted_job_is_no_longer_queryable() -> None:
     service = A1EnrichmentInformationService(A1ServiceRegistry())
-    service.create_or_replace_ei_job("default", "delete-me", {"ei_payload": {"name": "x"}})
+    service.create_or_replace_ei_job(
+        "default",
+        "delete-me",
+        {
+            "eiTypeId": "default",
+            "jobDefinition": {"name": "x"},
+            "jobResultUri": "https://example.com/delete-me",
+        },
+    )
     service.delete_ei_job("default", "delete-me")
 
     try:

@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 from app.models.a1_service import A1ServiceDefinition, A1ServiceType
 from app.models.oran import EiJobObject, EiJobResultObject, EiJobStatusObject, EiTypeObject, SpecType
+from app.services.a1_errors import A1ConflictError
 from app.services.a1_service_registry import A1ServiceRegistry
 
 logger = logging.getLogger(__name__)
@@ -29,15 +30,15 @@ class A1EnrichmentInformationService:
                 description="Default enrichment job type",
                 ei_schema={
                     "type": "object",
-                    "required": ["ei_payload"],
+                    "required": ["eiTypeId", "jobDefinition", "jobResultUri"],
                 },
                 ei_status_schema={
                     "type": "object",
-                    "required": ["ei_job_id", "delivery_status"],
+                    "required": ["eiJobStatus"],
                 },
                 ei_result_schema={
                     "type": "object",
-                    "required": ["ei_job_id", "result_payload"],
+                    "required": ["jobResult"],
                 },
                 supports_ei_job_creation=True,
             )
@@ -106,6 +107,23 @@ class A1EnrichmentInformationService:
                 raise KeyError(f"EI type not found: {ei_type_id}")
             return sorted(job_id for (stored_type, job_id) in self._ei_jobs if stored_type == ei_type_id)
 
+    def _resolve_key_by_job_id(self, ei_job_id: str) -> Tuple[str, str]:
+        matching = [key for key in self._ei_jobs if key[1] == ei_job_id]
+        if not matching:
+            raise KeyError(f"EI job not found for eiJobId={ei_job_id}")
+        if len(matching) > 1:
+            raise A1ConflictError(
+                f"Multiple EI jobs found for eiJobId={ei_job_id}; include eiTypeId to disambiguate"
+            )
+        return matching[0]
+
+    @staticmethod
+    def _normalize_job_definition(ei_job: Dict[str, Any]) -> Dict[str, Any]:
+        job_definition = ei_job.get("jobDefinition")
+        if not isinstance(job_definition, dict):
+            raise ValueError("EI job payload field jobDefinition must be an object")
+        return deepcopy(job_definition)
+
     def create_or_replace_ei_job(
         self,
         ei_type_id: str,
@@ -123,8 +141,26 @@ class A1EnrichmentInformationService:
             if not isinstance(ei_job, dict):
                 raise ValueError("EI job payload must be an object")
 
+            payload_ei_type_id = str(ei_job.get("eiTypeId", ""))
+            if not payload_ei_type_id:
+                raise ValueError("EI job payload missing required fields: eiTypeId")
+            if payload_ei_type_id != ei_type_id:
+                raise ValueError(
+                    "eiTypeId in EI job payload does not match requested EI type"
+                )
+
+            existing_conflicts = [
+                key for key in self._ei_jobs if key[1] == ei_job_id and key[0] != ei_type_id
+            ]
+            if existing_conflicts:
+                raise A1ConflictError(
+                    f"EI job id already exists under another eiTypeId: {ei_job_id}"
+                )
+
             required_fields = self._ei_type_schema(ei_type).get("required", [])
-            missing_fields = [field for field in required_fields if field not in ei_job]
+            missing_fields = [
+                field for field in required_fields if ei_job.get(field) in (None, "")
+            ]
             if missing_fields:
                 raise ValueError(
                     "EI job payload missing required fields: " + ", ".join(sorted(missing_fields))
@@ -136,6 +172,9 @@ class A1EnrichmentInformationService:
             merged_job = deepcopy(existing_job)
             merged_job.update(deepcopy(ei_job))
 
+            merged_job["eiTypeId"] = payload_ei_type_id
+            merged_job["jobDefinition"] = self._normalize_job_definition(merged_job)
+
             if notification_destination is not None and "jobStatusNotificationUri" not in merged_job:
                 merged_job["jobStatusNotificationUri"] = notification_destination
             elif "jobStatusNotificationUri" not in ei_job:
@@ -145,7 +184,8 @@ class A1EnrichmentInformationService:
                 merged_job["jobResultUri"] = existing_job["jobResultUri"]
 
             job_model = EiJobObject(
-                ei_payload=merged_job.get("ei_payload", {}),
+                eiTypeId=payload_ei_type_id,
+                jobDefinition=merged_job.get("jobDefinition", {}),
                 jobStatusNotificationUri=merged_job.get("jobStatusNotificationUri"),
                 jobResultUri=merged_job.get("jobResultUri"),
             )
@@ -164,12 +204,33 @@ class A1EnrichmentInformationService:
                 self._notification_destinations.pop(key, None)
 
             self._ei_jobs[key]["ei_status"] = EiJobStatusObject(
-                ei_job_id=ei_job_id,
-                delivery_status="ACCEPTED",
-                delivery_reason="EI job accepted for evaluation by A1-EI Producer",
-                feedback=[],
+                eiJobStatus="ENABLED",
             ).model_dump(mode="json")
             return deepcopy(self._ei_jobs[key]), was_created
+
+    def get_ei_job_by_id(self, ei_job_id: str) -> Dict[str, Any]:
+        """Get an EI job by EI job identifier only (Annex A canonical path)."""
+        with self._lock:
+            key = self._resolve_key_by_job_id(ei_job_id)
+            return deepcopy(self._ei_jobs[key])
+
+    def delete_ei_job_by_id(self, ei_job_id: str) -> None:
+        """Delete an EI job by EI job identifier only (Annex A canonical path)."""
+        with self._lock:
+            key = self._resolve_key_by_job_id(ei_job_id)
+            if key not in self._ei_jobs:
+                raise KeyError(f"EI job not found for eiJobId={ei_job_id}")
+            del self._ei_jobs[key]
+            self._notification_destinations.pop(key, None)
+
+    def get_ei_job_status_by_id(self, ei_job_id: str) -> Dict[str, Any]:
+        """Get EI job status by EI job identifier only (Annex A canonical path)."""
+        with self._lock:
+            key = self._resolve_key_by_job_id(ei_job_id)
+            ei_job = self._ei_jobs.get(key)
+            if ei_job is None:
+                raise KeyError(f"EI job status not found for eiJobId={ei_job_id}")
+            return deepcopy(ei_job["ei_status"])
 
     def get_ei_job(self, ei_type_id: str, ei_job_id: str) -> Dict[str, Any]:
         """Get an EI job by type and job id."""
@@ -222,10 +283,10 @@ class A1EnrichmentInformationService:
         try:
             payload = EiJobStatusObject.model_validate(status_obj)
         except ValidationError as exc:
-            raise ValueError("EI status payload must include ei_job_id and delivery_status") from exc
+            raise ValueError("EI status payload must include eiJobStatus") from exc
 
-        if not payload.ei_job_id or not payload.delivery_status:
-            raise ValueError("EI status payload must include ei_job_id and delivery_status")
+        if not payload.eiJobStatus:
+            raise ValueError("EI status payload must include eiJobStatus")
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -246,10 +307,10 @@ class A1EnrichmentInformationService:
         try:
             payload = EiJobResultObject.model_validate(result_obj)
         except ValidationError as exc:
-            raise ValueError("EI result payload must include ei_job_id and result_payload") from exc
+            raise ValueError("EI result payload must include jobResult") from exc
 
-        if not payload.ei_job_id:
-            raise ValueError("EI result payload must include ei_job_id and result_payload")
+        if payload.jobResult in (None, {}):
+            raise ValueError("EI result payload must include jobResult")
 
         async with httpx.AsyncClient() as client:
             response = await client.post(

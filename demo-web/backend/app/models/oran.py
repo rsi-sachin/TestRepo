@@ -231,7 +231,8 @@ class EiTypeObject(BaseModel):
 class EiJobObject(BaseModel):
     """Representation of an EI job resource."""
 
-    ei_payload: Dict[str, Any] = Field(..., description="EI job payload")
+    eiTypeId: str = Field(..., description="EI type identifier")
+    jobDefinition: Dict[str, Any] = Field(..., description="EI job definition payload")
     jobStatusNotificationUri: Optional[str] = Field(
         None,
         description="Callback URI for EI job status notifications",
@@ -245,17 +246,13 @@ class EiJobObject(BaseModel):
 class EiJobStatusObject(BaseModel):
     """Representation of EI job status feedback."""
 
-    ei_job_id: str = Field(..., description="EI job identifier")
-    delivery_status: str = Field(..., description="Delivery status value")
-    delivery_reason: Optional[str] = Field(None, description="Human-readable delivery reason")
-    feedback: List[str] = Field(default_factory=list, description="Optional feedback messages")
+    eiJobStatus: str = Field(..., description="Annex A EI job status value")
 
 
 class EiJobResultObject(BaseModel):
     """Representation of an EI job result payload."""
 
-    ei_job_id: str = Field(..., description="EI job identifier")
-    result_payload: Dict[str, Any] = Field(..., description="Delivered result payload")
+    jobResult: Dict[str, Any] = Field(..., description="Delivered EI job result payload")
 
 
 # ======== PHASE 2 MODELS: Spec Parsing Pipeline ========

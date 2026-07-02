@@ -893,12 +893,14 @@ class ConformanceHarnessService:
         callback_status_uri = "https://near-rt.example.com/ei-status"
         callback_result_uri = "https://near-rt.example.com/ei-result"
         create_job = {
-            "ei_payload": {"job": "demo"},
+            "eiTypeId": ei_type_id,
+            "jobDefinition": {"job": "demo"},
             "jobStatusNotificationUri": callback_status_uri,
             "jobResultUri": callback_result_uri,
         }
         update_job = {
-            "ei_payload": {"job": "updated"},
+            "eiTypeId": ei_type_id,
+            "jobDefinition": {"job": "updated"},
             "jobStatusNotificationUri": callback_status_uri,
             "jobResultUri": callback_result_uri,
         }
@@ -939,12 +941,20 @@ class ConformanceHarnessService:
             ei_service._ei_types["secondary"] = {
                 "ei_type_id": "secondary",
                 "description": "Secondary enrichment job type",
-                "ei_schema": {"type": "object", "required": ["ei_payload"]},
-                "ei_status_schema": {"type": "object", "required": ["ei_job_id", "delivery_status"]},
-                "ei_result_schema": {"type": "object", "required": ["ei_job_id", "result_payload"]},
+                "ei_schema": {"type": "object", "required": ["eiTypeId", "jobDefinition", "jobResultUri"]},
+                "ei_status_schema": {"type": "object", "required": ["eiJobStatus"]},
+                "ei_result_schema": {"type": "object", "required": ["jobResult"]},
                 "supports_ei_job_creation": True,
             }
-            ei_service.create_or_replace_ei_job("secondary", f"secondary-{run_id}", {"ei_payload": {"job": "secondary"}})
+            ei_service.create_or_replace_ei_job(
+                "secondary",
+                f"secondary-{run_id}",
+                {
+                    "eiTypeId": "secondary",
+                    "jobDefinition": {"job": "secondary"},
+                    "jobResultUri": "https://near-rt.example.com/secondary-result",
+                },
+            )
             aggregated_job_ids = {}
             for current_type in ei_service.list_ei_type_ids():
                 aggregated_job_ids[current_type] = ei_service.list_ei_job_ids(current_type)
@@ -966,7 +976,7 @@ class ConformanceHarnessService:
 
         try:
             queried_job = ei_service.get_ei_job(ei_type_id, ei_job_id)
-            query_job_ok = queried_job["ei_job"] == create_job
+            query_job_ok = all(queried_job["ei_job"].get(key) == value for key, value in create_job.items())
             query_job_detail = "Query EI job returned the stored EiJobObject"
         except Exception as exc:  # pragma: no cover - defensive
             query_job_ok = False
@@ -982,7 +992,9 @@ class ConformanceHarnessService:
         try:
             _, was_created = ei_service.create_or_replace_ei_job(ei_type_id, ei_job_id, update_job)
             updated_job = ei_service.get_ei_job(ei_type_id, ei_job_id)
-            update_ok = was_created is False and updated_job["ei_job"] == update_job
+            update_ok = was_created is False and all(
+                updated_job["ei_job"].get(key) == value for key, value in update_job.items()
+            )
             update_detail = "Update EI job replaced the stored EiJobObject" if update_ok else "Update EI job did not replace the stored object"
         except Exception as exc:  # pragma: no cover - defensive
             update_ok = False
@@ -1019,7 +1031,7 @@ class ConformanceHarnessService:
 
         try:
             status_obj = ei_service.get_ei_job_status(ei_type_id, ei_job_id)
-            query_status_ok = status_obj["ei_job_id"] == ei_job_id
+            query_status_ok = status_obj["eiJobStatus"] in {"ENABLED", "DISABLED"}
             query_status_detail = "Query EI job status returned an EiJobStatusObject"
         except Exception as exc:  # pragma: no cover - defensive
             query_status_ok = False
@@ -1057,7 +1069,7 @@ class ConformanceHarnessService:
                 a1_enrichment_module,
                 lambda: ei_service.deliver_ei_job_result(
                     callback_result_uri,
-                    {"ei_job_id": ei_job_id, "result_payload": {"score": 0.95}},
+                    {"jobResult": {"score": 0.95}},
                 ),
             )
             result_ok = result_ok and ei_service.get_ei_job(ei_type_id, ei_job_id)["ei_job"]["jobResultUri"] == callback_result_uri
@@ -1108,8 +1120,16 @@ class ConformanceHarnessService:
 
         ei_type_id = ei_type_ids[0] if ei_type_ids else "default"
         ei_job_id = f"ei-job-{run_id}"
-        create_job = {"ei_payload": {"job": "demo"}}
-        update_job = {"ei_payload": {"job": "updated"}}
+        create_job = {
+            "eiTypeId": ei_type_id,
+            "jobDefinition": {"job": "demo"},
+            "jobResultUri": "https://near-rt.example.com/eij-demo-result",
+        }
+        update_job = {
+            "eiTypeId": ei_type_id,
+            "jobDefinition": {"job": "updated"},
+            "jobResultUri": "https://near-rt.example.com/eij-demo-result",
+        }
 
         try:
             _, was_created = ei_service.create_or_replace_ei_job(ei_type_id, ei_job_id, create_job)
@@ -1190,7 +1210,7 @@ class ConformanceHarnessService:
             results.append(
                 {
                     "test_id": "TC-A1-EI-007",
-                    "status": "PASS" if status_obj["ei_job_id"] == ei_job_id else "FAIL",
+                    "status": "PASS" if status_obj.get("eiJobStatus") in {"ENABLED", "DISABLED"} else "FAIL",
                     "detail": "EI job status object returned",
                 }
             )
