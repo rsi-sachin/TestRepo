@@ -252,6 +252,15 @@ async def list_ei_types() -> List[str]:
     return a1_ei_service.list_ei_type_ids()
 
 
+@router.get("/a1/eijobs", response_model=List[str])
+async def list_ei_job_ids(ei_type_id: Optional[str] = Query(None, alias="eiTypeId")) -> List[str]:
+    """List EI job identifiers, optionally filtered by EI type (§5.3.4.2)."""
+    try:
+        return a1_ei_service.list_ei_job_ids(ei_type_id)
+    except KeyError as e:
+        _raise_problem(404, "EI Type Not Found", str(e), instance="/a1/eijobs")
+
+
 @router.get("/a1/eitypes/{ei_type_id}")
 async def get_ei_type(ei_type_id: str) -> Dict[str, object]:
     """Get a single EI type definition (§5.3.1)."""
@@ -262,7 +271,7 @@ async def get_ei_type(ei_type_id: str) -> Dict[str, object]:
 
 
 @router.get("/a1/eitypes/{ei_type_id}/eijobs", response_model=List[str])
-async def list_ei_job_ids(ei_type_id: str) -> List[str]:
+async def list_ei_job_ids_for_type(ei_type_id: str) -> List[str]:
     """List EI job identifiers for a given EI type (§5.3.3)."""
     try:
         return a1_ei_service.list_ei_job_ids(ei_type_id)
@@ -280,6 +289,8 @@ async def create_or_replace_ei_job(
 ) -> Dict[str, object]:
     """Create or update an EI job (§5.3.2/§5.3.4)."""
     try:
+        if notification_destination is not None and "jobStatusNotificationUri" not in ei_job:
+            ei_job = {**ei_job, "jobStatusNotificationUri": notification_destination}
         result, was_created = a1_ei_service.create_or_replace_ei_job(
             ei_type_id=ei_type_id,
             ei_job_id=ei_job_id,

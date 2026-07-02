@@ -35,3 +35,9 @@
 - For every new ORAN test case created or modified, include an explicit specification reference in the test case itself.
 - Prefer a `spec_reference` field in the returned payload or test metadata, and keep it aligned with the exact source section(s).
 - If a test case spans multiple source sections, include all relevant section references in the test name, metadata, or assertions.
+
+## Pull Request URL Requests
+
+- When the user asks to create or share a pull request URL, always also provide:
+  - a proposed PR title
+  - a concise PR summary suitable for the PR description or opening note

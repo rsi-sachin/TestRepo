@@ -42,9 +42,15 @@ def test_ei_type_and_job_lifecycle_endpoints() -> None:
     get_type_response = client.get("/api/oran/a1/eitypes/default")
     create_response = client.put(
         "/api/oran/a1/eitypes/default/eijobs/ei-job-42",
-        json={"ei_payload": {"workload": "baseline"}},
+        json={
+            "ei_payload": {"workload": "baseline"},
+            "jobStatusNotificationUri": "https://example.com/ei-status",
+            "jobResultUri": "https://example.com/ei-result",
+        },
         params={"notificationDestination": "https://example.com/ei-callback"},
     )
+    list_all_jobs_response = client.get("/api/oran/a1/eijobs")
+    list_jobs_by_type_response = client.get("/api/oran/a1/eijobs", params={"eiTypeId": "default"})
     list_jobs_response = client.get("/api/oran/a1/eitypes/default/eijobs")
     get_job_response = client.get("/api/oran/a1/eitypes/default/eijobs/ei-job-42")
     status_response = client.get("/api/oran/a1/eitypes/default/eijobs/ei-job-42/status")
@@ -61,6 +67,12 @@ def test_ei_type_and_job_lifecycle_endpoints() -> None:
     assert get_type_response.json()["ei_type_id"] == "default"
     assert create_response.status_code == 201
     assert "Location" in create_response.headers
+    assert create_response.json()["ei_job"]["jobStatusNotificationUri"] == "https://example.com/ei-status"
+    assert create_response.json()["ei_job"]["jobResultUri"] == "https://example.com/ei-result"
+    assert list_all_jobs_response.status_code == 200
+    assert list_all_jobs_response.json() == ["ei-job-42"]
+    assert list_jobs_by_type_response.status_code == 200
+    assert list_jobs_by_type_response.json() == ["ei-job-42"]
     assert list_jobs_response.status_code == 200
     assert "ei-job-42" in list_jobs_response.json()
     assert get_job_response.status_code == 200
