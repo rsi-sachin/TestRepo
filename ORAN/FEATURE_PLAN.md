@@ -1,6 +1,6 @@
 # ORAN Feature Plan
 
-Last updated: 2026-07-02 (aligned with TS 103 987 Section 6 progress and latest regression evidence)
+Last updated: 2026-07-02 (aligned with TS 103 987 Section 6 plus Annex A strict EI progress and latest regression evidence)
 Primary objective: Deliver a conformance-first ORAN implementation for System Integrators with module-separated code ownership, module-level traceability, and auditable conformance coverage.
 
 This is the main guiding document for planning and execution.
@@ -90,7 +90,7 @@ A module can move to Complete only when all three conditions pass:
 
 | Module | Status | Conformance Coverage | Evidence Anchor |
 |---|---|---|---|
-| Non-RT RIC + A1 Interface | In Progress | TS 103 989 section 4.2.1/4.2.2 conformance passing; TS 103 989 section 7 interoperability passing; TS 103 987 section 6 API-definition alignment verified | ORAN-FTM-001, ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004, ORAN-FTM-013, ORAN-FTM-014 |
+| Non-RT RIC + A1 Interface | In Progress | TS 103 989 section 4.2.1/4.2.2 conformance passing; TS 103 989 section 7 interoperability passing; TS 103 987 section 6 API-definition alignment verified; TS 103 987 Annex A strict EI payload/resource alignment verified | ORAN-FTM-001, ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004, ORAN-FTM-013, ORAN-FTM-014 |
 | O1 Interface | TBD | Not started | Trace row pending in ORAN/docs/feature_traceability_map.md |
 | E2 Interface | TBD | Not started | Trace row pending in ORAN/docs/feature_traceability_map.md |
 | Near-RT RIC Simulator | TBD | Not started | Trace row pending in ORAN/docs/feature_traceability_map.md |
@@ -104,6 +104,9 @@ A module can move to Complete only when all three conditions pass:
 - TS 103 987 Section 6 API-definition alignment completed for A1 policy/EI/API router scope.
 - Interface regression: 20 passed, 0 failed.
 - Combined interface + conformance verification: 107 passed, 0 failed.
+- TS 103 987 Annex A strict EI alignment completed for canonical EI job payload/resource handling and callback metadata exposure.
+- Strict-mode focused regression: 38 passed, 0 failed.
+- Residual deployment-path gap remains: application-prefixed API roots are still used for runtime exposure.
 - See ORAN/docs/feature_traceability_map.md rows: ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004.
 
 ## 5. Already In Place vs TBD
