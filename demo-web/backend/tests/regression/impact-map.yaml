@@ -82,3 +82,31 @@ changed_artifacts:
       - tests/conformance/test_execution_evidence.py::test_a1_api_response_includes_json_content_type_header
       - tests/conformance/test_execution_evidence.py::test_policy_creation_response_includes_location_header
     perspectives: [conformance, dut-readiness, simulator-capability, execution-evidence]
+
+  demo-web/backend/tests/conformance/test_ts103983_section4_principles.py:
+    source_sections: ["TS 103 983 section 4.1", "TS 103 983 section 4.2", "TS 103 983 section 4.3", "TS 103 983 section 4.4"]
+    tests:
+      - tests/conformance/test_ts103983_section4_principles.py::test_section_4_1_service_architecture_exposes_a1_p_and_a1_ei
+      - tests/conformance/test_ts103983_section4_principles.py::test_section_4_1_services_map_to_ts_103_983_principles
+      - tests/conformance/test_ts103983_section4_principles.py::test_section_4_1_2_topology_stubs_are_available
+      - tests/conformance/test_ts103983_section4_principles.py::test_section_4_2_policy_and_ei_ownership_operations_exist
+      - tests/conformance/test_ts103983_section4_principles.py::test_section_4_2_status_feedback_paths_exist
+      - tests/conformance/test_ts103983_section4_principles.py::test_section_4_2_policy_lifecycle_behaves_end_to_end
+      - tests/conformance/test_ts103983_section4_principles.py::test_section_4_2_ei_job_lifecycle_behaves_end_to_end
+      - tests/conformance/test_ts103983_section4_principles.py::test_section_4_3_and_4_4_ei_delivery_capabilities_exist
+      - tests/conformance/test_ts103983_section4_principles.py::test_section_4_4_problem_details_contract_for_unknown_resources
+      - tests/conformance/test_ts103983_section4_principles.py::test_section_4_spec_catalog_includes_ts_103_983
+    perspectives: [conformance, architecture, capability, traceability]
+
+  demo-web/backend/tests/conformance/test_ts103983_section4_topology_contracts.py:
+    source_sections: ["TS 103 983 section 4.1.2", "TS 103 983 Figure 4.1.2-1"]
+    tests:
+      - tests/conformance/test_ts103983_section4_topology_contracts.py::test_figure_4_1_2_1_topology_artifact_contains_required_entities
+      - tests/conformance/test_ts103983_section4_topology_contracts.py::test_figure_4_1_2_1_topology_artifact_contains_required_interfaces
+      - tests/conformance/test_ts103983_section4_topology_contracts.py::test_o1_interface_contract_accepts_get_without_payload
+      - tests/conformance/test_ts103983_section4_topology_contracts.py::test_o1_interface_contract_rejects_set_without_payload
+      - tests/conformance/test_ts103983_section4_topology_contracts.py::test_e2_interface_contract_accepts_subscription_with_event_trigger
+      - tests/conformance/test_ts103983_section4_topology_contracts.py::test_e2_interface_contract_rejects_indication_without_ran_function_id
+      - tests/conformance/test_ts103983_section4_topology_contracts.py::test_topology_modules_expose_stub_health_for_o1_e2_and_info_sources
+      - tests/conformance/test_ts103983_section4_topology_contracts.py::test_topology_artifact_mvp_profile_aligns_with_stubbed_modules
+    perspectives: [conformance, topology, contract, traceability]
