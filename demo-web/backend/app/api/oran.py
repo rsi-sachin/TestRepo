@@ -35,6 +35,7 @@ from app.services.catalog_generator_service import CatalogGeneratorService
 from app.services.a1_service_registry import A1ServiceRegistry
 from app.services.a1_policy_service import A1PolicyService
 from app.services.a1_enrichment_service import A1EnrichmentInformationService
+from app.services.a1_errors import A1ConflictError
 from app.services.rule_learner_service import RuleLearnerService
 from app.repositories.rule_pack_repository import RulePackRepository
 from app.models.rule_pack import RulePack, RulePackSummary
@@ -98,7 +99,45 @@ def _raise_problem(status_code: int, title: str, detail: str, instance: str | No
     raise HTTPException(
         status_code=status_code,
         detail=_problem(status_code=status_code, title=title, detail=detail, instance=instance),
+        headers={"Content-Type": "application/problem+json"},
     )
+
+
+_A1_PROBLEM_RESPONSE_DEFINITIONS: Dict[int, Dict[str, object]] = {
+    400: {
+        "description": "Bad Request",
+        "model": ProblemDetails,
+        "content": {"application/problem+json": {}},
+    },
+    404: {
+        "description": "Not Found",
+        "model": ProblemDetails,
+        "content": {"application/problem+json": {}},
+    },
+    405: {
+        "description": "Method Not Allowed",
+        "model": ProblemDetails,
+        "content": {"application/problem+json": {}},
+    },
+    409: {
+        "description": "Conflict",
+        "model": ProblemDetails,
+        "content": {"application/problem+json": {}},
+    },
+    500: {
+        "description": "Internal Server Error",
+        "model": ProblemDetails,
+        "content": {"application/problem+json": {}},
+    },
+}
+
+
+def _a1_problem_responses(*status_codes: int) -> Dict[int, Dict[str, object]]:
+    return {
+        status_code: _A1_PROBLEM_RESPONSE_DEFINITIONS[status_code]
+        for status_code in status_codes
+        if status_code in _A1_PROBLEM_RESPONSE_DEFINITIONS
+    }
 
 
 @router.get("/services", response_model=A1ServiceRegistryResponse)
@@ -128,7 +167,11 @@ async def list_policy_types() -> List[str]:
     return a1_policy_service.list_policy_type_ids()
 
 
-@router.get("/a1/policytypes/{policy_type_id}", response_model=PolicyTypeObject)
+@router.get(
+    "/a1/policytypes/{policy_type_id}",
+    response_model=PolicyTypeObject,
+    responses=_a1_problem_responses(404, 405),
+)
 async def get_policy_type(policy_type_id: str):
     """Get a single policy type object."""
     try:
@@ -137,7 +180,11 @@ async def get_policy_type(policy_type_id: str):
         _raise_problem(404, "Policy Type Not Found", str(e), instance=f"/a1/policytypes/{policy_type_id}")
 
 
-@router.get("/a1/policytypes/{policy_type_id}/policies", response_model=List[str])
+@router.get(
+    "/a1/policytypes/{policy_type_id}/policies",
+    response_model=List[str],
+    responses=_a1_problem_responses(404, 405),
+)
 async def list_policy_ids(policy_type_id: str) -> List[str]:
     """List all policy identifiers for a given policy type (§5.2.4.2)."""
     try:
@@ -154,6 +201,7 @@ async def list_policy_ids(policy_type_id: str) -> List[str]:
 @router.put(
     "/a1/policytypes/{policy_type_id}/policies/{policy_id}",
     response_model=PolicyObject,
+    responses=_a1_problem_responses(400, 404, 405, 409, 500),
 )
 async def create_or_replace_policy(
     policy_type_id: str,
@@ -191,6 +239,13 @@ async def create_or_replace_policy(
             str(e),
             instance=f"/a1/policytypes/{policy_type_id}/policies/{policy_id}",
         )
+    except A1ConflictError as e:
+        _raise_problem(
+            409,
+            "Policy Conflict",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+        )
     except ValueError as e:
         _raise_problem(
             400,
@@ -200,7 +255,11 @@ async def create_or_replace_policy(
         )
 
 
-@router.get("/a1/policytypes/{policy_type_id}/policies/{policy_id}", response_model=PolicyObject)
+@router.get(
+    "/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+    response_model=PolicyObject,
+    responses=_a1_problem_responses(404, 405),
+)
 async def get_policy(policy_type_id: str, policy_id: str):
     """Get one policy object."""
     try:
@@ -214,7 +273,11 @@ async def get_policy(policy_type_id: str, policy_id: str):
         )
 
 
-@router.delete("/a1/policytypes/{policy_type_id}/policies/{policy_id}", status_code=204)
+@router.delete(
+    "/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+    status_code=204,
+    responses=_a1_problem_responses(404, 405),
+)
 async def delete_policy(policy_type_id: str, policy_id: str):
     """Delete one policy object."""
     try:
@@ -232,6 +295,7 @@ async def delete_policy(policy_type_id: str, policy_id: str):
 @router.get(
     "/a1/policytypes/{policy_type_id}/policies/{policy_id}/status",
     response_model=PolicyStatusObject,
+    responses=_a1_problem_responses(404, 405),
 )
 async def get_policy_status(policy_type_id: str, policy_id: str):
     """Get policy status resource."""
@@ -252,7 +316,11 @@ async def list_ei_types() -> List[str]:
     return a1_ei_service.list_ei_type_ids()
 
 
-@router.get("/a1/eijobs", response_model=List[str])
+@router.get(
+    "/a1/eijobs",
+    response_model=List[str],
+    responses=_a1_problem_responses(404, 405),
+)
 async def list_ei_job_ids(ei_type_id: Optional[str] = Query(None, alias="eiTypeId")) -> List[str]:
     """List EI job identifiers, optionally filtered by EI type (§5.3.4.2)."""
     try:
@@ -261,7 +329,11 @@ async def list_ei_job_ids(ei_type_id: Optional[str] = Query(None, alias="eiTypeI
         _raise_problem(404, "EI Type Not Found", str(e), instance="/a1/eijobs")
 
 
-@router.get("/a1/eitypes/{ei_type_id}")
+@router.get(
+    "/a1/eitypes/{ei_type_id}",
+    response_model=Dict[str, object],
+    responses=_a1_problem_responses(404, 405),
+)
 async def get_ei_type(ei_type_id: str) -> Dict[str, object]:
     """Get a single EI type definition (§5.3.1)."""
     try:
@@ -270,7 +342,11 @@ async def get_ei_type(ei_type_id: str) -> Dict[str, object]:
         _raise_problem(404, "EI Type Not Found", str(e), instance=f"/a1/eitypes/{ei_type_id}")
 
 
-@router.get("/a1/eitypes/{ei_type_id}/eijobs", response_model=List[str])
+@router.get(
+    "/a1/eitypes/{ei_type_id}/eijobs",
+    response_model=List[str],
+    responses=_a1_problem_responses(404, 405),
+)
 async def list_ei_job_ids_for_type(ei_type_id: str) -> List[str]:
     """List EI job identifiers for a given EI type (§5.3.3)."""
     try:
@@ -279,7 +355,11 @@ async def list_ei_job_ids_for_type(ei_type_id: str) -> List[str]:
         _raise_problem(404, "EI Type Not Found", str(e), instance=f"/a1/eitypes/{ei_type_id}/eijobs")
 
 
-@router.put("/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}")
+@router.put(
+    "/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
+    response_model=Dict[str, object],
+    responses=_a1_problem_responses(400, 404, 405, 409, 500),
+)
 async def create_or_replace_ei_job(
     ei_type_id: str,
     ei_job_id: str,
@@ -310,6 +390,13 @@ async def create_or_replace_ei_job(
             str(e),
             instance=f"/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
         )
+    except A1ConflictError as e:
+        _raise_problem(
+            409,
+            "EI Job Conflict",
+            str(e),
+            instance=f"/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
+        )
     except ValueError as e:
         _raise_problem(
             400,
@@ -319,7 +406,11 @@ async def create_or_replace_ei_job(
         )
 
 
-@router.get("/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}")
+@router.get(
+    "/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
+    response_model=Dict[str, object],
+    responses=_a1_problem_responses(404, 405),
+)
 async def get_ei_job(ei_type_id: str, ei_job_id: str) -> Dict[str, object]:
     """Get one EI job (§5.3.3)."""
     try:
@@ -333,7 +424,11 @@ async def get_ei_job(ei_type_id: str, ei_job_id: str) -> Dict[str, object]:
         )
 
 
-@router.delete("/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}", status_code=204)
+@router.delete(
+    "/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
+    status_code=204,
+    responses=_a1_problem_responses(404, 405),
+)
 async def delete_ei_job(ei_type_id: str, ei_job_id: str):
     """Delete one EI job (§5.3.5)."""
     try:
@@ -348,7 +443,11 @@ async def delete_ei_job(ei_type_id: str, ei_job_id: str):
         )
 
 
-@router.get("/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}/status")
+@router.get(
+    "/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}/status",
+    response_model=Dict[str, object],
+    responses=_a1_problem_responses(404, 405),
+)
 async def get_ei_job_status(ei_type_id: str, ei_job_id: str) -> Dict[str, object]:
     """Get EI job status resource (§5.3.6)."""
     try:

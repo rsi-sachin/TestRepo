@@ -20,6 +20,24 @@
   - Focused section-7 regression: 26 passed, 0 failed.
   - completion_gate_status: pass
 
+## Task Update: TS 103 987 Section 6 API Definition Alignment
+
+- Task: Analyze and implement Section 6 of `ORAN/docs/ts_103987v040300p.pdf` to update existing A1 API definitions and close runtime/API-schema coverage gaps.
+- Date completed: 2026-07-02
+- Status: Complete
+- Trace IDs: ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004
+- Implementation summary:
+  - Applied Section 6 API-definition response modeling to A1-P and A1-EI routes, including documented 4xx/5xx response contracts and ProblemDetails media type exposure.
+  - Standardized ProblemDetails response media type handling (`application/problem+json`) for A1 error responses.
+  - Added runtime method-constraint coverage (405) and conflict-mapping coverage (409) at interface layer.
+  - Added/updated interface tests for policy and EI APIs to validate OpenAPI response metadata and runtime error behavior.
+  - Preserved existing conformance semantics (policy/EI update behavior) while keeping explicit 409 mapping tests via controlled conflict injection.
+- Verification status:
+  - Interface API regression: 20 passed, 0 failed.
+  - Conformance regression: 87 passed, 0 failed.
+  - Combined verification run: 107 passed, 0 failed.
+  - completion_gate_status: pass
+
 ## Important Document References (Repo Index)
 
 ### Program and planning documents

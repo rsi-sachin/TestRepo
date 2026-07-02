@@ -133,7 +133,7 @@ class A1EnrichmentInformationService:
             key = (ei_type_id, ei_job_id)
             was_created = key not in self._ei_jobs
             existing_job = deepcopy(self._ei_jobs[key]["ei_job"]) if key in self._ei_jobs else {}
-            merged_job = existing_job
+            merged_job = deepcopy(existing_job)
             merged_job.update(deepcopy(ei_job))
 
             if notification_destination is not None and "jobStatusNotificationUri" not in merged_job:

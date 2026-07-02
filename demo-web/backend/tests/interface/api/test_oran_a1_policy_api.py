@@ -3,11 +3,20 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app.api import oran
+from app.models.a1_policy_models import PolicyTypeObject
+from app.services.a1_errors import A1ConflictError
 
 
 @pytest.fixture
 def client() -> TestClient:
     # Keep interface tests isolated by clearing shared in-memory stores.
+    oran.a1_policy_service._policy_types.clear()
+    oran.a1_policy_service._policy_types["default"] = PolicyTypeObject(
+        policy_type_id="default",
+        policy_schema={"type": "object", "required": ["policy_statements"]},
+        policy_status_schema={"type": "object", "required": ["policy_id", "enforcement_status"]},
+        supports_policy_creation=True,
+    )
     oran.a1_policy_service._policies.clear()
     oran.a1_policy_service._policy_status.clear()
     oran.a1_policy_service._notification_destinations.clear()
@@ -69,6 +78,7 @@ def test_policy_not_found_returns_problem_details_shape(client: TestClient) -> N
     response = client.get("/api/oran/a1/policytypes/default/policies/missing")
 
     assert response.status_code == 404
+    assert response.headers["content-type"].startswith("application/problem+json")
     detail = response.json()["detail"]
     assert detail["title"] == "Policy Not Found"
     assert detail["status"] == 404
@@ -98,6 +108,7 @@ def test_delete_unknown_policy_returns_not_found_problem_details(client: TestCli
     response = client.delete("/api/oran/a1/policytypes/default/policies/not-there")
 
     assert response.status_code == 404
+    assert response.headers["content-type"].startswith("application/problem+json")
     detail = response.json()["detail"]
     assert detail["title"] == "Policy Not Found"
     assert detail["status"] == 404
@@ -143,3 +154,59 @@ def test_get_unknown_policy_type_returns_404(
     assert detail["status"] == 404
     assert detail["title"] == "Policy Type Not Found"
     assert "nonexistent-type" in detail["instance"]
+
+
+def test_section6_policy_openapi_definitions_include_problem_details_responses(
+    client: TestClient,
+) -> None:
+    """Section 6 requires documented 4xx/5xx and method constraints for A1-P resources."""
+    schema = client.get("/openapi.json").json()
+    operations = schema["paths"]
+
+    put_policy = operations["/api/oran/a1/policytypes/{policy_type_id}/policies/{policy_id}"]["put"]
+    assert "400" in put_policy["responses"]
+    assert "404" in put_policy["responses"]
+    assert "405" in put_policy["responses"]
+    assert "409" in put_policy["responses"]
+
+    get_policy_type = operations["/api/oran/a1/policytypes/{policy_type_id}"]["get"]
+    assert "405" in get_policy_type["responses"]
+
+    policy_not_found_response = put_policy["responses"]["404"]
+    assert (
+        "application/problem+json"
+        in policy_not_found_response["content"]
+    )
+
+
+def test_policy_conflict_is_mapped_to_problem_details(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    def _raise_conflict(*args, **kwargs):
+        raise A1ConflictError("simulated policy conflict")
+
+    monkeypatch.setattr(oran.a1_policy_service, "create_or_replace_policy", _raise_conflict)
+
+    response = client.put(
+        "/api/oran/a1/policytypes/default/policies/policy-conflict",
+        json={
+            "scope": {"scope_type": "cell", "scope_value": "002"},
+            "policy_statements": [{"id": "stmt-c", "action": "allow"}],
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.headers["content-type"].startswith("application/problem+json")
+    detail = response.json()["detail"]
+    assert detail["title"] == "Policy Conflict"
+    assert detail["status"] == 409
+
+
+def test_policy_resources_reject_unsupported_methods_with_405(client: TestClient) -> None:
+    list_delete = client.request("DELETE", "/api/oran/a1/policytypes")
+    status_put = client.request(
+        "PUT",
+        "/api/oran/a1/policytypes/default/policies/policy-m/status",
+        json={},
+    )
+
+    assert list_delete.status_code == 405
+    assert status_put.status_code == 405
