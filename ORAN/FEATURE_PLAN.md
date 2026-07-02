@@ -1,7 +1,26 @@
 # ORAN Feature Plan
 
-Last updated: 2026-06-30 (status refresh after Section 4.2.1/4.2.2 completion)
+Last updated: 2026-07-02 (aligned with TS 103 987 Section 6 progress and latest regression evidence)
 Primary objective: Deliver a conformance-first ORAN implementation for System Integrators with module-separated code ownership, module-level traceability, and auditable conformance coverage.
+
+This is the main guiding document for planning and execution.
+Detailed feature/module/component trace metadata is maintained in:
+
+- ORAN/docs/feature_traceability_map.md
+
+## 0. Document Usage Model (Single-Entry Navigation)
+
+Use this file as the primary entry point for planning, status interpretation, and execution sequencing.
+
+- Plan-level decisions, delivery gates, and module sequencing are defined here.
+- Detailed trace rows (Trace ID, code scope, source clauses, verification evidence) are defined in ORAN/docs/feature_traceability_map.md.
+- Sprint/task execution details are tracked in ORAN/TODO.md.
+
+Update rule:
+
+1. Update ORAN/docs/feature_traceability_map.md first for any feature/module/component implementation delta.
+2. Reflect only summarized status deltas in this FEATURE_PLAN.md.
+3. Keep references bidirectional so a reader can navigate from this file to trace rows and evidence quickly.
 
 ## 1. Scope and Architecture Baseline
 
@@ -58,7 +77,7 @@ A module can move to Complete only when all three conditions pass:
 - DUT readiness checks implemented and passing
 - Simulator capability verification implemented and passing
 - Evidence collector and validator implemented and passing
-- TS 103 989 section 4.2.1 and 4.2.2 conformance suite (30 tests) passing
+- TS 103 989 section 4.2.1 and 4.2.2 conformance suite passing
 
 ### O1 and E2 hard gates (this phase)
 
@@ -71,14 +90,21 @@ A module can move to Complete only when all three conditions pass:
 
 | Module | Status | Conformance Coverage | Evidence Anchor |
 |---|---|---|---|
-| Non-RT RIC + A1 Interface | In Progress | TS 103 989 section 4.2.1/4.2.2 executable conformance implemented and passing (30 tests); broader module completion pending | ORAN-FTM-001,002,003,004,013 |
-| O1 Interface | TBD | Not started | ORAN-FTM-015 |
-| E2 Interface | TBD | Not started | ORAN-FTM-014 |
-| Near-RT RIC Simulator | TBD | Not started | ORAN-FTM-016 |
-| E2 Nodes Simulator | TBD | Not started | ORAN-FTM-016 |
-| RAN User Intent Simulator | TBD | Not started | ORAN-FTM-016 |
-| Internal/External Info Sources Simulator | TBD | Not started | ORAN-FTM-017 |
-| Conformance Harness | Complete | DUT readiness, simulator capability verification, and evidence checks implemented; conformance suites passing | ORAN-FTM-018, ORAN-FTM-013 |
+| Non-RT RIC + A1 Interface | In Progress | TS 103 989 section 4.2.1/4.2.2 conformance passing; TS 103 989 section 7 interoperability passing; TS 103 987 section 6 API-definition alignment verified | ORAN-FTM-001, ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004, ORAN-FTM-013, ORAN-FTM-014 |
+| O1 Interface | TBD | Not started | Trace row pending in ORAN/docs/feature_traceability_map.md |
+| E2 Interface | TBD | Not started | Trace row pending in ORAN/docs/feature_traceability_map.md |
+| Near-RT RIC Simulator | TBD | Not started | Trace row pending in ORAN/docs/feature_traceability_map.md |
+| E2 Nodes Simulator | TBD | Not started | Trace row pending in ORAN/docs/feature_traceability_map.md |
+| RAN User Intent Simulator | TBD | Not started | Trace row pending in ORAN/docs/feature_traceability_map.md |
+| Internal/External Info Sources Simulator | TBD | Not started | Trace row pending in ORAN/docs/feature_traceability_map.md |
+| Conformance Harness | Complete | DUT readiness, simulator capability verification, and evidence checks implemented; conformance suites passing | ORAN-FTM-013, ORAN-FTM-014 |
+
+### Current verified snapshot (from latest trace updates)
+
+- TS 103 987 Section 6 API-definition alignment completed for A1 policy/EI/API router scope.
+- Interface regression: 20 passed, 0 failed.
+- Combined interface + conformance verification: 107 passed, 0 failed.
+- See ORAN/docs/feature_traceability_map.md rows: ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004.
 
 ## 5. Already In Place vs TBD
 
@@ -135,7 +161,16 @@ Each matrix row must include source section references extracted through skill-a
 - Failing gates: list of blockers with owner
 - Evidence artifact links: logs, reports, and test IDs
 
-## 9. Deployment Target
+## 9. Cross-Reference Index
+
+- Strategic execution plan: ORAN/FEATURE_PLAN.md (this document)
+- Trace row details and verification mapping: ORAN/docs/feature_traceability_map.md
+- Sprint/task execution log: ORAN/TODO.md
+- Coverage and policy artifacts:
+  - ORAN/docs/coverage/
+  - ORAN/docs/test-policy/
+
+## 10. Deployment Target
 
 - Development: Docker Compose
 - Production: single-node VM
