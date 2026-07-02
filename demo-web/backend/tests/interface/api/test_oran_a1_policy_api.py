@@ -26,16 +26,30 @@ def test_list_a1_services_contract(client: TestClient) -> None:
     assert any(service["service_type"] == "A1-P" for service in payload["services"])
 
 
+def test_service_role_boundary_for_a1p_and_a1ei(client: TestClient) -> None:
+    a1p = client.get("/api/oran/services/A1-P")
+    a1ei = client.get("/api/oran/services/A1-EI")
+
+    assert a1p.status_code == 200
+    assert a1ei.status_code == 200
+
+    a1p_payload = a1p.json()
+    a1ei_payload = a1ei.json()
+
+    assert a1p_payload["service"]["consumer_role"]["label"] == "A1-P Consumer"
+    assert a1p_payload["service"]["producer_role"]["label"] == "A1-P Producer"
+    assert a1ei_payload["service"]["consumer_role"]["label"] == "A1-EI Consumer"
+    assert a1ei_payload["service"]["producer_role"]["label"] == "A1-EI Producer"
+
+
 def test_policy_lifecycle_endpoints(client: TestClient) -> None:
     create_response = client.put(
         "/api/oran/a1/policytypes/default/policies/policy-42",
         json={
-            "policy": {
-                "scope": {"scope_type": "cell", "scope_value": "001"},
-                "policy_statements": [{"id": "stmt-1", "action": "allow"}],
-            },
-            "notification_destination": "https://example.com/callback",
+            "scope": {"scope_type": "cell", "scope_value": "001"},
+            "policy_statements": [{"id": "stmt-1", "action": "allow"}],
         },
+        params={"notificationDestination": "https://example.com/callback"},
     )
     assert create_response.status_code == 201
 
@@ -59,6 +73,34 @@ def test_policy_not_found_returns_problem_details_shape(client: TestClient) -> N
     assert detail["title"] == "Policy Not Found"
     assert detail["status"] == 404
     assert detail["instance"] == "/a1/policytypes/default/policies/missing"
+
+
+def test_policy_status_after_delete_returns_not_found_problem_details(client: TestClient) -> None:
+    client.put(
+        "/api/oran/a1/policytypes/default/policies/delete-status-check",
+        json={
+            "scope": {"scope_type": "cell", "scope_value": "001"},
+            "policy_statements": [{"id": "stmt-del", "action": "allow"}],
+        },
+        params={"notificationDestination": "https://example.com/callback"},
+    )
+
+    delete_response = client.delete("/api/oran/a1/policytypes/default/policies/delete-status-check")
+    status_response = client.get("/api/oran/a1/policytypes/default/policies/delete-status-check/status")
+
+    assert delete_response.status_code == 204
+    assert status_response.status_code == 404
+    detail = status_response.json()["detail"]
+    assert detail["title"] == "Policy Status Not Found"
+
+
+def test_delete_unknown_policy_returns_not_found_problem_details(client: TestClient) -> None:
+    response = client.delete("/api/oran/a1/policytypes/default/policies/not-there")
+
+    assert response.status_code == 404
+    detail = response.json()["detail"]
+    assert detail["title"] == "Policy Not Found"
+    assert detail["status"] == 404
 
 
 def test_invalid_notification_destination_is_rejected(client: TestClient) -> None:

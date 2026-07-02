@@ -1,0 +1,54 @@
+﻿{
+    "runId":  "s5-20260701112651",
+    "generatedAt":  "2026-07-01T11:26:54.0475536+05:30",
+    "exchanges":  [
+                      {
+                          "testCaseId":  "TC-A1-EI-API-001",
+                          "exchangeId":  "ex-001",
+                          "response":  {
+                                           "body":  {
+                                                        "result":  "created"
+                                                    },
+                                           "headers":  {
+                                                           "Content-Type":  "application/json"
+                                                       },
+                                           "statusCode":  201
+                                       },
+                          "request":  {
+                                          "method":  "PUT",
+                                          "body":  {
+                                                       "ei_payload":  {
+                                                                          "workload":  "baseline"
+                                                                      }
+                                                   },
+                                          "headers":  {
+                                                          "Content-Type":  "application/json"
+                                                      },
+                                          "uri":  "/api/oran/a1/eitypes/default/eijobs/ei-job-42"
+                                      }
+                      },
+                      {
+                          "testCaseId":  "TC-A1-EI-API-002",
+                          "exchangeId":  "ex-002",
+                          "response":  {
+                                           "body":  {
+                                                        "delivery_status":  "ACCEPTED",
+                                                        "ei_job_id":  "ei-job-42"
+                                                    },
+                                           "headers":  {
+                                                           "Content-Type":  "application/json"
+                                                       },
+                                           "statusCode":  200
+                                       },
+                          "request":  {
+                                          "method":  "GET",
+                                          "body":  null,
+                                          "headers":  {
+
+                                                      },
+                                          "uri":  "/api/oran/a1/eitypes/default/eijobs/ei-job-42/status"
+                                      }
+                      }
+                  ],
+    "note":  "Protocol/message evidence derived from deterministic API assertions in focused section-5 closure run."
+}

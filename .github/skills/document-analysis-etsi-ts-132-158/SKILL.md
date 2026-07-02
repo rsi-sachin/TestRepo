@@ -48,6 +48,8 @@ Extract and interpret ETSI TS 132 158 content to:
 
 Before converting extracted standards guidance to source code, this skill must:
 
+0. Map findings to Trace IDs in `ORAN/docs/feature_traceability_map.md` before proposing code changes.
+
 1. Read `ORAN/docs/feature_traceability_map.md`.
 2. Resolve pattern/conformance recommendations to one or more Trace IDs.
 3. Restrict generated file targets to mapped `Code Scope` entries.
@@ -71,6 +73,7 @@ verification_targets:
 Hard gate:
 
 - Do not emit source code unless `selected_trace_ids` is non-empty and resolved against `ORAN/docs/feature_traceability_map.md`.
+- Do not propose code changes unless findings are mapped to Trace IDs in `ORAN/docs/feature_traceability_map.md`.
 
 ## Document Context
 **Document:** ETSI TS 132 158 - 3GPP Design Patterns  

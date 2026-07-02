@@ -34,4 +34,51 @@ changed_artifacts:
     tests:
       - tests/module/oran/test_a1_service_flow.py::test_a1_service_helpers_share_registry_contract
       - tests/feature/test_a1_service_selection_feature.py::test_service_selection_metadata_for_a1_p_and_a1_ei
-    perspectives: [module, feature]
+      - tests/conformance/test_non_rt_ric_dut_readiness.py::test_non_rt_ric_dut_has_a1_ei_producer_role_defined
+      - tests/conformance/test_non_rt_ric_dut_readiness.py::test_non_rt_ric_dut_a1_ei_producer_service_is_reachable
+      - tests/conformance/test_non_rt_ric_dut_readiness.py::test_non_rt_ric_dut_a1_ei_service_carries_ei_type_resource_domain
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_ei_consumer_service_is_defined_in_registry
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_ei_consumer_has_ei_type_query_resource_domain
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_ei_consumer_has_ei_job_resource_domain
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_ei_consumer_has_notifications_resource_domain
+    perspectives: [module, feature, conformance]
+
+  demo-web/backend/tests/conformance/:
+    source_sections: ["TS 103 989 §4.2.1", "TS 103 989 §4.2.2.0", "TS 103 989 §4.2.2.1", "TS 103 989 §4.2.2.2"]
+    trace_id: ORAN-FTM-013
+    tests:
+      - tests/conformance/test_non_rt_ric_dut_readiness.py::test_non_rt_ric_dut_has_a1_p_consumer_role_defined
+      - tests/conformance/test_non_rt_ric_dut_readiness.py::test_non_rt_ric_dut_a1_p_consumer_can_initiate_policy_procedures
+      - tests/conformance/test_non_rt_ric_dut_readiness.py::test_non_rt_ric_dut_has_a1_ei_producer_role_defined
+      - tests/conformance/test_non_rt_ric_dut_readiness.py::test_non_rt_ric_dut_a1_ei_producer_service_is_reachable
+      - tests/conformance/test_non_rt_ric_dut_readiness.py::test_non_rt_ric_dut_supports_at_least_one_agreed_policy_type
+      - tests/conformance/test_non_rt_ric_dut_readiness.py::test_non_rt_ric_dut_agreed_policy_type_permits_policy_creation
+      - tests/conformance/test_non_rt_ric_dut_readiness.py::test_non_rt_ric_dut_agreed_policy_type_has_policy_schema
+      - tests/conformance/test_non_rt_ric_dut_readiness.py::test_non_rt_ric_dut_agreed_policy_type_has_status_schema
+      - tests/conformance/test_non_rt_ric_dut_readiness.py::test_non_rt_ric_dut_a1_ei_service_carries_ei_type_resource_domain
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_p_producer_can_enable_policy_type
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_p_producer_can_disable_policy_type
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_p_producer_returns_201_on_policy_creation
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_p_producer_returns_200_on_policy_update
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_p_producer_responds_with_failure_404_for_unknown_policy
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_p_producer_responds_with_failure_404_for_unknown_policy_type
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_p_producer_has_notify_policy_status_capability
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_p_producer_notify_signature_accepts_destination_and_status
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_p_producer_policy_type_schema_enables_content_validation
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_rejects_policy_with_missing_required_statements
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_ei_consumer_service_is_defined_in_registry
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_ei_consumer_has_ei_type_query_resource_domain
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_ei_consumer_has_ei_job_resource_domain
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_a1_ei_consumer_has_notifications_resource_domain
+      - tests/conformance/test_simulator_capabilities.py::test_simulator_has_both_http_client_and_server_capabilities
+      - tests/conformance/test_execution_evidence.py::test_a1_policy_service_has_logger_configured
+      - tests/conformance/test_execution_evidence.py::test_a1_policy_service_logger_records_notification_warnings
+      - tests/conformance/test_execution_evidence.py::test_a1_operations_return_deterministic_status_codes
+      - tests/conformance/test_execution_evidence.py::test_error_response_carries_complete_problem_details_for_missing_policy
+      - tests/conformance/test_execution_evidence.py::test_error_response_carries_complete_problem_details_for_missing_policy_type
+      - tests/conformance/test_execution_evidence.py::test_policy_status_carries_enforcement_status_after_creation
+      - tests/conformance/test_execution_evidence.py::test_policy_status_carries_enforcement_reason_as_verdict_detail
+      - tests/conformance/test_execution_evidence.py::test_policy_status_object_model_has_enforcement_reason_field
+      - tests/conformance/test_execution_evidence.py::test_a1_api_response_includes_json_content_type_header
+      - tests/conformance/test_execution_evidence.py::test_policy_creation_response_includes_location_header
+    perspectives: [conformance, dut-readiness, simulator-capability, execution-evidence]

@@ -12,6 +12,12 @@ related-skills:
   - document-analysis-a1gap
 configuration:
   ask-user-for-mode: true
+  post-analysis-handoff:
+    target-skill: post-analysis-test-policy-orchestration
+    trigger: "after analysis completes and the user requests implementation, testing, or coverage closure"
+    fail-closed-if-skipped: true
+    confirmation-required: true
+    confirmation-rule: "Always set the handoff target to post-analysis-test-policy-orchestration, but do not dispatch the handoff until the user explicitly confirms."
   supported-modes:
     - single
     - dependencies
@@ -30,6 +36,9 @@ traceability:
     - mapped_todo_sections
     - mapped_code_scope
     - verification_targets
+    - post_analysis_handoff_status
+    - post_analysis_handoff_target
+    - post_analysis_handoff_reason
   code-generation-gate: "Do not generate source code unless selected_trace_ids is non-empty and resolved against ORAN/docs/feature_traceability_map.md."
 ---
 
@@ -48,11 +57,22 @@ Extract and interpret A1TD specification content to:
 
 Before converting extracted data-model knowledge to source code, this skill must:
 
+0. Map findings to Trace IDs in `ORAN/docs/feature_traceability_map.md` before proposing code changes.
+
 1. Read `ORAN/docs/feature_traceability_map.md`.
 2. Resolve extracted entities/fields/constraints to one or more Trace IDs.
 3. Restrict generated file targets to mapped `Code Scope` entries.
 4. Produce verification work from mapped `Verification` entries.
 5. Block code generation if no traceable mapping exists.
+
+## Post-Analysis Handoff Rules
+
+When the analysis result is complete and the request continues into implementation/testing, this skill must:
+
+1. Invoke `post-analysis-test-policy-orchestration` as a formal post-step.
+2. Pass the trace-mapped implementation plan, selected Trace IDs, mapped code scope, and verification targets.
+3. Keep the handoff fail-closed if the plan is incomplete or cannot be dispatched.
+4. Record `post_analysis_handoff_status`, `post_analysis_handoff_target`, and `post_analysis_handoff_reason` in the analysis output.
 
 Required conversion payload fields:
 
@@ -69,6 +89,7 @@ verification_targets:
 Hard gate:
 
 - Do not emit source code unless `selected_trace_ids` is non-empty and resolved against `ORAN/docs/feature_traceability_map.md`.
+- Do not propose code changes unless findings are mapped to Trace IDs in `ORAN/docs/feature_traceability_map.md`.
 
 ## Document Context
 **Document:** A1 Technical Data Model (A1TD)  

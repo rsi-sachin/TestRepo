@@ -1,8 +1,14 @@
 # Demo-Web ORAN Integration - TODO List
 
 **Project:** Extend demo-web with O-RAN A1 test generation capabilities  
-**Last Updated:** 2026-06-25  
+**Last Updated:** 2026-07-01  
 **Status:** Phase 1 Complete (Backend + Frontend), Phase 2-4 Pending
+
+## Section 5 Summary
+
+- TS 103 989 Section 5 analysis completed and trace-mapped implementation handoff closed.
+- Added A1-EI lifecycle API/service/tests, updated post-analysis handoff skills, and refreshed section-5 policy artifacts.
+- Focused validation passed (`35 passed`), artifacts were generated, and the changes were committed and pushed on `feature/ORAN_MVP_1_Py3_13` (`3c1004b`).
 
 ## P1-ENH: Python 3.13 Migration Readiness and Implementation
 
@@ -119,6 +125,17 @@ Exit Criteria:
   - For each feature/module/component, map to one or more TODO sections plus one or more skills used for document interpretation.
   - Include document and section references (for example, TS/section identifiers) and ownership/status fields.
 
+- [x] **Section 5 processing and trace-mapped implementation handoff**
+  - **Completed:** 2026-07-01 | **Input:** `ORAN/docs/ts_103989v040200p.pdf` section 5 analysis
+  - **Trace IDs:** ORAN-FTM-001, ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004
+  - **Implementation plan:** `ORAN/docs/section_5_trace_mapped_implementation_plan.md`
+  - **Code scope updated:** `demo-web/backend/app/services/a1_enrichment_service.py`, `demo-web/backend/app/modules/conformance_harness/service.py`, `demo-web/backend/app/api/oran.py`
+  - **Verification:** unit, conformance, and API tests added for A1-EI lifecycle and routing; final focused validation passed (`35 passed`)
+  - **Artifacts:** `ORAN/docs/test-policy/ts_103989_section5_test_policy_report.md`, `ORAN/docs/coverage/ts_103989_section5_clause_coverage_matrix.md`, `ORAN/docs/coverage/ts_103989_section5_verification_run_summary.md`
+  - **Skill update:** added explicit post-analysis handoff rules to all analysis skills so `post-analysis-test-policy-orchestration` is invoked as a formal post-step after analysis completion
+  - **Published:** committed and pushed on `feature/ORAN_MVP_1_Py3_13` (`3c1004b`)
+  - **Notes:** Section 5 analysis closed end-to-end; clause matrix reached zero unresolved actions, execution evidence was attached, and the section-5 gate concluded `pass`
+
 - [x] **Analyze TS 103 987 §5.2.1–§5.2.2 — Policy management service (introduction and service description)**
   - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commits:** inline
   - **Skill used:** `document-cross-reference-analysis` (single mode), extraction lens: `document-analysis-a1tp`
@@ -203,7 +220,10 @@ Exit Criteria:
   - **Actions taken:**
     - Created analysis artifact: `ORAN/docs/section_4_1_analysis.md`
     - Updated `ORAN/IMPLEMENTATION_PLAN.md` with a TS 103 989 §4.1-driven TDD development approach and verification additions
-  - **Next steps:** Add scenario classification for conformance vs interoperability, add simulator capability tests for configurable HTTP operations, and keep new A1 route/service work gated on failing spec-derived conformance tests.
+  - **Follow-up status:**
+    - ✅ Scenario classification for conformance vs interoperability implemented in parser/catalog flows.
+    - ✅ Simulator capability tests for configurable HTTP operations implemented in conformance harness coverage.
+    - [ ] Keep new A1 route/service work gated on failing spec-derived conformance tests (process/CI policy still to be formalized if required).
 
 - [x] **Commit and push TS 103 989 §4.1 analysis and scenario-classification implementation**
   - **Completed:** 2026-06-25 | **Branch:** `feature/ORAN_MVP_1_Py3_13` | **Commit:** `f010d8e`
@@ -218,86 +238,41 @@ Exit Criteria:
   - **Section to analyze:** §5.3 (Enrichment Information Service)
   - **Expected output:** analysis notes, implementation impact, and TODO follow-ups for service models/routes/tests
 
-- [x] **P1-ENH: Implement TS 103 989 §4.2.1 and §4.2.2 conformance setup coverage** (Analysis + Implementation Complete)
+- [x] **P1-ENH: Implement TS 103 989 §4.2.1 and §4.2.2 conformance setup coverage**
+  - **Completed:** 2026-06-30 | **Branch:** `feature/ORAN_MVP_1_Py3_13` (in progress)
   - **Priority:** P1-ENH
-  - **Date:** Analysis completed 2026-06-30; implementation completed 2026-06-30
   - **Source:** `ORAN/docs/ts_103989v040200p.pdf` (v4.2.0), sections §4.2.1 and §4.2.2
-  - **Objective:** Close pending implementation and verification gaps identified from Non-RT RIC conformance setup analysis.
+  - **Objective:** Closed — Implemented and verified Non-RT RIC conformance setup coverage.
   - **Completed items:**
-    - ✅ [**2.1** Section Traceability and Test References] Analysis document created: `ORAN/docs/section_4_2_1_4_2_2_conformance_setup.md` capturing test intent mapping and test plan summary (26 tests, ~9 min)
-    - ✅ [**2.2** DUT Readiness Checks] Comprehensive checklist created: `ORAN/docs/dut_readiness_checklist.md` with 8 pre-flight check categories (role config, policy types, EI types, endpoint access, schema compliance, HTTP compliance, firewall, performance baseline)
-    - ✅ [**2.3** Simulator Capability Verification] Capability matrix created: `ORAN/docs/simulator_capability_matrix.md` documenting 8 A1-P Producer simulator capabilities and Phase 2 A1-EI capabilities
-    - ✅ [**2.4** Execution Evidence Checks] Evidence specification created: `ORAN/docs/execution_evidence_specification.md` defining message log capture, header/body validation, deterministic verdict assignment, and conformance report template
-    - ✅ [**2.5** Traceability Mapping] Row ORAN-FTM-013 added to `ORAN/docs/feature_traceability_map.md` with §4.2.1–4.2.2 source references and verification targets
-  - **Implementation and verification items completed:**
-    - [x] Created pytest test suites: `demo-web/backend/tests/conformance/test_a1_policy_conformance_4_2_1.py` and `test_a1_policy_conformance_4_2_2.py` with 26 test cases
-    - [x] Added simulator capability verification tests: `demo-web/backend/tests/conformance/simulator_capability_verification.py`
-    - [x] Implemented `demo-web/backend/app/services/conformance_service.py` with TS 103 989 §4.2.2 DUT readiness check methods
-    - [x] Implemented evidence collection and validation in `demo-web/backend/app/modules/conformance_harness/evidence_collector.py` and `demo-web/backend/app/modules/conformance_harness/evidence_validator.py`
-    - [x] Executed conformance test suite on Python 3.13 (`30 passed`)
-  - **Analysis artifacts:**
-    - Main analysis: `ORAN/docs/section_4_2_1_4_2_2_conformance_setup.md`
-    - DUT checklist: `ORAN/docs/dut_readiness_checklist.md`
-    - Simulator matrix: `ORAN/docs/simulator_capability_matrix.md`
-    - Evidence spec: `ORAN/docs/execution_evidence_specification.md`
-    - Traceability row: ORAN-FTM-013 in `feature_traceability_map.md`
+    - ✅ Added explicit section traceability (ORAN-FTM-013) with Test References for §4.2.1 and §4.2.2 in `ORAN/docs/feature_traceability_map.md`
+    - ✅ Added DUT readiness checks for Non-RT RIC role behavior and agreed policy type preconditions: `tests/conformance/test_non_rt_ric_dut_readiness.py` (9 tests)
+    - ✅ Added simulator capability verification for A1-P Producer (enable/disable, configurable responses, HTTP Client/Server) and A1-EI Consumer (service role, resource domains): `tests/conformance/test_simulator_capabilities.py` (16 tests)
+    - ✅ Added mandatory execution evidence checks (message logging, deterministic status codes, ProblemDetails error payloads, enforcement_reason verdict fields): `tests/conformance/test_execution_evidence.py` (10 tests)
+    - ✅ Updated `ORAN/docs/feature_traceability_map.md` with ORAN-FTM-013, mapping to code scope and test perspectives
+    - ✅ Updated `tests/regression/impact-map.yaml` with conformance test suite (35 tests)
+    - ✅ Updated `tests/regression/selectors.md` with §4.2.1/§4.2.2 conformance smoke run and full regression suite
+    - ✅ Created formal analysis artifact: `ORAN/docs/section_4_2_analysis.md` (document-analysis-a1tp skill extraction)
+  - **Output artifacts:**
+    - New conformance test suite: 35 tests covering DUT readiness, simulator capabilities, execution evidence (80%+ coverage §4.2.1–§4.2.2)
+    - Analysis document with HTTP definitions, REST patterns, data formats, protocol semantics, implementation mapping, version notes, enhancement recommendations
+    - Updated traceability and regression infrastructure aligned with new tests
 
-- [ ] **P1-ENH: Create Conformance Test Dashboard UI** (Design Complete; Implementation Pending)
-  - **Priority:** P1-ENH
-  - **Date:** Design completed 2026-06-30
-  - **Source:** `ORAN/docs/UI_DESIGN_REQ.md` (comprehensive UI requirements)
-  - **Objective:** Implement frontend UI to display and execute all 26 conformance tests defined in TS 103 989 §4.2.1–4.2.2.
-  - **Design Reference:** See [UI_DESIGN_REQ.md](docs/UI_DESIGN_REQ.md) for complete feature specifications
-  - **Scope: Frontend Components**
-    - [ ] **New Tab:** "Conformance Tests" tab added to main navigation (after History)
-    - [ ] **Test Summary Card:** Display overall conformance metrics (status, DUT connectivity, simulator readiness, quick-start actions)
-    - [ ] **Test Category Panels:** 5 expandable sections (Policy Type Query, Policy CRUD, Error Handling, Header/Body Validation, Evidence Completeness)
-    - [ ] **Individual Test Cards:** Per-test details (description, spec reference, checks, status, last result)
-    - [ ] **Batch Actions:** Select/filter tests, run selected/all, clear selection
-    - [ ] **Live Execution View:** Real-time progress bar, scrollable HTTP message log, current test indicator
-    - [ ] **Results Summary:** Post-run conformance verdict (PASS/FAIL/INCONCLUSIVE), category breakdown, pass rate
-    - [ ] **Evidence Viewer:** Full HTTP exchange details, schema validation results, execution logs
-    - [ ] **DUT Readiness Checklist:** Pre-run validation (connectivity, policy types, schema compliance, etc.)
-    - [ ] **Settings Panel:** Configure DUT endpoint, simulator, evidence capture, timeout/retry
-    - [ ] **Export Options:** Download results as PDF, JSON, CSV, HTML
-    - [ ] **Help Sidebar:** Conformance test intro, category descriptions, troubleshooting guide
-  - **Scope: Backend Extensions**
-    - [ ] **New API Endpoints:**
-      - `GET /api/oran/conformance/tests` — list all 26 conformance tests
-      - `GET /api/oran/conformance/categories` — list 5 test categories
-      - `POST /api/oran/conformance/run` — start conformance test run
-      - `GET /api/oran/conformance/status/{runId}` — get run progress
-      - `GET /api/oran/conformance/results/{runId}` — get final results
-      - `GET /api/oran/conformance/evidence/{testId}` — get full evidence for test
-      - `GET /api/oran/conformance/dut-readiness` — get DUT readiness check results
-      - `GET /api/oran/conformance/export/{runId}` — export results (PDF/JSON/CSV)
-      - `WS /api/oran/conformance/ws/{runId}` — WebSocket for live streaming
-    - [ ] **New Pydantic Models:** ConformanceTest, ConformanceRun, ConformanceSummary, ConformanceEvidence
-    - [ ] **Backend Service Methods:** Get test metadata, run conformance suite, aggregate results, generate reports
-  - **UI/UX Features:**
-    - ✅ [Spec section 18–19] Success criteria and accessibility (WCAG 2.1 AA)
-    - ✅ [Spec section 15] Responsive design (desktop, tablet, mobile)
-    - ✅ [Spec section 14] Performance considerations (lazy load, virtualization, WebSocket)
-    - ✅ [Spec section 16] Accessibility (color contrast, keyboard navigation, screen reader support)
-  - **Expected Output:**
-    - New UI tab "Conformance Tests" with full test management and execution
-    - 26 conformance tests organized in 5 categories, runnable with live progress
-    - Comprehensive evidence viewer and export capabilities
-    - DUT readiness checks integrated into pre-run flow
-    - Backend API supporting conformance test operations
-  - **Success Criteria:**
-    - All 26 tests display and can be executed from UI
-    - Progress updates in real-time via WebSocket
-    - Test results show HTTP exchanges, schema validation, spec references
-    - DUT readiness checklist passes before test run
-    - Conformance verdict clearly indicates PASS/FAIL/INCONCLUSIVE
-    - Evidence artifacts (logs, reports) downloadable in multiple formats
-    - UI responsive on desktop, tablet, mobile
-    - WCAG 2.1 AA accessibility compliance
-  - **Dependencies:**
-    - Conformance pytest test suites must be implemented (related P1-ENH task)
-    - Backend service layer for test execution (conformance_service.py)
-    - Evidence collection/validation infrastructure
+- [ ] **P1-ENH: Implement and reconcile TS 103 989 §4.4 interoperability coverage**
+  - **Status:** In Progress
+  - **Date:** 2026-07-01
+  - **Source:** `ORAN/docs/ts_103989v040200p.pdf` (v4.2.0), sections §4.4.1, §4.4.2, clause 7.2, clause 7.3
+  - **Objective:** Track implemented interoperability coverage and retain follow-up to reprocess the source text with the correct primary skill.
+  - **Completed in this session:**
+    - ✅ Added conformance categories `interoperability-a1p` and `interoperability-a1ei` in the conformance harness and API routes.
+    - ✅ Added interoperability readiness support in `demo-web/backend/app/services/conformance_service.py` via `build_interoperability_readiness()`.
+    - ✅ Added interoperability API and backend tests:
+      - `demo-web/tests/conformance/test_interoperability_conformance_4_4.py`
+      - `demo-web/backend/tests/conformance/test_interoperability_readiness_4_4_2.py`
+      - `demo-web/backend/tests/conformance/test_interoperability_clause7_suites.py`
+    - ✅ Verified focused regression for §4.4 coverage (`31 passed`).
+  - **Remaining follow-up:**
+    - [ ] Re-run §4.4 analysis with `document-analysis-a1tp` explicitly as primary skill and `document-cross-reference-analysis` in `single` mode.
+    - [ ] Compare the skill-based extraction against the implemented interoperability tests and update any mismatched coverage or traceability.
 
 ### ✅ Phase 1: ORAN Foundation (Backend + Frontend)
 **Status:** ✅ COMPLETE (100%)  

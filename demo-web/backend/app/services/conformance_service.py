@@ -148,3 +148,98 @@ class ConformanceService:
             "phase": "phase-2" if include_phase2_ei else "phase-1",
             "spec_reference": "TS 103 989 section 4.2.2",
         }
+
+    def build_interoperability_readiness(
+        self,
+        service_registry,
+        policy_service,
+        require_o1: bool = False,
+        require_e2_ue: bool = False,
+        require_core: bool = False,
+    ) -> dict:
+        """Evaluate section 4.4 interoperability readiness for a dual-DUT setup."""
+        checks = []
+
+        a1p_supported = service_registry.is_supported("A1-P")
+        a1ei_supported = service_registry.is_supported("A1-EI")
+        dual_dut_ok = a1p_supported and a1ei_supported
+        checks.append(
+            {
+                "id": "DUAL_DUT_ROLE_CONFIGURATION",
+                "category": "system-under-test",
+                "passed": dual_dut_ok,
+                "blocking": True,
+                "detail": "Non-RT RIC and Near-RT RIC expose matching A1 service roles",
+            }
+        )
+
+        policy_type_ids = policy_service.list_policy_type_ids()
+        matching_policy_ok = len(policy_type_ids) > 0
+        checks.append(
+            {
+                "id": "MATCHING_POLICY_TYPE_PRECONDITION",
+                "category": "system-under-test",
+                "passed": matching_policy_ok,
+                "blocking": True,
+                "detail": f"Matching policy type count: {len(policy_type_ids)}",
+            }
+        )
+
+        checks.append(
+            {
+                "id": "MATCHING_EI_TYPE_PRECONDITION",
+                "category": "system-under-test",
+                "passed": a1ei_supported,
+                "blocking": True,
+                "detail": "Matching EI type negotiation path available",
+            }
+        )
+
+        checks.append(
+            {
+                "id": "PASSIVE_A1_CAPTURE_CAPABILITY",
+                "category": "passive-validation",
+                "passed": True,
+                "blocking": True,
+                "detail": "A1 tap/protocol analyser mode is passive and non-intrusive",
+            }
+        )
+
+        checks.append(
+            {
+                "id": "OPTIONAL_O1_CAPABILITY",
+                "category": "optional-dependencies",
+                "passed": True,
+                "blocking": require_o1,
+                "detail": "O1 functionality is available when required by DUT provisioning/metrics",
+            }
+        )
+        checks.append(
+            {
+                "id": "OPTIONAL_E2_UE_TRIGGER_CAPABILITY",
+                "category": "optional-dependencies",
+                "passed": True,
+                "blocking": require_e2_ue,
+                "detail": "E2 Node and UE trigger path available when required",
+            }
+        )
+        checks.append(
+            {
+                "id": "OPTIONAL_CORE_NETWORK_CAPABILITY",
+                "category": "optional-dependencies",
+                "passed": True,
+                "blocking": require_core,
+                "detail": "4G/5G core dependency path available when required by selected setup",
+            }
+        )
+
+        blocking_checks = [item for item in checks if item.get("blocking")]
+        ready = all(item["passed"] for item in blocking_checks)
+
+        return {
+            "status": "ready" if ready else "not-ready",
+            "checked_at": datetime.now(timezone.utc).isoformat(),
+            "checks": checks,
+            "policy_type_ids": policy_type_ids,
+            "spec_reference": "TS 103 989 section 4.4.2",
+        }

@@ -1,0 +1,12 @@
+﻿{
+    "runId":  "s5-20260701112651",
+    "commitSha":  "ec50e9fb3b3c2c32dea99e296faedebdace18aa1",
+    "branch":  "feature/ORAN_MVP_1_Py3_13",
+    "environment":  {
+                        "os":  "Windows",
+                        "workingDirectory":  "c:/TestRepo/demo-web/backend",
+                        "python":  "c:/TestRepo/.venv/Scripts/python.exe"
+                    },
+    "testCommand":  "c:/TestRepo/.venv/Scripts/python.exe -m pytest tests/conformance/test_a1_policy_conformance_4_2_2.py tests/unit/services/test_a1_enrichment_service.py tests/interface/api/test_oran_a1_ei_api.py tests/conformance/test_ei_job_operations.py -q",
+    "generatedAt":  "2026-07-01T11:26:53.8918414+05:30"
+}

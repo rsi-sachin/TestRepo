@@ -14,6 +14,19 @@ orchestrates:
   - document-analysis-etsi-ts-132-158
 configuration:
   ask-user-for-mode: true
+  default-mode: single
+  post-analysis-handoff:
+    target-skill: post-analysis-test-policy-orchestration
+    trigger: "after cross-reference analysis completes and follow-up implementation/testing is requested"
+    fail-closed-if-skipped: true
+    confirmation-required: true
+    confirmation-rule: "Always set the handoff target to post-analysis-test-policy-orchestration, but do not dispatch the handoff until the user explicitly confirms."
+  autonomous-output-rules:
+    - Treat implementation-oriented requests as analysis-plus-handoff workflows that must still use the protocol extraction skill where applicable.
+    - Treat protocol-centric requests as requiring the protocol extraction skill and cross-reference consolidation.
+    - When a clause-to-test or coverage mapping is requested, always produce a matrix that links clauses to existing trace IDs, tests, code, and gaps.
+    - Prefer substantive body content over navigation or index entries when duplicate headings or titles are detected.
+    - Always report direct coverage, partial coverage, missing coverage, new tests, modified tests, and implementation gaps when those are relevant to the request.
   supported-modes:
     - single
     - dependencies
@@ -24,9 +37,30 @@ configuration:
     dependencies: "Automatically resolve dependencies and gather context from referenced documents"
     full-suite: "Analyze all A1 documents (A1TP, A1TD, A1GAP) together with complete cross-referencing"
     version-evolution: "Compare document versions to identify breaking changes and schema evolution"
-  section-selection-defaults:
-    skip-first-section-match: true
-    rationale: "The first section-name/ID match is often from Table of Contents; prefer body headings by default."
+  content-selection-defaults:
+    prefer-body-content: true
+    rationale: "Prefer substantive body content over navigation or index entries when duplicate headings or titles are detected."
+  routing-gate:
+    protocol-markers:
+      - http
+      - rest
+      - endpoint
+      - uri
+      - resource
+      - status code
+      - authentication
+      - authorization
+    required-sub-skill: document-analysis-a1tp
+    fail-closed: true
+    failure-action: "Stop and report missing required sub-skill selection before continuing analysis."
+  required-analysis-output-fields:
+    - selected_primary_skill
+    - selected_secondary_skills
+    - why_selected
+    - protocol_markers_detected
+    - post_analysis_handoff_status
+    - post_analysis_handoff_target
+    - post_analysis_handoff_reason
 traceability:
   required-artifact: "ORAN/docs/feature_traceability_map.md"
   required-before-code-generation: true
@@ -35,6 +69,7 @@ traceability:
     - mapped_todo_sections
     - mapped_code_scope
     - verification_targets
+    - implementation_plan
   code-generation-gate: "Do not generate source code unless selected_trace_ids is non-empty and resolved against ORAN/docs/feature_traceability_map.md."
 ---
 
@@ -55,11 +90,24 @@ Orchestrate intelligent analysis of interconnected A1-related documents to:
 
 Before converting analysis knowledge into source code, this skill must:
 
+0. Map findings to Trace IDs in `ORAN/docs/feature_traceability_map.md` before proposing code changes.
+
 1. Read `ORAN/docs/feature_traceability_map.md`.
 2. Select one or more matching Trace IDs for the requested implementation.
 3. Map recommendations to TODO sections and code scopes listed in the traceability map.
 4. Produce explicit verification targets from the `Verification` column.
 5. Stop code generation if no Trace ID mapping is available.
+6. When the trace-mapped plan is complete, hand it off as the implementation input and do not start production code edits until that plan exists.
+7. After analysis completion, invoke `post-analysis-test-policy-orchestration` as a formal post-step whenever implementation, testing, or coverage closure is requested.
+
+## Post-Analysis Handoff Rules
+
+When this orchestrator finishes analysis and the request continues into implementation/testing, it must:
+
+1. Invoke `post-analysis-test-policy-orchestration` using the latest analysis artifact or trace-mapped implementation plan.
+2. Include selected Trace IDs, mapped TODO sections, mapped code scope, and verification targets in the handoff payload.
+3. Preserve fail-closed behavior: if the handoff cannot be dispatched, mark the analysis result as incomplete rather than complete.
+4. Emit `post_analysis_handoff_status`, `post_analysis_handoff_target`, and `post_analysis_handoff_reason` in the analysis output.
 
 Required conversion payload fields:
 
@@ -76,6 +124,36 @@ verification_targets:
 Hard gate:
 
 - Do not emit source code unless `selected_trace_ids` is non-empty and resolved against `ORAN/docs/feature_traceability_map.md`.
+- Do not propose code changes unless findings are mapped to Trace IDs in `ORAN/docs/feature_traceability_map.md`.
+
+## Required Skill Routing Gate
+
+Before analysis begins, this skill must classify request content and select sub-skills with fail-closed behavior.
+
+- If protocol markers are detected (HTTP/REST/endpoints/resources/status codes/authentication), `document-analysis-a1tp` is mandatory.
+- Cross-reference orchestration may continue only after the mandatory sub-skill is selected.
+- If mandatory selection is missing, stop and report routing failure rather than continuing with partial analysis.
+
+Required routing audit fields in every analysis response:
+
+```yaml
+selected_primary_skill: "document-analysis-a1tp"
+selected_secondary_skills: ["document-cross-reference-analysis"]
+why_selected: "Protocol markers detected in request context"
+protocol_markers_detected: ["HTTP", "REST", "resource"]
+```
+
+## Implicit Prompt Defaults
+
+When the user prompt requests analysis, mapping, or cross-reference consolidation:
+
+- Treat protocol-centric requests as primary-skill candidates for `document-analysis-a1tp`.
+- Use `document-cross-reference-analysis` in `single` mode unless the user explicitly requests dependencies/full-suite/version-evolution.
+- Prefer body content over navigation/index entries when duplicate headings or titles exist.
+- Always include mapping to existing tests/code and report:
+  - new tests,
+  - modified tests,
+  - implementation/coverage gaps.
 
 ## Document Ecosystem
 
@@ -434,9 +512,9 @@ result = analyze_document_with_references(
 )
 
 # Outputs:
-# - A1TP Section 4.1 analysis
-# - References found: [A1TD v1.2 section 5.2, A1GAP v1.2 section 3.4, ...]
-# - Suggestion: "Analyze A1TD and A1GAP for complete context"
+# - Requested analysis output
+# - References found: [related document references]
+# - Suggestion: "Analyze related references for complete context"
 # - Preliminary module suggestions (standalone)
 ```
 

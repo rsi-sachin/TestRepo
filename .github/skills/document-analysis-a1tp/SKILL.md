@@ -12,6 +12,52 @@ related-skills:
   - document-analysis-a1gap
 configuration:
   ask-user-for-mode: true
+  post-analysis-handoff:
+    target-skill: post-analysis-test-policy-orchestration
+    trigger: "after analysis completes and the user requests implementation, testing, or gap closure"
+    fail-closed-if-skipped: true
+    confirmation-required: true
+    confirmation-rule: "Always set the handoff target to post-analysis-test-policy-orchestration, but do not dispatch the handoff until the user explicitly confirms."
+  implicit-trigger-patterns:
+    - prompt-pattern: "Analyze sections <section-list> from <document-path>"
+      implied-primary-skill: document-analysis-a1tp
+      implied-orchestrator-skill: document-cross-reference-analysis
+      implied-mode: single
+      implied-extraction-focus:
+        - http
+        - rest
+        - resource
+        - status code
+        - authentication
+      implied-section-selection:
+        skip-first-section-match: true
+        use-body-section-text: true
+      implied-output-requirements:
+        - map findings to existing tests and code
+        - generate a trace-mapped implementation gap list for section 5
+        - generate a test matrix showing exactly which section 5 clauses are already covered and which are missing
+        - list new tests
+        - list modified tests
+        - list implementation and coverage gaps
+    - prompt-pattern: "Implement Section <section-list> of <document-path>"
+      implied-primary-skill: document-analysis-a1tp
+      implied-orchestrator-skill: document-cross-reference-analysis
+      implied-mode: single
+      implied-extraction-focus:
+        - http
+        - rest
+        - resource
+        - status code
+        - authentication
+      implied-section-selection:
+        skip-first-section-match: true
+        use-body-section-text: true
+      implied-output-requirements:
+        - map findings to existing tests and code
+        - generate implementation-ready gaps and test needs
+        - list new tests
+        - list modified tests
+        - prepare confirmation-gated post-analysis handoff metadata
   supported-modes:
     - single
     - dependencies
@@ -22,6 +68,20 @@ configuration:
     dependencies: "Include request/response schemas and procedure triggers from related documents"
     full-suite: "Complete analysis with all related A1 documents and ETSI standards"
     version-evolution: "Track API changes and breaking changes across document versions"
+  mandatory-invocation-when:
+    - request contains protocol markers (http, rest, endpoint, resource, uri, status code, authentication)
+    - target document is technical protocol oriented
+  fail-closed-if-not-invoked: true
+  required-analysis-output-fields:
+    - selected_primary_skill
+    - selected_secondary_skills
+    - why_selected
+    - protocol_markers_detected
+    - section_target_validation
+    - pre_response_checklist
+    - post_analysis_handoff_status
+    - post_analysis_handoff_target
+    - post_analysis_handoff_reason
 traceability:
   required-artifact: "ORAN/docs/feature_traceability_map.md"
   required-before-code-generation: true
@@ -30,6 +90,7 @@ traceability:
     - mapped_todo_sections
     - mapped_code_scope
     - verification_targets
+    - implementation_plan
   code-generation-gate: "Do not generate source code unless selected_trace_ids is non-empty and resolved against ORAN/docs/feature_traceability_map.md."
 ---
 
@@ -47,11 +108,14 @@ Extract and interpret A1TP specification content to:
 
 Before converting extracted protocol knowledge to source code, this skill must:
 
+0. Map findings to Trace IDs in `ORAN/docs/feature_traceability_map.md` before proposing code changes.
+
 1. Read `ORAN/docs/feature_traceability_map.md`.
 2. Resolve extracted endpoint/auth/data requirements to one or more Trace IDs.
 3. Restrict generated file targets to mapped `Code Scope` entries.
 4. Produce verification work from mapped `Verification` entries.
 5. Block code generation if no traceable mapping exists.
+6. When selected trace IDs, mapped code scope, and verification targets are resolved, generate a trace-mapped implementation plan and pass it as the input to the implementation phase before any code edits are made.
 
 Required conversion payload fields:
 
@@ -71,6 +135,7 @@ verification_targets:
 Hard gate:
 
 - Do not emit source code unless `selected_trace_ids` is non-empty and resolved against `ORAN/docs/feature_traceability_map.md`.
+- Do not propose code changes unless findings are mapped to Trace IDs in `ORAN/docs/feature_traceability_map.md`.
 
 ## Document Context
 **Document:** A1 Technical Protocol (A1TP)  
@@ -88,6 +153,49 @@ Hard gate:
 - Mapping protocol requirements to code modules
 - Processing version diffs to identify breaking changes
 - Resolving cross-references from other A1-related documents
+
+## Invocation Requirements
+
+- This skill is mandatory as the primary skill for protocol-centric technical analysis.
+- If protocol markers are present and this skill is not selected, analysis must stop and report a routing error.
+- `document-cross-reference-analysis` can be used as orchestrator, but does not replace mandatory primary selection of this skill for protocol-centric requests.
+- For prompts matching `Analyze sections <section-list> from <document-path>`, this skill is implied as primary by default.
+- For that prompt pattern, `document-cross-reference-analysis` runs in `single` mode by default unless the user explicitly asks for a different mode.
+
+Required routing audit fields in every analysis response:
+
+```yaml
+selected_primary_skill: "document-analysis-a1tp"
+selected_secondary_skills: ["document-cross-reference-analysis"]
+why_selected: "Protocol markers detected in user request/document section"
+protocol_markers_detected: ["HTTP", "REST", "status code"]
+section_target_validation:
+  requested_section: "4.4"
+  toc_match_skipped: true
+  body_section_used: true
+```
+
+## Pre-Response Checklist
+
+Before finalizing an analysis response, confirm all items below:
+
+- Body section target validated (TOC match skipped when duplicate heading is found).
+- Protocol markers extracted and listed.
+- HTTP/REST/auth/data/error handling extraction performed when applicable.
+- Test or module impact mapping provided.
+- Existing tests/code mapping provided, with explicit lists for new tests, modified tests, and gaps.
+- Required routing audit fields populated.
+- Post-analysis handoff prepared whenever implementation/testing continuation is requested.
+
+## Post-Analysis Handoff Rules
+
+When analysis output is complete and the user wants implementation, testing, or coverage closure, this skill must:
+
+1. Invoke `post-analysis-test-policy-orchestration` as a formal next step.
+2. Pass the analysis artifact path, source document path, section scope, and change summary.
+3. Ensure the resulting workflow includes a test policy report, clause coverage matrix when applicable, and verification summary artifacts.
+4. Set `post_analysis_handoff_status` to `initiated` only after the handoff is actually dispatched.
+5. Set `post_analysis_handoff_status` to `blocked` if the handoff cannot be performed, and explain the reason.
 
 ## Key Extraction Patterns
 

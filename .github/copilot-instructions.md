@@ -86,9 +86,17 @@ Full requirements: `C:\testrepo\docs\requirements.txt`
 
 - When a user request matches the pattern `analyze <sections> from <document>`, always invoke the document-analysis workflow skill first.
 - Prefer `document-cross-reference-analysis` as the workflow entry skill, and choose `single` mode unless the user asks for dependency or multi-document expansion.
-- For protocol-centric content (HTTP/REST/resources), include `document-analysis-a1tp` extraction patterns in the analysis output.
+- For protocol-centric content (HTTP/REST/resources/status-codes/authentication), invoke `document-analysis-a1tp` as the primary analysis skill before extraction or mapping.
+- Do not proceed with protocol-centric analysis using only `document-cross-reference-analysis`; `document-analysis-a1tp` selection is mandatory.
+- Missing required skill invocation is a blocker, not a warning.
 - When a user request includes `Use Test Harness skill to add unit/component/module/interface/feature and e2e tests for a given commit or change summary`, invoke `test-harness-regression` first.
 - For test harness requests, include perspectives for memory, load, stress, parameter passing, and fault/error handling where applicable, and maintain regression mapping artifacts for changed files/modules.
+- After any `analyze <sections> from <document>` workflow completes and implementation/testing is requested, invoke `post-analysis-test-policy-orchestration` to launch post-analysis test planning.
+- In `post-analysis-test-policy-orchestration`, the `Test Policy Orchestrator` agent must be invoked with recent analysis/commit changes to derive required tests.
+- If the analyzed source is a test specification (for example, TS 103 989), `post-analysis-test-policy-orchestration` must generate a clause-by-clause coverage matrix and add missing tests for uncovered clauses before completion.
+- `post-analysis-test-policy-orchestration` must persist outputs using fixed artifact paths under `ORAN/docs/test-policy/` and `ORAN/docs/coverage/`.
+- `post-analysis-test-policy-orchestration` is fail-closed: do not mark completion when uncovered clauses remain with unresolved `action=add|modify` entries.
+- Optional mode: `auto-commit` may be used only when explicitly requested; default is off.
 
 ## Traceability Gate for Document-to-Code Conversion
 

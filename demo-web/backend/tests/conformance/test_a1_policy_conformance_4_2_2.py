@@ -1,3 +1,5 @@
+"""TS 103 989 V4.2.0 section 4.2.2 conformance coverage tests."""
+
 from app.modules.conformance_harness.evidence_collector import collect_execution_evidence
 from app.modules.conformance_harness.evidence_validator import validate_execution_evidence
 from app.services.a1_policy_service import A1PolicyService
@@ -123,3 +125,49 @@ def test_section_4_2_2_collect_execution_evidence_normalizes_exchanges() -> None
     assert result["exchange_count"] == 1
     assert result["artifact_count"] == 1
     assert result["exchanges"][0]["response"]["status_code"] == 200
+
+
+def test_section_4_2_2_module_docstring_pins_spec_version_reference() -> None:
+    import inspect
+    import tests.conformance.test_a1_policy_conformance_4_2_2 as module
+
+    doc = inspect.getdoc(module) or ""
+    assert "TS 103 989 V4.2.0" in doc
+
+
+def test_section_4_2_2_policy_schema_contract_required_fields_are_explicit() -> None:
+    service = A1PolicyService()
+    policy_type = service.get_policy_type("default")
+
+    assert policy_type.policy_schema.get("type") == "object"
+    assert "policy_statements" in policy_type.policy_schema.get("required", [])
+    assert policy_type.policy_status_schema.get("type") == "object"
+    assert "enforcement_status" in policy_type.policy_status_schema.get("required", [])
+
+
+def test_section_4_2_2_evidence_validator_rejects_missing_required_keys() -> None:
+    result = validate_execution_evidence({"test_case_id": "TC-A1-PTQ-001"})
+
+    assert result["valid"] is False
+    assert "test_section_reference" in result["missing_keys"]
+    assert "verdict" in result["missing_keys"]
+
+
+def test_section_4_2_2_evidence_validator_rejects_non_list_artifacts() -> None:
+    payload = _payload("PASS")
+    payload["evidence_artifacts"] = "not-a-list"
+
+    result = validate_execution_evidence(payload)
+
+    assert result["valid"] is False
+    assert "evidence_artifacts must be a list" in result["errors"]
+
+
+def test_section_4_2_2_evidence_validator_rejects_artifact_without_required_keys() -> None:
+    payload = _payload("PASS")
+    payload["evidence_artifacts"] = [{"artifact_type": "http_message_log"}]
+
+    result = validate_execution_evidence(payload)
+
+    assert result["valid"] is False
+    assert any("missing key: file_path" in message for message in result["errors"])
