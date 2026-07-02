@@ -2,10 +2,11 @@
 ORAN models - Pydantic schemas for O-RAN A1 test generation and execution
 """
 
-from pydantic import BaseModel, Field
-from typing import Dict, Optional, List
 from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class SpecType(str, Enum):
@@ -202,6 +203,59 @@ class OranExecutionResult(BaseModel):
                 }
             }
         }
+
+
+# ======== PHASE 2A: A1-EI Models ========
+
+
+class EiTypeObject(BaseModel):
+    """Representation of an EI type as used by the A1-EI service."""
+
+    ei_type_id: str = Field(..., description="EI type identifier")
+    description: Optional[str] = Field(None, description="EI type description")
+    ei_schema: Dict[str, Any] = Field(default_factory=dict, description="JSON schema for EiJobObject")
+    ei_status_schema: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="JSON schema for EiJobStatusObject",
+    )
+    ei_result_schema: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="JSON schema for EiJobResultObject",
+    )
+    supports_ei_job_creation: bool = Field(
+        default=True,
+        description="Whether EI job create/update is supported for the type",
+    )
+
+
+class EiJobObject(BaseModel):
+    """Representation of an EI job resource."""
+
+    ei_payload: Dict[str, Any] = Field(..., description="EI job payload")
+    jobStatusNotificationUri: Optional[str] = Field(
+        None,
+        description="Callback URI for EI job status notifications",
+    )
+    jobResultUri: Optional[str] = Field(
+        None,
+        description="Callback URI for EI job result deliveries",
+    )
+
+
+class EiJobStatusObject(BaseModel):
+    """Representation of EI job status feedback."""
+
+    ei_job_id: str = Field(..., description="EI job identifier")
+    delivery_status: str = Field(..., description="Delivery status value")
+    delivery_reason: Optional[str] = Field(None, description="Human-readable delivery reason")
+    feedback: List[str] = Field(default_factory=list, description="Optional feedback messages")
+
+
+class EiJobResultObject(BaseModel):
+    """Representation of an EI job result payload."""
+
+    ei_job_id: str = Field(..., description="EI job identifier")
+    result_payload: Dict[str, Any] = Field(..., description="Delivered result payload")
 
 
 # ======== PHASE 2 MODELS: Spec Parsing Pipeline ========

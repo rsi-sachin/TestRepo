@@ -28,7 +28,11 @@ def test_ei_job_lifecycle_create_query_update_delete() -> None:
     created_job, was_created = helper.create_or_replace_ei_job(
         "default",
         "job-001",
-        {"ei_payload": {"name": "initial"}},
+        {
+            "ei_payload": {"name": "initial"},
+            "jobStatusNotificationUri": "https://consumer.example.com/status",
+            "jobResultUri": "https://consumer.example.com/result",
+        },
     )
     updated_job, was_created_on_update = helper.create_or_replace_ei_job(
         "default",
@@ -39,14 +43,35 @@ def test_ei_job_lifecycle_create_query_update_delete() -> None:
     assert was_created is True
     assert was_created_on_update is False
     assert created_job["ei_job_id"] == "job-001"
+    assert created_job["ei_job"]["jobStatusNotificationUri"] == "https://consumer.example.com/status"
+    assert created_job["ei_job"]["jobResultUri"] == "https://consumer.example.com/result"
     assert updated_job["ei_job"]["ei_payload"]["name"] == "updated"
     assert helper.list_ei_job_ids("default") == ["job-001"]
+    assert helper.list_ei_job_ids() == ["job-001"]
     assert helper.get_ei_job("default", "job-001")["ei_job"]["ei_payload"]["name"] == "updated"
     assert helper.get_ei_job_status("default", "job-001")["delivery_status"] == "ACCEPTED"
 
     helper.delete_ei_job("default", "job-001")
 
     assert helper.list_ei_job_ids("default") == []
+
+
+def test_ei_job_ids_can_be_listed_without_type_filter() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+    helper._ei_types["secondary"] = {
+        "ei_type_id": "secondary",
+        "description": "Secondary enrichment job type",
+        "ei_schema": {"type": "object", "required": ["ei_payload"]},
+        "ei_status_schema": {"type": "object", "required": ["ei_job_id", "delivery_status"]},
+        "ei_result_schema": {"type": "object", "required": ["ei_job_id", "result_payload"]},
+        "supports_ei_job_creation": True,
+    }
+
+    helper.create_or_replace_ei_job("default", "job-a", {"ei_payload": {"name": "a"}})
+    helper.create_or_replace_ei_job("secondary", "job-b", {"ei_payload": {"name": "b"}})
+
+    assert helper.list_ei_job_ids() == ["job-a", "job-b"]
+    assert helper.list_ei_job_ids("default") == ["job-a"]
 
 
 def test_unknown_ei_type_raises_key_error() -> None:
@@ -157,3 +182,75 @@ def test_notify_ei_job_status_rejects_payload_missing_required_fields() -> None:
 
     with pytest.raises(ValueError, match="must include ei_job_id and delivery_status"):
         asyncio.run(helper.notify_ei_job_status("https://consumer.example.com/ei-status", {"ei_job_id": "x"}))
+
+
+def test_deliver_ei_job_result_logs_warning_for_non_success_status(
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+    post_call_count = {"value": 0}
+
+    class _FakeResponse:
+        status_code = 502
+
+    class _FakeAsyncClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def post(self, *args, **kwargs):
+            post_call_count["value"] += 1
+            return _FakeResponse()
+
+    monkeypatch.setattr(ei_module.httpx, "AsyncClient", _FakeAsyncClient)
+
+    with caplog.at_level(logging.WARNING, logger=ei_module.logger.name):
+        asyncio.run(
+            helper.deliver_ei_job_result(
+                "https://consumer.example.com/ei-result",
+                {"ei_job_id": "job-001", "result_payload": {"quality": "good"}},
+            )
+        )
+
+    assert "unexpected status 502" in caplog.text
+    assert post_call_count["value"] == 1
+
+
+def test_deliver_ei_job_result_propagates_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+    post_call_count = {"value": 0}
+
+    class _FakeAsyncClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def post(self, *args, **kwargs):
+            post_call_count["value"] += 1
+            raise httpx.TimeoutException("EI result callback timed out")
+
+    monkeypatch.setattr(ei_module.httpx, "AsyncClient", _FakeAsyncClient)
+
+    with pytest.raises(httpx.TimeoutException):
+        asyncio.run(
+            helper.deliver_ei_job_result(
+                "https://consumer.example.com/ei-result",
+                {"ei_job_id": "job-001", "result_payload": {"quality": "pending"}},
+            )
+        )
+
+    assert post_call_count["value"] == 1
+
+
+def test_deliver_ei_job_result_rejects_payload_missing_required_fields() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    with pytest.raises(ValueError, match="must include ei_job_id and result_payload"):
+        asyncio.run(helper.deliver_ei_job_result("https://consumer.example.com/ei-result", {"ei_job_id": "x"}))

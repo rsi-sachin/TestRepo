@@ -27,7 +27,7 @@ def test_conformance_tests_exposes_interoperability_a1p_suite_metadata():
     assert response.status_code == 200
     tests = response.json()
 
-    assert len(tests) == 4
+    assert len(tests) == 9
     assert {item["category_id"] for item in tests} == {"interoperability-a1p"}
     assert any("4.4" in item["spec_reference"] for item in tests)
 
@@ -38,7 +38,7 @@ def test_conformance_tests_exposes_interoperability_a1ei_suite_metadata():
     assert response.status_code == 200
     tests = response.json()
 
-    assert len(tests) == 4
+    assert len(tests) == 11
     assert {item["category_id"] for item in tests} == {"interoperability-a1ei"}
     assert any("4.4" in item["spec_reference"] for item in tests)
 
@@ -50,7 +50,7 @@ def test_conformance_run_executes_interoperability_a1p_category():
     payload = response.json()
 
     assert payload["category_id"] == "interoperability-a1p"
-    assert payload["summary"]["total"] == 4
+    assert payload["summary"]["total"] == 9
     assert payload["summary"]["failed"] == 0
 
 
@@ -61,5 +61,5 @@ def test_conformance_run_executes_interoperability_a1ei_category():
     payload = response.json()
 
     assert payload["category_id"] == "interoperability-a1ei"
-    assert payload["summary"]["total"] == 4
+    assert payload["summary"]["total"] == 11
     assert payload["summary"]["failed"] == 0

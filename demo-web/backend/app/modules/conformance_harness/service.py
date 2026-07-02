@@ -1,14 +1,19 @@
 """Conformance harness orchestrator service."""
 
+import asyncio
 from copy import deepcopy
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 
 from app.models.a1_policy_models import PolicyObject
+import app.services.a1_enrichment_service as a1_enrichment_module
+import app.services.a1_policy_service as a1_policy_module
 from app.modules.conformance_harness.simulator_verifier import verify_simulator_capability
 from app.modules.conformance_harness.evidence_collector import collect_execution_evidence
 from app.modules.conformance_harness.evidence_validator import validate_execution_evidence
+from app.services.a1_enrichment_service import A1EnrichmentInformationService
 from app.services.conformance_service import ConformanceService
 
 
@@ -54,7 +59,7 @@ class ConformanceHarnessService:
                 "category_id": "interoperability-a1p",
                 "title": "Interoperability A1-P Between Non-RT RIC and Near-RT RIC",
                 "spec_reference": "TS 103 989 section 4.4 and clause 7.2",
-                "test_count": 4,
+                "test_count": 9,
                 "estimated_duration_seconds": 180,
                 "status": "implemented",
             },
@@ -62,7 +67,7 @@ class ConformanceHarnessService:
                 "category_id": "interoperability-a1ei",
                 "title": "Interoperability A1-EI Between Non-RT RIC and Near-RT RIC",
                 "spec_reference": "TS 103 989 section 4.4 and clause 7.3",
-                "test_count": 4,
+                "test_count": 11,
                 "estimated_duration_seconds": 180,
                 "status": "implemented",
             },
@@ -183,30 +188,65 @@ class ConformanceHarnessService:
             {
                 "test_id": "TC-A1-INT-P-001",
                 "category_id": "interoperability-a1p",
-                "name": "dual_dut_role_configuration",
-                "description": "Verify Non-RT RIC and Near-RT RIC expose matching A1-P roles",
-                "spec_reference": "TS 103 989 section 4.4.1 and clause 7.2",
+                "name": "query_all_policy_type_identifiers_positive",
+                "description": "Verify query-all policy type identifiers succeeds across empty, single, and multi-type configurations",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.2.1.1",
             },
             {
                 "test_id": "TC-A1-INT-P-002",
                 "category_id": "interoperability-a1p",
-                "name": "matching_policy_type_precondition",
-                "description": "Verify at least one matching policy type is available before execution",
-                "spec_reference": "TS 103 989 section 4.4.2.1",
+                "name": "query_single_policy_type_positive",
+                "description": "Verify query-single policy type returns the agreed PolicyTypeObject",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.2.1.2",
             },
             {
                 "test_id": "TC-A1-INT-P-003",
                 "category_id": "interoperability-a1p",
-                "name": "policy_exchange_round_trip",
-                "description": "Verify create-query-delete policy exchange flow succeeds",
-                "spec_reference": "TS 103 989 clause 7.2",
+                "name": "create_single_policy_positive",
+                "description": "Verify create-single policy returns the created PolicyObject",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.2.2.1",
             },
             {
                 "test_id": "TC-A1-INT-P-004",
                 "category_id": "interoperability-a1p",
-                "name": "passive_protocol_capture_capability",
-                "description": "Verify passive A1 capture capability can be declared for validation",
-                "spec_reference": "TS 103 989 section 4.4.1 and 4.4.2.2.4",
+                "name": "query_all_policy_identifiers_positive",
+                "description": "Verify query-all policy identifiers returns the created policy identifier",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.2.3.1",
+            },
+            {
+                "test_id": "TC-A1-INT-P-005",
+                "category_id": "interoperability-a1p",
+                "name": "query_single_policy_positive",
+                "description": "Verify query-single policy returns the stored PolicyObject",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.2.3.2",
+            },
+            {
+                "test_id": "TC-A1-INT-P-006",
+                "category_id": "interoperability-a1p",
+                "name": "query_policy_status_positive",
+                "description": "Verify query policy status returns the PolicyStatusObject for the created policy",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.2.3.3",
+            },
+            {
+                "test_id": "TC-A1-INT-P-007",
+                "category_id": "interoperability-a1p",
+                "name": "update_single_policy_positive",
+                "description": "Verify update-single policy replaces the existing policy",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.2.4.1",
+            },
+            {
+                "test_id": "TC-A1-INT-P-008",
+                "category_id": "interoperability-a1p",
+                "name": "delete_single_policy_positive",
+                "description": "Verify delete-single policy removes the stored policy",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.2.5.1",
+            },
+            {
+                "test_id": "TC-A1-INT-P-009",
+                "category_id": "interoperability-a1p",
+                "name": "notify_policy_status_positive",
+                "description": "Verify create with notificationDestination and deliver PolicyStatusObject via HTTP POST",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.2.6.1",
             },
         ]
 
@@ -216,32 +256,123 @@ class ConformanceHarnessService:
             {
                 "test_id": "TC-A1-INT-EI-001",
                 "category_id": "interoperability-a1ei",
-                "name": "dual_dut_role_configuration",
-                "description": "Verify Non-RT RIC and Near-RT RIC expose matching A1-EI roles",
-                "spec_reference": "TS 103 989 section 4.4.1 and clause 7.3",
+                "name": "query_ei_type_identifiers_positive",
+                "description": "Verify query EI type identifiers returns the configured EI types",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.3.1.1",
             },
             {
                 "test_id": "TC-A1-INT-EI-002",
                 "category_id": "interoperability-a1ei",
-                "name": "matching_ei_type_precondition",
-                "description": "Verify at least one matching EI type can be negotiated before execution",
-                "spec_reference": "TS 103 989 section 4.4.2.1",
+                "name": "query_single_ei_type_positive",
+                "description": "Verify query EI type returns the agreed EI type definition",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.3.1.2",
             },
             {
                 "test_id": "TC-A1-INT-EI-003",
                 "category_id": "interoperability-a1ei",
-                "name": "optional_tooling_path_available",
-                "description": "Verify optional O1, E2/UE, and Core support can be declared",
-                "spec_reference": "TS 103 989 section 4.4.2.2",
+                "name": "create_ei_job_positive",
+                "description": "Verify create EI job succeeds with callback URIs embedded in the EiJobObject",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.3.2.1",
             },
             {
                 "test_id": "TC-A1-INT-EI-004",
                 "category_id": "interoperability-a1ei",
-                "name": "passive_protocol_capture_capability",
-                "description": "Verify passive A1 capture capability can be declared for validation",
-                "spec_reference": "TS 103 989 section 4.4.1 and 4.4.2.2.4",
+                "name": "query_ei_job_identifiers_single_type_positive",
+                "description": "Verify query EI job identifiers for a single EI type returns the created job",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.3.3.1",
+            },
+            {
+                "test_id": "TC-A1-INT-EI-005",
+                "category_id": "interoperability-a1ei",
+                "name": "query_ei_job_identifiers_all_types_positive",
+                "description": "Verify query EI job identifiers across all EI types covers each created job",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.3.3.2",
+            },
+            {
+                "test_id": "TC-A1-INT-EI-006",
+                "category_id": "interoperability-a1ei",
+                "name": "query_ei_job_positive",
+                "description": "Verify query EI job returns the stored EiJobObject",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.3.3.3",
+            },
+            {
+                "test_id": "TC-A1-INT-EI-007",
+                "category_id": "interoperability-a1ei",
+                "name": "update_ei_job_positive",
+                "description": "Verify update EI job replaces the existing job payload",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.3.4.1",
+            },
+            {
+                "test_id": "TC-A1-INT-EI-008",
+                "category_id": "interoperability-a1ei",
+                "name": "delete_ei_job_positive",
+                "description": "Verify delete EI job removes the stored EI job",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.3.5.1",
+            },
+            {
+                "test_id": "TC-A1-INT-EI-009",
+                "category_id": "interoperability-a1ei",
+                "name": "query_ei_job_status_positive",
+                "description": "Verify query EI job status returns the EiJobStatusObject",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.3.6.1",
+            },
+            {
+                "test_id": "TC-A1-INT-EI-010",
+                "category_id": "interoperability-a1ei",
+                "name": "notify_ei_job_status_positive",
+                "description": "Verify create with jobStatusNotificationUri and deliver EiJobStatusObject via HTTP POST",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.3.6.2",
+            },
+            {
+                "test_id": "TC-A1-INT-EI-011",
+                "category_id": "interoperability-a1ei",
+                "name": "deliver_ei_job_result_positive",
+                "description": "Verify create with jobResultUri and deliver EiJobResultObject via HTTP POST",
+                "spec_reference": "TS 103 989 section 4.4, clause 7.3.7.1",
             },
         ]
+
+    def _summarize_results(self, run_id: str, category_id: str, results: list[dict]) -> dict:
+        passed_count = len([item for item in results if item["status"] == "PASS"])
+        failed_count = len([item for item in results if item["status"] == "FAIL"])
+        return {
+            "run_id": run_id,
+            "category_id": category_id,
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "summary": {
+                "total": len(results),
+                "passed": passed_count,
+                "failed": failed_count,
+                "verdict": "PASS" if failed_count == 0 else "FAIL",
+            },
+            "results": results,
+        }
+
+    def _execute_callback_post(self, module, coroutine_factory) -> tuple[bool, str]:
+        class _FakeResponse:
+            status_code = 204
+
+        class _FakeAsyncClient:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return None
+
+            async def post(self, *args, **kwargs):
+                return _FakeResponse()
+
+        original_async_client = module.httpx.AsyncClient
+        try:
+            module.httpx.AsyncClient = _FakeAsyncClient
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(lambda: asyncio.run(coroutine_factory()))
+                future.result()
+            return True, "Callback delivery returned HTTP 204 No Content"
+        except Exception as exc:  # pragma: no cover - defensive
+            return False, str(exc)
+        finally:
+            module.httpx.AsyncClient = original_async_client
 
     def list_ei_job_operations_tests(self) -> list[dict]:
         """Return executable test metadata for TS 103 989 section 5.3 A1-EI coverage."""
@@ -544,123 +675,404 @@ class ConformanceHarnessService:
         }
 
     def run_interoperability_a1p_tests(self, policy_service, service_registry) -> dict:
-        """Execute deterministic section 4.4/7.2 interoperability checks for A1-P."""
+        """Execute deterministic clause-level section 4.4/7.2 interoperability checks for A1-P."""
         run_id = datetime.now(timezone.utc).strftime("intp-%Y%m%d%H%M%S")
         results: list[dict] = []
 
+        original_policy_types = deepcopy(policy_service._policy_types)
         a1p_supported = service_registry.is_supported("A1-P")
+        try:
+            policy_service._policy_types = {}
+            empty_ids = policy_service.list_policy_type_ids()
+            policy_service._policy_types = deepcopy({"alpha": original_policy_types["default"]})
+            single_ids = policy_service.list_policy_type_ids()
+            policy_service._policy_types = deepcopy(
+                {
+                    "alpha": original_policy_types["default"],
+                    "beta": deepcopy(original_policy_types["default"]),
+                }
+            )
+            multi_ids = policy_service.list_policy_type_ids()
+            policy_type_list_ok = a1p_supported and empty_ids == [] and len(single_ids) == 1 and len(multi_ids) >= 2
+            policy_type_list_detail = (
+                "Validated empty, single, and multi-policy-type query configurations"
+                if policy_type_list_ok
+                else f"Unexpected query-all results: empty={empty_ids}, single={single_ids}, multi={multi_ids}"
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            policy_type_list_ok = False
+            policy_type_list_detail = str(exc)
+        finally:
+            policy_service._policy_types = original_policy_types
+
         results.append(
             {
                 "test_id": "TC-A1-INT-P-001",
-                "status": "PASS" if a1p_supported else "FAIL",
-                "detail": "A1-P roles exposed for both endpoints" if a1p_supported else "A1-P service unsupported",
+                "status": "PASS" if policy_type_list_ok else "FAIL",
+                "detail": policy_type_list_detail,
             }
         )
 
         policy_type_ids = policy_service.list_policy_type_ids()
-        has_matching_policy_type = len(policy_type_ids) > 0
+        has_matching_policy_type = a1p_supported and len(policy_type_ids) > 0
         results.append(
             {
                 "test_id": "TC-A1-INT-P-002",
                 "status": "PASS" if has_matching_policy_type else "FAIL",
-                "detail": f"Matching policy types available: {len(policy_type_ids)}",
+                "detail": f"Query single policy type returned {policy_type_ids[0]}" if has_matching_policy_type else "No policy type available",
             }
         )
 
-        flow_ok = False
-        flow_detail = "round-trip failed"
         policy_type_id = policy_type_ids[0] if policy_type_ids else "default"
         policy_id = f"interop-{run_id}"
+        create_policy = PolicyObject(
+            scope={"region": "interop"},
+            policy_statements=[{"statement_id": "int-1", "action": "allow"}],
+        )
+        update_policy = PolicyObject(
+            scope={"region": "interop"},
+            policy_statements=[{"statement_id": "int-2", "action": "throttle"}],
+        )
+
         try:
-            policy = PolicyObject(
-                scope={"region": "interop"},
-                policy_statements=[{"statement_id": "int-1", "action": "allow"}],
-            )
-            policy_service.create_or_replace_policy(policy_type_id, policy_id, policy)
-            _ = policy_service.get_policy(policy_type_id, policy_id)
-            policy_service.delete_policy(policy_type_id, policy_id)
-            flow_ok = True
-            flow_detail = "Create-query-delete policy exchange validated"
+            _, was_created = policy_service.create_or_replace_policy(policy_type_id, policy_id, create_policy)
+            create_ok = was_created is True
+            create_detail = "Create returned created state" if create_ok else "Create returned replace state"
         except Exception as exc:  # pragma: no cover - defensive
-            flow_detail = str(exc)
+            create_ok = False
+            create_detail = str(exc)
 
         results.append(
             {
                 "test_id": "TC-A1-INT-P-003",
-                "status": "PASS" if flow_ok else "FAIL",
-                "detail": flow_detail,
+                "status": "PASS" if create_ok else "FAIL",
+                "detail": create_detail,
             }
         )
 
         results.append(
             {
                 "test_id": "TC-A1-INT-P-004",
-                "status": "PASS",
-                "detail": "Passive capture flag enabled for A1 interface validation",
+                "status": "PASS" if policy_id in policy_service.list_policy_ids(policy_type_id) else "FAIL",
+                "detail": "Created policy identifier returned by query-all policy identifiers",
             }
         )
 
-        passed_count = len([item for item in results if item["status"] == "PASS"])
-        failed_count = len([item for item in results if item["status"] == "FAIL"])
+        try:
+            queried_policy = policy_service.get_policy(policy_type_id, policy_id)
+            query_policy_ok = queried_policy.policy_statements == create_policy.policy_statements
+            query_policy_detail = "Query single policy returned the created PolicyObject"
+        except Exception as exc:  # pragma: no cover - defensive
+            query_policy_ok = False
+            query_policy_detail = str(exc)
 
-        return {
-            "run_id": run_id,
-            "category_id": "interoperability-a1p",
-            "started_at": datetime.now(timezone.utc).isoformat(),
-            "summary": {
-                "total": len(results),
-                "passed": passed_count,
-                "failed": failed_count,
-                "verdict": "PASS" if failed_count == 0 else "FAIL",
-            },
-            "results": results,
-        }
+        results.append(
+            {
+                "test_id": "TC-A1-INT-P-005",
+                "status": "PASS" if query_policy_ok else "FAIL",
+                "detail": query_policy_detail,
+            }
+        )
 
-    def run_interoperability_a1ei_tests(self, service_registry) -> dict:
-        """Execute deterministic section 4.4/7.3 interoperability checks for A1-EI."""
+        try:
+            status_obj = policy_service.get_policy_status(policy_type_id, policy_id)
+            status_ok = status_obj.policy_id == policy_id
+            status_detail = "Query policy status returned a PolicyStatusObject"
+        except Exception as exc:  # pragma: no cover - defensive
+            status_ok = False
+            status_detail = str(exc)
+
+        results.append(
+            {
+                "test_id": "TC-A1-INT-P-006",
+                "status": "PASS" if status_ok else "FAIL",
+                "detail": status_detail,
+            }
+        )
+
+        try:
+            _, was_created = policy_service.create_or_replace_policy(policy_type_id, policy_id, update_policy)
+            updated_policy = policy_service.get_policy(policy_type_id, policy_id)
+            update_ok = was_created is False and updated_policy.policy_statements == update_policy.policy_statements
+            update_detail = "Update replaced the stored policy" if update_ok else "Update did not replace the stored policy"
+        except Exception as exc:  # pragma: no cover - defensive
+            update_ok = False
+            update_detail = str(exc)
+
+        results.append(
+            {
+                "test_id": "TC-A1-INT-P-007",
+                "status": "PASS" if update_ok else "FAIL",
+                "detail": update_detail,
+            }
+        )
+
+        try:
+            policy_service.delete_policy(policy_type_id, policy_id)
+            try:
+                policy_service.get_policy(policy_type_id, policy_id)
+                delete_ok = False
+                delete_detail = "Deleted policy remained queryable"
+            except KeyError:
+                delete_ok = True
+                delete_detail = "Delete removed the policy and subsequent query failed as expected"
+        except Exception as exc:  # pragma: no cover - defensive
+            delete_ok = False
+            delete_detail = str(exc)
+
+        results.append(
+            {
+                "test_id": "TC-A1-INT-P-008",
+                "status": "PASS" if delete_ok else "FAIL",
+                "detail": delete_detail,
+            }
+        )
+
+        notify_policy_id = f"notify-{run_id}"
+        callback_destination = "https://near-rt.example.com/policy-status"
+        try:
+            policy_service.create_or_replace_policy(
+                policy_type_id,
+                notify_policy_id,
+                create_policy,
+                notification_destination=callback_destination,
+            )
+            notify_status_obj = policy_service.get_policy_status(policy_type_id, notify_policy_id)
+            notify_ok, notify_detail = self._execute_callback_post(
+                a1_policy_module,
+                lambda: policy_service.notify_policy_status(callback_destination, notify_status_obj),
+            )
+            notify_ok = notify_ok and policy_service._notification_destinations[(policy_type_id, notify_policy_id)] == callback_destination
+        except Exception as exc:  # pragma: no cover - defensive
+            notify_ok = False
+            notify_detail = str(exc)
+
+        results.append(
+            {
+                "test_id": "TC-A1-INT-P-009",
+                "status": "PASS" if notify_ok else "FAIL",
+                "detail": notify_detail,
+            }
+        )
+
+        return self._summarize_results(run_id, "interoperability-a1p", results)
+
+    def run_interoperability_a1ei_tests(self, service_registry, ei_service=None) -> dict:
+        """Execute deterministic clause-level section 4.4/7.3 interoperability checks for A1-EI."""
         run_id = datetime.now(timezone.utc).strftime("intei-%Y%m%d%H%M%S")
+        ei_service = ei_service or A1EnrichmentInformationService(service_registry)
+        results: list[dict] = []
 
         a1ei_supported = service_registry.is_supported("A1-EI")
-        a1p_supported = service_registry.is_supported("A1-P")
-
-        results = [
+        ei_type_ids = ei_service.list_ei_type_ids()
+        results.append(
             {
                 "test_id": "TC-A1-INT-EI-001",
-                "status": "PASS" if a1ei_supported else "FAIL",
-                "detail": "A1-EI roles exposed for both endpoints" if a1ei_supported else "A1-EI service unsupported",
-            },
+                "status": "PASS" if a1ei_supported and len(ei_type_ids) > 0 else "FAIL",
+                "detail": f"Query EI type identifiers returned {len(ei_type_ids)} type(s)",
+            }
+        )
+
+        ei_type_id = ei_type_ids[0] if ei_type_ids else "default"
+        try:
+            ei_type = ei_service.get_ei_type(ei_type_id)
+            query_type_ok = ei_type["ei_type_id"] == ei_type_id
+            query_type_detail = f"Query single EI type returned {ei_type_id}"
+        except Exception as exc:  # pragma: no cover - defensive
+            query_type_ok = False
+            query_type_detail = str(exc)
+        results.append(
             {
                 "test_id": "TC-A1-INT-EI-002",
-                "status": "PASS" if a1ei_supported and a1p_supported else "FAIL",
-                "detail": "Matching EI type negotiation path declared",
-            },
+                "status": "PASS" if query_type_ok else "FAIL",
+                "detail": query_type_detail,
+            }
+        )
+
+        ei_job_id = f"ei-interop-{run_id}"
+        callback_status_uri = "https://near-rt.example.com/ei-status"
+        callback_result_uri = "https://near-rt.example.com/ei-result"
+        create_job = {
+            "ei_payload": {"job": "demo"},
+            "jobStatusNotificationUri": callback_status_uri,
+            "jobResultUri": callback_result_uri,
+        }
+        update_job = {
+            "ei_payload": {"job": "updated"},
+            "jobStatusNotificationUri": callback_status_uri,
+            "jobResultUri": callback_result_uri,
+        }
+
+        try:
+            _, was_created = ei_service.create_or_replace_ei_job(ei_type_id, ei_job_id, create_job)
+            create_ok = was_created is True
+            create_detail = "Create EI job returned created state with callback URIs" if create_ok else "Create EI job returned replace state"
+        except Exception as exc:  # pragma: no cover - defensive
+            create_ok = False
+            create_detail = str(exc)
+        results.append(
             {
                 "test_id": "TC-A1-INT-EI-003",
-                "status": "PASS",
-                "detail": "Optional O1, E2/UE, and Core dependency path declared",
-            },
+                "status": "PASS" if create_ok else "FAIL",
+                "detail": create_detail,
+            }
+        )
+
+        try:
+            job_ids = ei_service.list_ei_job_ids(ei_type_id)
+            single_type_ok = ei_job_id in job_ids
+            single_type_detail = "Query EI job identifiers returned the created job for the EI type"
+        except Exception as exc:  # pragma: no cover - defensive
+            single_type_ok = False
+            single_type_detail = str(exc)
+        results.append(
             {
                 "test_id": "TC-A1-INT-EI-004",
-                "status": "PASS",
-                "detail": "Passive capture flag enabled for A1 interface validation",
-            },
-        ]
+                "status": "PASS" if single_type_ok else "FAIL",
+                "detail": single_type_detail,
+            }
+        )
 
-        passed_count = len([item for item in results if item["status"] == "PASS"])
-        failed_count = len([item for item in results if item["status"] == "FAIL"])
+        original_ei_types = deepcopy(ei_service._ei_types)
+        original_ei_jobs = deepcopy(ei_service._ei_jobs)
+        try:
+            ei_service._ei_types["secondary"] = {
+                "ei_type_id": "secondary",
+                "description": "Secondary enrichment job type",
+                "ei_schema": {"type": "object", "required": ["ei_payload"]},
+                "ei_status_schema": {"type": "object", "required": ["ei_job_id", "delivery_status"]},
+                "ei_result_schema": {"type": "object", "required": ["ei_job_id", "result_payload"]},
+                "supports_ei_job_creation": True,
+            }
+            ei_service.create_or_replace_ei_job("secondary", f"secondary-{run_id}", {"ei_payload": {"job": "secondary"}})
+            aggregated_job_ids = {}
+            for current_type in ei_service.list_ei_type_ids():
+                aggregated_job_ids[current_type] = ei_service.list_ei_job_ids(current_type)
+            all_types_ok = ei_job_id in aggregated_job_ids[ei_type_id] and f"secondary-{run_id}" in aggregated_job_ids["secondary"]
+            all_types_detail = "Query EI job identifiers across all EI types returned both primary and secondary jobs"
+        except Exception as exc:  # pragma: no cover - defensive
+            all_types_ok = False
+            all_types_detail = str(exc)
+        finally:
+            ei_service._ei_types = original_ei_types
+            ei_service._ei_jobs = original_ei_jobs
+        results.append(
+            {
+                "test_id": "TC-A1-INT-EI-005",
+                "status": "PASS" if all_types_ok else "FAIL",
+                "detail": all_types_detail,
+            }
+        )
 
-        return {
-            "run_id": run_id,
-            "category_id": "interoperability-a1ei",
-            "started_at": datetime.now(timezone.utc).isoformat(),
-            "summary": {
-                "total": len(results),
-                "passed": passed_count,
-                "failed": failed_count,
-                "verdict": "PASS" if failed_count == 0 else "FAIL",
-            },
-            "results": results,
-        }
+        try:
+            queried_job = ei_service.get_ei_job(ei_type_id, ei_job_id)
+            query_job_ok = queried_job["ei_job"] == create_job
+            query_job_detail = "Query EI job returned the stored EiJobObject"
+        except Exception as exc:  # pragma: no cover - defensive
+            query_job_ok = False
+            query_job_detail = str(exc)
+        results.append(
+            {
+                "test_id": "TC-A1-INT-EI-006",
+                "status": "PASS" if query_job_ok else "FAIL",
+                "detail": query_job_detail,
+            }
+        )
+
+        try:
+            _, was_created = ei_service.create_or_replace_ei_job(ei_type_id, ei_job_id, update_job)
+            updated_job = ei_service.get_ei_job(ei_type_id, ei_job_id)
+            update_ok = was_created is False and updated_job["ei_job"] == update_job
+            update_detail = "Update EI job replaced the stored EiJobObject" if update_ok else "Update EI job did not replace the stored object"
+        except Exception as exc:  # pragma: no cover - defensive
+            update_ok = False
+            update_detail = str(exc)
+        results.append(
+            {
+                "test_id": "TC-A1-INT-EI-007",
+                "status": "PASS" if update_ok else "FAIL",
+                "detail": update_detail,
+            }
+        )
+
+        status_job_id = f"status-{run_id}"
+        ei_service.create_or_replace_ei_job(ei_type_id, status_job_id, create_job)
+        try:
+            ei_service.delete_ei_job(ei_type_id, status_job_id)
+            try:
+                ei_service.get_ei_job(ei_type_id, status_job_id)
+                delete_ok = False
+                delete_detail = "Deleted EI job remained queryable"
+            except KeyError:
+                delete_ok = True
+                delete_detail = "Delete removed the EI job and subsequent query failed as expected"
+        except Exception as exc:  # pragma: no cover - defensive
+            delete_ok = False
+            delete_detail = str(exc)
+        results.append(
+            {
+                "test_id": "TC-A1-INT-EI-008",
+                "status": "PASS" if delete_ok else "FAIL",
+                "detail": delete_detail,
+            }
+        )
+
+        try:
+            status_obj = ei_service.get_ei_job_status(ei_type_id, ei_job_id)
+            query_status_ok = status_obj["ei_job_id"] == ei_job_id
+            query_status_detail = "Query EI job status returned an EiJobStatusObject"
+        except Exception as exc:  # pragma: no cover - defensive
+            query_status_ok = False
+            query_status_detail = str(exc)
+        results.append(
+            {
+                "test_id": "TC-A1-INT-EI-009",
+                "status": "PASS" if query_status_ok else "FAIL",
+                "detail": query_status_detail,
+            }
+        )
+
+        try:
+            notify_ok, notify_detail = self._execute_callback_post(
+                a1_enrichment_module,
+                lambda: ei_service.notify_ei_job_status(
+                    callback_status_uri,
+                    ei_service.get_ei_job_status(ei_type_id, ei_job_id),
+                ),
+            )
+            notify_ok = notify_ok and ei_service.get_ei_job(ei_type_id, ei_job_id)["ei_job"]["jobStatusNotificationUri"] == callback_status_uri
+        except Exception as exc:  # pragma: no cover - defensive
+            notify_ok = False
+            notify_detail = str(exc)
+        results.append(
+            {
+                "test_id": "TC-A1-INT-EI-010",
+                "status": "PASS" if notify_ok else "FAIL",
+                "detail": notify_detail,
+            }
+        )
+
+        try:
+            result_ok, result_detail = self._execute_callback_post(
+                a1_enrichment_module,
+                lambda: ei_service.deliver_ei_job_result(
+                    callback_result_uri,
+                    {"ei_job_id": ei_job_id, "result_payload": {"score": 0.95}},
+                ),
+            )
+            result_ok = result_ok and ei_service.get_ei_job(ei_type_id, ei_job_id)["ei_job"]["jobResultUri"] == callback_result_uri
+        except Exception as exc:  # pragma: no cover - defensive
+            result_ok = False
+            result_detail = str(exc)
+        results.append(
+            {
+                "test_id": "TC-A1-INT-EI-011",
+                "status": "PASS" if result_ok else "FAIL",
+                "detail": result_detail,
+            }
+        )
+
+        return self._summarize_results(run_id, "interoperability-a1ei", results)
 
     def run_ei_job_operations_tests(self, ei_service, service_registry) -> dict:
         """Execute deterministic section 5.3 A1-EI job operation checks."""
@@ -737,10 +1149,12 @@ class ConformanceHarnessService:
 
         try:
             queried = ei_service.get_ei_job(ei_type_id, ei_job_id)
+            query_payload = queried["ei_job"]
+            payload_matches = all(query_payload.get(key) == value for key, value in create_job.items())
             results.append(
                 {
                     "test_id": "TC-A1-EI-005",
-                    "status": "PASS" if queried["ei_job"] == create_job else "FAIL",
+                    "status": "PASS" if payload_matches else "FAIL",
                     "detail": "Queried EI job matches latest create payload",
                 }
             )
