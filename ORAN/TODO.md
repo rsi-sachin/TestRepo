@@ -429,6 +429,30 @@ Exit Criteria:
     - O1/E2 coverage is currently contract/stub-level; full integration message-flow behavior remains pending.
     - §4.2 extensibility/backward-compatibility assertions still need explicit tests.
 
+- [ ] **P1-ENH: Analyze TS 103 983 Section 5 and enrich existing A1 interface design/code**
+  - **Status:** Analysis complete; implementation enrichment pending
+  - **Date:** 2026-07-02
+  - **Source:** `ORAN/docs/ts_103983v040000p.pdf` (v4.0.0), section §5 (`§5.1`, `§5.2`)
+  - **Skill used:** `document-analysis-a1tp` (primary), `document-cross-reference-analysis` (single mode orchestrator)
+  - **Trace IDs:** `ORAN-FTM-001`, `ORAN-FTM-002`, `ORAN-FTM-003`, `ORAN-FTM-004`, `ORAN-FTM-016`
+  - **Objective:** Map TS 103 983 section-5 A1 function clauses to existing A1-P/A1-EI design and code, identify implementation gaps, and prepare the next enrichment slice.
+  - **Completed in this session:**
+    - ✅ Analyzed body clauses for `§5`, `§5.1`, and `§5.2` from `ORAN/docs/ts_103983v040000p.pdf`.
+    - ✅ Created section-5 clause coverage matrix artifact:
+      - `ORAN/docs/coverage/ts_103983_section5_clause_coverage_matrix.md`
+      - Current summary: `covered=8`, `partial=9`, `missing=1`.
+    - ✅ Updated traceability mapping with dedicated section-5 feature row:
+      - `ORAN/docs/feature_traceability_map.md` (`ORAN-FTM-016`)
+    - ✅ Mapped current implementation anchors for A1 service registry, A1-P, A1-EI, router flows, and current conformance coverage.
+  - **Current status:** Existing A1-P and A1-EI behavior is broadly aligned with section 5, but targeted gaps remain in policy scope validation, lifecycle-transition semantics, EI lifecycle resilience/reconciliation behavior, and explicit A1-ML scope handling.
+  - **Next action items:**
+    - [ ] Add section-5 conformance coverage for policy scope identifiers in `§5.1.4.1` to `§5.1.4.5`.
+    - [ ] Add explicit policy lifecycle transition tests for `§5.1.3` state semantics.
+    - [ ] Add EI lifecycle resilience/reconciliation tests for `§5.2.3.3.1` and `§5.2.3.3.2`.
+    - [ ] Decide and document A1-ML section-5 scope as explicit out-of-scope or planned baseline work.
+    - [ ] On explicit confirmation, dispatch `post-analysis-test-policy-orchestration` for clause-to-test closure planning.
+  - **Notes:** This entry reflects analysis/design enrichment completion, not implementation completion. No section-5 code changes have been applied yet for the identified gaps.
+
 ### ✅ Phase 1: ORAN Foundation (Backend + Frontend)
 **Status:** ✅ COMPLETE (100%)  
 **Estimated:** 5-6 days  
