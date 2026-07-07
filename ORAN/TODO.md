@@ -202,6 +202,18 @@ Exit Criteria:
 **Status:** Pending  
 **Priority:** High
 
+- [ ] Create an RCA Skill that can learn failure identification, correlation, root-cause analysis, and test-orchestration handoff.
+  - Identify failures from logs.
+  - Correlate failures with historical similar failures.
+  - Identify the root cause(s).
+  - Identify test data and test configuration, including endpoints and component simulators to instantiate.
+  - Perform post-analysis handoff to the test orchestration skill with the information identified above.
+
+- [ ] Analyze additional ORAN document sections and capture implementation/gap findings.
+  - Analyze Section 7 of TS 103 983 in `ORAN/docs/`.
+  - Analyze Section 8 of TS 103 983 in `ORAN/docs/`.
+  - Analyze Section 4 of TS 103 988 in `ORAN/docs/`.
+
 - [ ] Add unit and module-level tests for newly added A1 service selection and service modules.
   - Scope: `backend/app/services/a1_service_registry.py`, `backend/app/services/a1_policy_service.py`, `backend/app/services/a1_enrichment_service.py`, `backend/app/api/oran.py`, and related model updates.
   - Add API tests for `/api/oran/services` and service-aware flows (`extract-methodology`, `upload-specs`, `generate`, `generate-from-selection`).
