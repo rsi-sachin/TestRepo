@@ -11,7 +11,14 @@ import httpx
 from pydantic import ValidationError
 
 from app.models.a1_service import A1ServiceDefinition, A1ServiceType
-from app.models.oran import EiJobObject, EiJobResultObject, EiJobStatusObject, EiTypeObject, SpecType
+from app.models.oran import (
+    EiJobObject,
+    EiJobResultObject,
+    EiJobStatusObject,
+    EiTypeObject,
+    EiTypeStatusObject,
+    SpecType,
+)
 from app.services.a1_errors import A1ConflictError
 from app.services.a1_service_registry import A1ServiceRegistry
 
@@ -137,6 +144,27 @@ class A1EnrichmentInformationService:
             if ei_type is None:
                 raise KeyError(f"EI type not found: {ei_type_id}")
             return self._ei_type_to_dict(ei_type)
+
+    def get_ei_type_status(self, ei_type_id: str) -> Dict[str, Any]:
+        """Return status metadata for one EI type."""
+        with self._lock:
+            ei_type = self._ei_types.get(ei_type_id)
+            if ei_type is None:
+                raise KeyError(f"EI type not found: {ei_type_id}")
+
+            supports_creation = self._ei_type_supports_job_creation(ei_type)
+            status = "ENABLED" if supports_creation else "DISABLED"
+            reason = (
+                "EI type is available for EI job create/update operations"
+                if supports_creation
+                else "EI type is currently unavailable for EI job create/update operations"
+            )
+
+            return EiTypeStatusObject(
+                eiTypeId=ei_type_id,
+                eiTypeStatus=status,
+                statusReason=reason,
+            ).model_dump(mode="json")
 
     def list_ei_job_ids(self, ei_type_id: Optional[str] = None) -> List[str]:
         """Return EI job identifiers, optionally filtered by EI type."""
@@ -369,3 +397,24 @@ class A1EnrichmentInformationService:
             )
             # Section-5 resilience behavior: do not buffer failed deliveries; mark as disabled.
             self._set_ei_status_by_destination(destination, "DISABLED")
+
+    async def notify_ei_type_status(self, destination: str, status_obj: Dict[str, Any]) -> None:
+        """Send outbound EI-type status notification to the consumer callback URI."""
+        try:
+            payload = EiTypeStatusObject.model_validate(status_obj)
+        except ValidationError as exc:
+            raise ValueError("EI type status payload must include eiTypeId and eiTypeStatus") from exc
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                destination,
+                json=payload.model_dump(mode="json"),
+                headers={"Content-Type": "application/json"},
+                timeout=10.0,
+            )
+        if response.status_code not in (200, 204):
+            logger.warning(
+                "EI type status notification to %s returned unexpected status %d",
+                destination,
+                response.status_code,
+            )

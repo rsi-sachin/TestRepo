@@ -15,10 +15,12 @@ from app.models.a1_service import A1ServiceRegistryResponse
 from app.models.a1_policy_models import (
     PolicyObject,
     PolicyStatusObject,
+    PolicyTypeStatusObject,
     PolicyTypeObject,
     ProblemDetails,
 )
 from app.models.oran import (
+    EiTypeStatusObject,
     OranTestCatalog,
     OranTestCase,
     OranExecutionResult,
@@ -158,6 +160,33 @@ _POLICY_STATUS_CALLBACK_OPENAPI: Dict[str, object] = {
     }
 }
 
+_POLICY_TYPE_STATUS_CALLBACK_OPENAPI: Dict[str, object] = {
+    "policyTypeStatusNotification": {
+        "{$request.query.notificationDestination}": {
+            "post": {
+                "description": "Notify about status for this policy type",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PolicyTypeStatusObject"
+                            }
+                        }
+                    },
+                },
+                "responses": {
+                    "204": {"description": "Notification received"},
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {"application/problem+json": {}},
+                    },
+                },
+            }
+        }
+    }
+}
+
 _EI_CALLBACKS_OPENAPI: Dict[str, object] = {
     "jobStatusNotification": {
         "{$request.body.jobStatusNotificationUri}": {
@@ -209,6 +238,33 @@ _EI_CALLBACKS_OPENAPI: Dict[str, object] = {
     },
 }
 
+_EI_TYPE_STATUS_CALLBACK_OPENAPI: Dict[str, object] = {
+    "eiTypeStatusNotification": {
+        "{$request.query.notificationDestination}": {
+            "post": {
+                "description": "Notify about status for this EI type",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EiTypeStatusObject"
+                            }
+                        }
+                    },
+                },
+                "responses": {
+                    "204": {"description": "Notification received"},
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {"application/problem+json": {}},
+                    },
+                },
+            }
+        }
+    }
+}
+
 
 def _a1_problem_responses(*status_codes: int) -> Dict[int, Dict[str, object]]:
     return {
@@ -256,6 +312,58 @@ async def get_policy_type(policy_type_id: str):
         return a1_policy_service.get_policy_type(policy_type_id)
     except KeyError as e:
         _raise_problem(404, "Policy Type Not Found", str(e), instance=f"/a1/policytypes/{policy_type_id}")
+
+
+@router.get(
+    "/a1/policytypes/{policy_type_id}/status",
+    response_model=PolicyTypeStatusObject,
+    responses=_a1_problem_responses(404, 405),
+)
+async def get_policy_type_status(policy_type_id: str):
+    """Get policy type status resource (section-6 policy type status procedure)."""
+    try:
+        return a1_policy_service.get_policy_type_status(policy_type_id)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "Policy Type Status Not Found",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/status",
+        )
+
+
+@router.post(
+    "/a1/policytypes/{policy_type_id}/status/notify",
+    status_code=204,
+    responses=_a1_problem_responses(400, 404, 405),
+    openapi_extra={"callbacks": _POLICY_TYPE_STATUS_CALLBACK_OPENAPI},
+)
+async def notify_policy_type_status(
+    policy_type_id: str,
+    status: PolicyTypeStatusObject,
+    notification_destination: str = Query(..., alias="notificationDestination"),
+):
+    """Trigger policy type status notification to a callback URI."""
+    try:
+        a1_policy_service.get_policy_type(policy_type_id)
+        if status.policy_type_id != policy_type_id:
+            raise ValueError("policy_type_id in payload must match policy_type_id in path")
+        await a1_policy_service.notify_policy_type_status(notification_destination, status)
+        return Response(status_code=204)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "Policy Type Not Found",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/status/notify",
+        )
+    except ValueError as e:
+        _raise_problem(
+            400,
+            "Invalid Policy Type Status Notification",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/status/notify",
+        )
 
 
 @router.get(
@@ -553,6 +661,51 @@ async def get_ei_type(ei_type_id: str) -> Dict[str, object]:
         return a1_ei_service.get_ei_type(ei_type_id)
     except KeyError as e:
         _raise_problem(404, "EI Type Not Found", str(e), instance=f"/a1/eitypes/{ei_type_id}")
+
+
+@router.get(
+    "/a1/eitypes/{ei_type_id}/status",
+    response_model=EiTypeStatusObject,
+    responses=_a1_problem_responses(404, 405),
+)
+async def get_ei_type_status(ei_type_id: str) -> Dict[str, object]:
+    """Get EI type status resource (section-6 EI type status procedure)."""
+    try:
+        return a1_ei_service.get_ei_type_status(ei_type_id)
+    except KeyError as e:
+        _raise_problem(404, "EI Type Status Not Found", str(e), instance=f"/a1/eitypes/{ei_type_id}/status")
+
+
+@router.post(
+    "/a1/eitypes/{ei_type_id}/status/notify",
+    status_code=204,
+    responses=_a1_problem_responses(400, 404, 405),
+    openapi_extra={"callbacks": _EI_TYPE_STATUS_CALLBACK_OPENAPI},
+)
+async def notify_ei_type_status(
+    ei_type_id: str,
+    status: EiTypeStatusObject,
+    notification_destination: str = Query(..., alias="notificationDestination"),
+):
+    """Trigger EI type status notification to a callback URI."""
+    try:
+        a1_ei_service.get_ei_type(ei_type_id)
+        if status.eiTypeId != ei_type_id:
+            raise ValueError("eiTypeId in payload must match ei_type_id in path")
+        await a1_ei_service.notify_ei_type_status(
+            notification_destination,
+            status.model_dump(mode="json"),
+        )
+        return Response(status_code=204)
+    except KeyError as e:
+        _raise_problem(404, "EI Type Not Found", str(e), instance=f"/a1/eitypes/{ei_type_id}/status/notify")
+    except ValueError as e:
+        _raise_problem(
+            400,
+            "Invalid EI Type Status Notification",
+            str(e),
+            instance=f"/a1/eitypes/{ei_type_id}/status/notify",
+        )
 
 
 @router.get(

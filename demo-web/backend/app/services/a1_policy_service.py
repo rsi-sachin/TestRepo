@@ -10,6 +10,7 @@ import httpx
 
 from app.models.a1_service import A1ServiceDefinition, A1ServiceType
 from app.models.a1_policy_models import PolicyObject, PolicyStatusObject, PolicyTypeObject
+from app.models.a1_policy_models import PolicyTypeStatusObject
 
 logger = logging.getLogger(__name__)
 from app.models.oran import SpecType
@@ -192,6 +193,24 @@ class A1PolicyService:
             raise KeyError(f"Policy type not found: {policy_type_id}")
         return deepcopy(policy_type)
 
+    def get_policy_type_status(self, policy_type_id: str) -> PolicyTypeStatusObject:
+        """Return status metadata for one policy type."""
+        policy_type = self._policy_types.get(policy_type_id)
+        if policy_type is None:
+            raise KeyError(f"Policy type not found: {policy_type_id}")
+
+        status = "ENABLED" if policy_type.supports_policy_creation else "DISABLED"
+        reason = (
+            "Policy type is available for policy create/update operations"
+            if status == "ENABLED"
+            else "Policy type is currently unavailable for policy create/update operations"
+        )
+        return PolicyTypeStatusObject(
+            policy_type_id=policy_type_id,
+            policy_type_status=status,
+            status_reason=reason,
+        )
+
     def create_or_replace_policy(
         self,
         policy_type_id: str,
@@ -279,6 +298,24 @@ class A1PolicyService:
         if response.status_code not in (200, 204):
             logger.warning(
                 "Policy status notification to %s returned unexpected status %d",
+                destination,
+                response.status_code,
+            )
+
+    async def notify_policy_type_status(
+        self, destination: str, status_obj: PolicyTypeStatusObject
+    ) -> None:
+        """Send outbound policy-type status notification to the consumer callback URI."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                destination,
+                json=status_obj.model_dump(mode="json"),
+                headers={"Content-Type": "application/json"},
+                timeout=10.0,
+            )
+        if response.status_code not in (200, 204):
+            logger.warning(
+                "Policy type status notification to %s returned unexpected status %d",
                 destination,
                 response.status_code,
             )

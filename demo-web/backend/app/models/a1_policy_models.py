@@ -32,6 +32,14 @@ class PolicyTypeObject(BaseModel):
     )
 
 
+class PolicyTypeStatusObject(BaseModel):
+    """JSON representation of policy type availability status."""
+
+    policy_type_id: str = Field(..., min_length=1, description="Policy type identifier")
+    policy_type_status: str = Field(..., min_length=1, description="Current policy type status")
+    status_reason: Optional[str] = Field(default=None, description="Optional reason for status")
+
+
 class PolicyObject(BaseModel):
     """JSON representation of an A1 policy."""
 

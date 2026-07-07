@@ -71,6 +71,12 @@ def test_ei_type_and_job_lifecycle_endpoints() -> None:
     assert "default" in list_types_response.json()
     assert get_type_response.status_code == 200
     assert get_type_response.json()["ei_type_id"] == "default"
+
+    ei_type_status_response = client.get("/api/oran/a1/eitypes/default/status")
+    assert ei_type_status_response.status_code == 200
+    assert ei_type_status_response.json()["eiTypeId"] == "default"
+    assert ei_type_status_response.json()["eiTypeStatus"] == "ENABLED"
+
     assert create_response.status_code == 201
     assert "Location" in create_response.headers
     assert create_response.json()["ei_job"]["jobStatusNotificationUri"] == "https://example.com/ei-status"
@@ -170,6 +176,17 @@ def test_section6_ei_openapi_definitions_include_problem_details_responses() -> 
     get_ei_job_status = operations["/api/oran/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}/status"]["get"]
     assert "405" in get_ei_job_status["responses"]
 
+    get_ei_type_status = operations["/api/oran/a1/eitypes/{ei_type_id}/status"]["get"]
+    assert "404" in get_ei_type_status["responses"]
+    assert "405" in get_ei_type_status["responses"]
+
+    post_ei_type_status_notify = operations["/api/oran/a1/eitypes/{ei_type_id}/status/notify"]["post"]
+    assert "400" in post_ei_type_status_notify["responses"]
+    assert "404" in post_ei_type_status_notify["responses"]
+    assert "405" in post_ei_type_status_notify["responses"]
+    type_callbacks = post_ei_type_status_notify.get("callbacks", {})
+    assert "eiTypeStatusNotification" in type_callbacks
+
     error_response = put_ei_job["responses"]["404"]
     assert "application/problem+json" in error_response["content"]
 
@@ -215,6 +232,34 @@ def test_ei_resources_reject_unsupported_methods_with_405() -> None:
 
     assert eitypes_post.status_code == 405
     assert status_delete.status_code == 405
+
+
+def test_notify_ei_type_status_returns_204(monkeypatch) -> None:
+    app = FastAPI()
+    app.include_router(oran.router, prefix="/api/oran")
+    client = TestClient(app)
+
+    observed = {}
+
+    async def _fake_notify(destination: str, status_obj: dict):
+        observed["destination"] = destination
+        observed["status"] = status_obj
+
+    monkeypatch.setattr(oran.a1_ei_service, "notify_ei_type_status", _fake_notify)
+
+    response = client.post(
+        "/api/oran/a1/eitypes/default/status/notify",
+        params={"notificationDestination": "https://callback.example.com/ei-type-status"},
+        json={
+            "eiTypeId": "default",
+            "eiTypeStatus": "ENABLED",
+            "statusReason": "type available",
+        },
+    )
+
+    assert response.status_code == 204
+    assert observed["destination"] == "https://callback.example.com/ei-type-status"
+    assert observed["status"]["eiTypeId"] == "default"
 
 
 def test_eijobs_filter_unknown_eitype_returns_problem_details() -> None:

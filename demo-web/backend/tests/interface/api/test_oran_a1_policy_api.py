@@ -156,6 +156,39 @@ def test_get_unknown_policy_type_returns_404(
     assert "nonexistent-type" in detail["instance"]
 
 
+def test_policy_type_status_procedures_are_exposed(client: TestClient) -> None:
+    status_response = client.get("/api/oran/a1/policytypes/default/status")
+
+    assert status_response.status_code == 200
+    payload = status_response.json()
+    assert payload["policy_type_id"] == "default"
+    assert payload["policy_type_status"] == "ENABLED"
+
+
+def test_policy_type_status_notify_returns_204(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    observed: dict[str, object] = {}
+
+    async def _fake_notify(destination: str, status_obj):
+        observed["destination"] = destination
+        observed["status"] = status_obj.model_dump(mode="json")
+
+    monkeypatch.setattr(oran.a1_policy_service, "notify_policy_type_status", _fake_notify)
+
+    response = client.post(
+        "/api/oran/a1/policytypes/default/status/notify",
+        params={"notificationDestination": "https://callback.example.com/policy-type-status"},
+        json={
+            "policy_type_id": "default",
+            "policy_type_status": "ENABLED",
+            "status_reason": "type available",
+        },
+    )
+
+    assert response.status_code == 204
+    assert observed["destination"] == "https://callback.example.com/policy-type-status"
+    assert observed["status"]["policy_type_id"] == "default"
+
+
 def test_section6_policy_openapi_definitions_include_problem_details_responses(
     client: TestClient,
 ) -> None:
@@ -171,6 +204,17 @@ def test_section6_policy_openapi_definitions_include_problem_details_responses(
 
     get_policy_type = operations["/api/oran/a1/policytypes/{policy_type_id}"]["get"]
     assert "405" in get_policy_type["responses"]
+
+    get_policy_type_status = operations["/api/oran/a1/policytypes/{policy_type_id}/status"]["get"]
+    assert "404" in get_policy_type_status["responses"]
+    assert "405" in get_policy_type_status["responses"]
+
+    post_policy_type_status_notify = operations["/api/oran/a1/policytypes/{policy_type_id}/status/notify"]["post"]
+    assert "400" in post_policy_type_status_notify["responses"]
+    assert "404" in post_policy_type_status_notify["responses"]
+    assert "405" in post_policy_type_status_notify["responses"]
+    callbacks = post_policy_type_status_notify.get("callbacks", {})
+    assert "policyTypeStatusNotification" in callbacks
 
     policy_not_found_response = put_policy["responses"]["404"]
     assert (

@@ -726,11 +726,11 @@ class ConformanceHarnessService:
         policy_type_id = policy_type_ids[0] if policy_type_ids else "default"
         policy_id = f"interop-{run_id}"
         create_policy = PolicyObject(
-            scope={"region": "interop"},
+            scope={"scope_type": "cell", "scope_value": "interop-cell-01"},
             policy_statements=[{"statement_id": "int-1", "action": "allow"}],
         )
         update_policy = PolicyObject(
-            scope={"region": "interop"},
+            scope={"scope_type": "cell", "scope_value": "interop-cell-01"},
             policy_statements=[{"statement_id": "int-2", "action": "throttle"}],
         )
 

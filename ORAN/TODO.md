@@ -1,8 +1,40 @@
 # Demo-Web ORAN Integration - TODO List
 
 **Project:** Extend demo-web with O-RAN A1 test generation capabilities  
-**Last Updated:** 2026-07-02  
-**Status:** Phase 1 Complete, TS 103 989 section 4.4/Section 7 interoperability complete, Phase 2-4 pending
+**Last Updated:** 2026-07-07  
+**Status:** Phase 1 Complete, TS 103 989 section 4.4/Section 7 interoperability complete, TS 103 983 section 6 complete, Phase 2-4 pending
+
+## Task Update: TS 103 983 Section 6 Signalling Procedures
+
+- Task: Analyze and implement Section 6 of `ORAN/docs/ts_103983v040000p.pdf`, close identified implementation gaps, and verify clause coverage with evidence artifacts.
+- Date completed: 2026-07-07
+- Status: Complete
+- Trace ID: ORAN-FTM-017
+- Implementation summary:
+  - Added explicit policy type status procedures (query + notify) to API/service layers.
+  - Added explicit EI type status procedures (query + notify) to API/service layers.
+  - Added interface API tests for new status procedures and OpenAPI callback metadata.
+  - Added clause-level section-6 coverage artifacts and updated section-6 gap analysis with residual governance items.
+- Verification status:
+  - Section-6 scoped regression: 94 passed, 0 failed.
+  - Additional broader regression (including clause-7 suites): 98 passed, 0 failed.
+  - completion_gate_status: pass
+- Artifacts:
+  - `ORAN/docs/coverage/ts_103983_section6_clause_coverage_matrix.md`
+  - `ORAN/docs/coverage/ts_103983_section6_gap_analysis.md`
+  - `ORAN/docs/coverage/ts_103983_section6_verification_run_summary.md`
+  - `ORAN/docs/coverage/evidence/ts103983-section6-20260707113814/`
+
+## Task Update: Clause-7 Interoperability Follow-up Fix (Post Section-6 Broad Run)
+
+- Task: Resolve the clause-7 interoperability regression discovered during a broad post-section-6 regression run.
+- Date completed: 2026-07-07
+- Status: Complete
+- Scope:
+  - Updated A1-P interoperability harness payload scope to match enforced policy scope schema in `demo-web/backend/app/modules/conformance_harness/service.py`.
+- Verification status:
+  - `tests/conformance/test_interoperability_clause7_suites.py`: 4 passed, 0 failed.
+  - Combined targeted regression set: 98 passed, 0 failed.
 
 ## Task Update: TS 103 989 Section 7 Implementation
 

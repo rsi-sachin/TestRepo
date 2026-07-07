@@ -228,6 +228,14 @@ class EiTypeObject(BaseModel):
     )
 
 
+class EiTypeStatusObject(BaseModel):
+    """Representation of EI type status feedback."""
+
+    eiTypeId: str = Field(..., description="EI type identifier")
+    eiTypeStatus: str = Field(..., description="Current EI type status")
+    statusReason: Optional[str] = Field(None, description="Optional reason for EI type status")
+
+
 class EiJobObject(BaseModel):
     """Representation of an EI job resource."""
 
