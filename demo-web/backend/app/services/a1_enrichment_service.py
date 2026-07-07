@@ -68,7 +68,47 @@ class A1EnrichmentInformationService:
             "recommended_specs": [spec.value for spec in self.get_supported_specs()],
             "primary_resources": self.definition.resource_domains,
             "supported_ei_types": self.list_ei_type_ids(),
+            "a1_ml_support": {
+                "status": "out_of_scope",
+                "reference": "TS 103 983 section 5",
+                "note": "A1-EI is implemented in MVP; A1-ML exchange is not included in current scope.",
+            },
         }
+
+    def reconcile_ei_jobs_after_restart(self, recovered_job_ids: Optional[List[str]] = None) -> Dict[str, str]:
+        """Reconcile EI job lifecycle state after restart without buffering assumptions.
+
+        When recovered_job_ids is provided, jobs not present in this set are marked
+        DISABLED so Near-RT RIC can explicitly recreate or update them.
+        """
+        with self._lock:
+            recovered = set(recovered_job_ids or [])
+            report: Dict[str, str] = {}
+            for (ei_type_id, ei_job_id), record in self._ei_jobs.items():
+                if recovered_job_ids is not None and ei_job_id not in recovered:
+                    record["ei_status"] = EiJobStatusObject(eiJobStatus="DISABLED").model_dump(mode="json")
+                    report[f"{ei_type_id}:{ei_job_id}"] = "DISABLED"
+                else:
+                    record["ei_status"] = EiJobStatusObject(eiJobStatus="ENABLED").model_dump(mode="json")
+                    report[f"{ei_type_id}:{ei_job_id}"] = "ENABLED"
+            return report
+
+    def _set_ei_status_by_destination(self, destination: str, status: str) -> None:
+        if not destination:
+            return
+
+        with self._lock:
+            for key, callback in self._notification_destinations.items():
+                if callback == destination and key in self._ei_jobs:
+                    self._ei_jobs[key]["ei_status"] = EiJobStatusObject(
+                        eiJobStatus=status
+                    ).model_dump(mode="json")
+
+            for key, record in self._ei_jobs.items():
+                if record.get("ei_job", {}).get("jobResultUri") == destination:
+                    self._ei_jobs[key]["ei_status"] = EiJobStatusObject(
+                        eiJobStatus=status
+                    ).model_dump(mode="json")
 
     def list_ei_type_ids(self) -> List[str]:
         """Return known EI type identifiers."""
@@ -301,6 +341,8 @@ class A1EnrichmentInformationService:
                 destination,
                 response.status_code,
             )
+            # Section-5 resilience behavior: do not buffer failed callbacks; mark as disabled.
+            self._set_ei_status_by_destination(destination, "DISABLED")
 
     async def deliver_ei_job_result(self, destination: str, result_obj: Dict[str, Any]) -> None:
         """Send outbound EI job result delivery to the consumer callback URI."""
@@ -325,3 +367,5 @@ class A1EnrichmentInformationService:
                 destination,
                 response.status_code,
             )
+            # Section-5 resilience behavior: do not buffer failed deliveries; mark as disabled.
+            self._set_ei_status_by_destination(destination, "DISABLED")

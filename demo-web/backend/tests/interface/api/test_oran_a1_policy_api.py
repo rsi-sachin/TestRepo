@@ -210,3 +210,46 @@ def test_policy_resources_reject_unsupported_methods_with_405(client: TestClient
 
     assert list_delete.status_code == 405
     assert status_put.status_code == 405
+
+
+def test_policy_content_taxonomy_profile_is_accepted(client: TestClient) -> None:
+    response = client.put(
+        "/api/oran/a1/policytypes/default/policies/policy-taxonomy-api-1",
+        json={
+            "scope": {"scope_type": "cell", "scope_value": "010"},
+            "policy_statements": [
+                {
+                    "id": "objective-api-1",
+                    "category": "objective",
+                    "objective": {"name": "availability", "target": ">=99.9%"},
+                },
+                {
+                    "id": "resource-api-1",
+                    "category": "resource",
+                    "resource": {"type": "cpu", "limit": "2 cores"},
+                },
+            ],
+        },
+    )
+
+    assert response.status_code == 201
+
+
+def test_policy_content_taxonomy_profile_rejects_invalid_statement(client: TestClient) -> None:
+    response = client.put(
+        "/api/oran/a1/policytypes/default/policies/policy-taxonomy-api-2",
+        json={
+            "scope": {"scope_type": "cell", "scope_value": "011"},
+            "policy_statements": [
+                {
+                    "id": "objective-api-2",
+                    "category": "objective",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["title"] == "Invalid Policy Request"
+    assert "non-empty objective object" in detail["detail"]

@@ -6,6 +6,18 @@ user-invocable: true
 domain: quality-engineering
 versions: ["v2"]
 configuration:
+  user-confirmation-checkpoint:
+    required: true
+    prompt-template: "Post-analysis orchestration is pending for <document_id> <section_scope>. Confirm to run now? (yes/no)"
+    accept-values: ["yes", "y", "confirm", "approved"]
+    reject-values: ["no", "n", "later", "not now"]
+    behavior-if-missing: "fail-closed"
+    behavior-if-rejected: "defer-and-exit"
+    evidence-required:
+      - "confirmation_prompt"
+      - "confirmation_response"
+      - "confirmation_timestamp"
+      - "confirmation_source"
   output-path-convention:
     test_policy_orchestrator_report: "ORAN/docs/test-policy/<document_id>_<section_scope>_test_policy_report.md"
     clause_coverage_matrix: "ORAN/docs/coverage/<document_id>_<section_scope>_clause_coverage_matrix.md"
@@ -64,6 +76,17 @@ Treat document as a **test specification** when any of these are true:
 
 ## Mandatory Workflow
 
+0. User confirmation checkpoint (mandatory, fail-closed).
+- Before invoking any orchestration agent/tooling, explicitly ask the user whether to run post-analysis orchestration now.
+- Persist confirmation evidence fields:
+  - `confirmation_prompt`
+  - `confirmation_response`
+  - `confirmation_timestamp`
+  - `confirmation_source` (`user`)
+- Proceed only when response is one of: `yes|y|confirm|approved` (case-insensitive).
+- If response is `no|n|later|not now`, return deferred status and stop without running orchestration.
+- If no explicit response is available, do not proceed; set workflow status to blocked.
+
 1. Validate prerequisites.
 - Confirm technical analysis has completed and produced trace-mapped output.
 - Confirm `ORAN/docs/feature_traceability_map.md` is available.
@@ -117,6 +140,8 @@ Treat document as a **test specification** when any of these are true:
 
 ## Required Outputs
 
+- `confirmation_checkpoint`: mandatory record of prompt + user response.
+
 - `test_policy_orchestrator_report`: Required tests from agent output.
 - `clause_coverage_matrix`: Mandatory when source is a test specification.
 - `missing_tests_added`: Explicit list of new/updated tests.
@@ -129,6 +154,14 @@ Treat document as a **test specification** when any of these are true:
 ## Output Format Contract
 
 ```yaml
+confirmation_checkpoint:
+  required: true
+  status: "confirmed|deferred|blocked"
+  prompt: "Post-analysis orchestration is pending for <document_id> <section_scope>. Confirm to run now? (yes/no)"
+  response: "<yes|no|...>"
+  timestamp: "<iso8601>"
+  source: "user"
+
 test_policy_orchestrator_report:
   agent: "Test Policy Orchestrator"
   required_tests: []
@@ -179,6 +212,11 @@ residual_risks:
 ```
 
 ## Guardrails
+
+- Never invoke `Test Policy Orchestrator` until `confirmation_checkpoint.status=confirmed`.
+- If confirmation is missing, mark workflow blocked and explicitly ask user for confirmation.
+- If user declines/defer response, mark workflow deferred and do not run orchestration.
+- Treat missing confirmation evidence as a fail-closed condition.
 
 - Always use the exact agent name `Test Policy Orchestrator`.
 - Do not skip clause matrix generation when source is a test specification.

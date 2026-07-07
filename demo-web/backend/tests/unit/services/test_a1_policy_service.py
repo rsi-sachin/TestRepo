@@ -91,3 +91,73 @@ def test_get_policy_type_raises_key_error_for_unknown_type_id() -> None:
 
     with pytest.raises(KeyError, match="Policy type not found"):
         service.get_policy_type("nonexistent-type")
+
+
+def test_policy_content_profile_accepts_objective_and_resource_categories() -> None:
+    service = A1PolicyService()
+    policy = PolicyObject(
+        scope={"scope_type": "cell", "scope_value": "alpha"},
+        policy_statements=[
+            {
+                "id": "objective-1",
+                "category": "objective",
+                "objective": {"name": "latency", "target": "p95<20ms"},
+            },
+            {
+                "id": "resource-1",
+                "category": "resource",
+                "resource": {"type": "bandwidth", "limit": "100mbps"},
+            },
+        ],
+    )
+
+    created, was_created = service.create_or_replace_policy(
+        policy_type_id="default",
+        policy_id="policy-taxonomy-1",
+        policy=policy,
+    )
+
+    assert was_created is True
+    assert created.policy_statements[0]["category"] == "objective"
+    assert created.policy_statements[1]["category"] == "resource"
+
+
+def test_policy_content_profile_rejects_unknown_category() -> None:
+    service = A1PolicyService()
+    policy = PolicyObject(
+        scope={"scope_type": "cell", "scope_value": "beta"},
+        policy_statements=[
+            {
+                "id": "bad-1",
+                "category": "unknown",
+                "objective": {"name": "throughput"},
+            }
+        ],
+    )
+
+    with pytest.raises(ValueError, match="Unsupported policy statement category"):
+        service.create_or_replace_policy(
+            policy_type_id="default",
+            policy_id="policy-taxonomy-bad-1",
+            policy=policy,
+        )
+
+
+def test_policy_content_profile_rejects_missing_category_payload() -> None:
+    service = A1PolicyService()
+    policy = PolicyObject(
+        scope={"scope_type": "cell", "scope_value": "gamma"},
+        policy_statements=[
+            {
+                "id": "bad-2",
+                "category": "objective",
+            }
+        ],
+    )
+
+    with pytest.raises(ValueError, match="must include a non-empty objective object"):
+        service.create_or_replace_policy(
+            policy_type_id="default",
+            policy_id="policy-taxonomy-bad-2",
+            policy=policy,
+        )

@@ -380,9 +380,9 @@ Exit Criteria:
     - O1/E2 coverage is currently contract/stub-level; full integration message-flow behavior remains pending.
     - §4.2 extensibility/backward-compatibility assertions still need explicit tests.
 
-- [ ] **P1-ENH: Analyze TS 103 983 Section 5 and enrich existing A1 interface design/code**
-  - **Status:** Analysis complete; implementation enrichment in progress (steps 1-3 and 5 complete; step 4 pending)
-  - **Date:** 2026-07-02
+- [x] **P1-ENH: Analyze TS 103 983 Section 5 and enrich existing A1 interface design/code**
+  - **Status:** Complete
+  - **Date:** 2026-07-07
   - **Source:** `ORAN/docs/ts_103983v040000p.pdf` (v4.0.0), section §5 (`§5.1`, `§5.2`)
   - **Skill used:** `document-analysis-a1tp` (primary), `document-cross-reference-analysis` (single mode orchestrator)
   - **Trace IDs:** `ORAN-FTM-001`, `ORAN-FTM-002`, `ORAN-FTM-003`, `ORAN-FTM-004`, `ORAN-FTM-016`
@@ -395,34 +395,29 @@ Exit Criteria:
     - ✅ Updated traceability mapping with dedicated section-5 feature row:
       - `ORAN/docs/feature_traceability_map.md` (`ORAN-FTM-016`)
     - ✅ Mapped current implementation anchors for A1 service registry, A1-P, A1-EI, router flows, and current conformance coverage.
-  - **Current status:** Existing A1-P and A1-EI behavior is broadly aligned with section 5, but targeted gaps remain in policy scope validation, lifecycle-transition semantics, EI lifecycle resilience/reconciliation behavior, and explicit A1-ML scope handling.
-  - **Next action items:**
-    - [x] Add section-5 conformance coverage for policy scope identifiers in `§5.1.4.1` to `§5.1.4.5`.
-    - [x] Add explicit policy lifecycle transition tests for `§5.1.3` state semantics.
-    - [x] Add EI lifecycle resilience/reconciliation tests for `§5.2.3.3.1` and `§5.2.3.3.2`.
-    - [ ] Decide and document A1-ML section-5 scope as explicit out-of-scope or planned baseline work.
-    - [x] On explicit confirmation, dispatch `post-analysis-test-policy-orchestration` for clause-to-test closure planning.
-  - **Progress update (2026-07-02):**
-    - Added conformance suite: `demo-web/backend/tests/conformance/test_ts103983_section5_a1_functions.py`.
-    - Verified focused regression: `10 passed` (step 1 to step 3 complete).
-    - Step 4 intentionally skipped per user instruction for this execution slice.
-    - Dispatched `post-analysis-test-policy-orchestration` and persisted artifacts:
-      - `ORAN/docs/test-policy/ts_103983_section5_test_policy_report.md`
-      - `ORAN/docs/coverage/ts_103983_section5_verification_run_summary.md`
-    - Added closure suites for module/e2e/nonfunctional/interface perspectives and evidence linkage artifacts:
-      - `demo-web/backend/tests/module/oran/test_ts103983_section5_module_concurrency.py`
-      - `demo-web/backend/tests/e2e/test_ts103983_section5_reconciliation_e2e.py`
-      - `demo-web/backend/tests/nonfunctional/parameter/test_ts103983_section5_parameter_passing.py`
-      - `demo-web/backend/tests/nonfunctional/memory/test_ts103983_section5_ei_memory_behavior.py`
-      - `demo-web/backend/tests/nonfunctional/load/test_ts103983_section5_ei_load.py`
-      - `demo-web/backend/tests/nonfunctional/stress/test_ts103983_section5_ei_stress.py`
-      - `demo-web/backend/tests/interface/api/test_ts103983_section5_interface_faults.py`
-      - `ORAN/docs/coverage/evidence/ts103983-section5-20260702/run_config_snapshot.json`
-      - `ORAN/docs/coverage/evidence/ts103983-section5-20260702/protocol_message_evidence.json`
-      - `ORAN/docs/coverage/evidence/ts103983-section5-20260702/requirement_registry_linkage.md`
-      - `ORAN/docs/coverage/evidence/ts103983-section5-20260702/pytest_junit.xml`
-    - Post-analysis gate result: `completion_gate_status=PASS` (fail-closed criteria satisfied for section-5 closure scope).
-  - **Notes:** This entry reflects analysis/design enrichment completion, not implementation completion. No section-5 code changes have been applied yet for the identified gaps.
+  - **Completed in this session (implementation enrichment):**
+    - ✅ Added policy scope discriminator validation for section `§5.1.4.1` to `§5.1.4.5` in `demo-web/backend/app/services/a1_policy_service.py`.
+    - ✅ Added explicit policy lifecycle transition helper for `§5.1.3` semantics (`ACCEPTED`/`ENFORCED`/`NOT_ENFORCED`) in `demo-web/backend/app/services/a1_policy_service.py`.
+    - ✅ Added EI lifecycle restart reconciliation helper for `§5.2.3.3.1` in `demo-web/backend/app/services/a1_enrichment_service.py`.
+    - ✅ Added EI delivery-failure resilience behavior for `§5.2.3.3.2` (non-buffering expectation via deterministic `DISABLED` status) in `demo-web/backend/app/services/a1_enrichment_service.py`.
+    - ✅ Added explicit section-5 A1-ML scope decision (`out_of_scope`) in A1 service summaries.
+    - ✅ Added dedicated section-5 conformance suites:
+      - `demo-web/backend/tests/conformance/test_ts103983_section5_policy_scope_identifiers.py`
+      - `demo-web/backend/tests/conformance/test_ts103983_section5_policy_lifecycle_transitions.py`
+      - `demo-web/backend/tests/conformance/test_ts103983_section5_ei_lifecycle_resilience.py`
+      - `demo-web/backend/tests/conformance/test_ts103983_section5_capability_summary.py`
+    - ✅ Verification run: focused regression completed with `61 passed`.
+  - **Residual follow-up (non-blocking):**
+    - [x] Optional hardening for `§5.1.5` policy statement objective/resource taxonomy profile.
+    - [x] Optional push-delivery callback contract and deterministic non-buffering checks for `§5.2.5` and `§5.2.5.1`.
+    - [ ] Optional future enhancement: explicit retry/backoff policy profile for push delivery.
+  - **Post-analysis orchestration:** Executed on 2026-07-07 after explicit user confirmation; fail-closed gate status is now `PASS`.
+    - Test policy report: `ORAN/docs/test-policy/ts_103983_section5_test_policy_report.md`
+    - Verification summary: `ORAN/docs/coverage/ts_103983_section5_verification_run_summary.md`
+    - Evidence artifacts:
+      - `ORAN/docs/coverage/evidence/ts_103983_section5_config_snapshot.yaml`
+      - `ORAN/docs/coverage/evidence/ts_103983_section5_protocol_message_evidence.md`
+  - **Notes:** Section-5 implementation enrichment is complete for the previously tracked blockers, and historical 2026-07-02 closure evidence remains in coverage artifacts.
 
 ### ✅ Phase 1: ORAN Foundation (Backend + Frontend)
 **Status:** ✅ COMPLETE (100%)  

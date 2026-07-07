@@ -275,3 +275,103 @@ def test_deliver_ei_job_result_rejects_payload_missing_required_fields() -> None
 
     with pytest.raises(ValueError, match="must include jobResult"):
         asyncio.run(helper.deliver_ei_job_result("https://consumer.example.com/ei-result", {"wrong": "x"}))
+
+
+def test_notify_ei_job_status_uses_json_content_type_and_disables_on_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+    helper.create_or_replace_ei_job(
+        "default",
+        "job-status-contract",
+        {
+            "eiTypeId": "default",
+            "jobDefinition": {"name": "status-contract"},
+            "jobStatusNotificationUri": "https://consumer.example.com/status-contract",
+            "jobResultUri": "https://consumer.example.com/result-contract",
+        },
+    )
+
+    captured = {"count": 0, "headers": None}
+
+    class _FakeResponse:
+        status_code = 500
+
+    class _FakeAsyncClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def post(self, *args, **kwargs):
+            captured["count"] += 1
+            captured["headers"] = kwargs.get("headers", {})
+            return _FakeResponse()
+
+    monkeypatch.setattr(ei_module.httpx, "AsyncClient", _FakeAsyncClient)
+
+    asyncio.run(
+        helper.notify_ei_job_status(
+            "https://consumer.example.com/status-contract",
+            {"eiJobStatus": "ENABLED"},
+        )
+    )
+
+    assert captured["count"] == 1
+    assert captured["headers"] == {"Content-Type": "application/json"}
+    assert helper.get_ei_job_status("default", "job-status-contract")["eiJobStatus"] == "DISABLED"
+
+
+def test_deliver_ei_job_result_repeated_failure_is_non_buffering_and_deterministic(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+    helper.create_or_replace_ei_job(
+        "default",
+        "job-result-contract",
+        {
+            "eiTypeId": "default",
+            "jobDefinition": {"name": "result-contract"},
+            "jobResultUri": "https://consumer.example.com/result-contract",
+        },
+    )
+
+    captured = {"count": 0, "headers": []}
+
+    class _FakeResponse:
+        status_code = 503
+
+    class _FakeAsyncClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def post(self, *args, **kwargs):
+            captured["count"] += 1
+            captured["headers"].append(kwargs.get("headers", {}))
+            return _FakeResponse()
+
+    monkeypatch.setattr(ei_module.httpx, "AsyncClient", _FakeAsyncClient)
+
+    asyncio.run(
+        helper.deliver_ei_job_result(
+            "https://consumer.example.com/result-contract",
+            {"jobResult": {"value": "first"}},
+        )
+    )
+    asyncio.run(
+        helper.deliver_ei_job_result(
+            "https://consumer.example.com/result-contract",
+            {"jobResult": {"value": "second"}},
+        )
+    )
+
+    assert captured["count"] == 2
+    assert captured["headers"] == [
+        {"Content-Type": "application/json"},
+        {"Content-Type": "application/json"},
+    ]
+    assert helper.get_ei_job_status("default", "job-result-contract")["eiJobStatus"] == "DISABLED"
