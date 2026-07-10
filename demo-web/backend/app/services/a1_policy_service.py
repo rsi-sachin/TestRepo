@@ -4,6 +4,7 @@ Policy-management specific A1 service helpers.
 
 import logging
 from copy import deepcopy
+import re
 from typing import Dict, List, Optional, Tuple
 
 import httpx
@@ -39,6 +40,19 @@ class A1PolicyService:
         "NOT_ENFORCED": {"ENFORCED", "NOT_ENFORCED"},
     }
     _SUPPORTED_POLICY_STATEMENT_CATEGORIES = {"objective", "resource"}
+    _HEX_RE = re.compile(r"^[0-9A-Fa-f]+$")
+    _TYPE_DEFINITION_CATALOG = {
+        "common": "1.0.0",
+        "QoSTarget": "4.0.1",
+        "QoETarget": "4.0.1",
+        "TrafficSteeringPreference": "4.0.1",
+        "QoSandTSP": "4.0.1",
+        "QoEandTSP": "4.0.1",
+        "UELevelTarget": "3.0.1",
+        "SliceSLATarget": "3.0.0",
+        "LoadBalancing": "1.0.2",
+        "EnergySaving": "2.0.0",
+    }
 
     def __init__(self, registry: A1ServiceRegistry | None = None) -> None:
         self.registry = registry or A1ServiceRegistry()
@@ -86,12 +100,65 @@ class A1PolicyService:
                 "supported_categories": sorted(self._SUPPORTED_POLICY_STATEMENT_CATEGORIES),
                 "legacy_statements_allowed": True,
             },
+            "type_definition_catalog": {
+                "source_reference": "TS 103 988 section 5.2",
+                "types": deepcopy(self._TYPE_DEFINITION_CATALOG),
+            },
             "a1_ml_support": {
                 "status": "out_of_scope",
                 "reference": "TS 103 983 section 5",
                 "note": "A1-P and A1-EI are implemented; A1-ML is not part of the current MVP baseline.",
             },
         }
+
+    def _validate_hex_attr(self, scope: Dict[str, object], name: str, length: int) -> None:
+        value = scope.get(name)
+        if value is None:
+            return
+        if not isinstance(value, str) or len(value) != length or self._HEX_RE.fullmatch(value) is None:
+            raise ValueError(f"Scope attribute {name} must be a {length}-character hexadecimal string")
+
+    def _validate_int_attr(self, scope: Dict[str, object], name: str, upper: int) -> None:
+        value = scope.get(name)
+        if value is None:
+            return
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0 or value > upper:
+            raise ValueError(f"Scope attribute {name} must be an integer between 0 and {upper}")
+
+    def _validate_encoded_scope_attributes(self, policy: PolicyObject) -> None:
+        scope = policy.scope
+        self._validate_hex_attr(scope, "ranUeId", 16)
+        self._validate_hex_attr(scope, "amfRegionId", 2)
+        self._validate_hex_attr(scope, "mmeGroupId", 4)
+        self._validate_hex_attr(scope, "mmeCode", 2)
+        self._validate_int_attr(scope, "amfUeNgapId", (1 << 40) - 1)
+        self._validate_int_attr(scope, "mmeUeS1apId", (1 << 32) - 1)
+        self._validate_int_attr(scope, "gnbCuUeF1apId", (1 << 32) - 1)
+        self._validate_int_attr(scope, "gnbCuCpUeE1apId", (1 << 32) - 1)
+
+        amf_set_id = scope.get("amfSetId")
+        if amf_set_id is not None:
+            if (
+                not isinstance(amf_set_id, str)
+                or len(amf_set_id) != 3
+                or self._HEX_RE.fullmatch(amf_set_id) is None
+                or amf_set_id[0] not in {"0", "1", "2", "3"}
+            ):
+                raise ValueError(
+                    "Scope attribute amfSetId must be a 3-character hexadecimal string with first nibble 0-3"
+                )
+
+        amf_pointer = scope.get("amfPointer")
+        if amf_pointer is not None:
+            if (
+                not isinstance(amf_pointer, str)
+                or len(amf_pointer) != 2
+                or self._HEX_RE.fullmatch(amf_pointer) is None
+                or amf_pointer[0] not in {"0", "1", "2", "3"}
+            ):
+                raise ValueError(
+                    "Scope attribute amfPointer must be a 2-character hexadecimal string with first nibble 0-3"
+                )
 
     def _validate_policy_content(self, policy: PolicyObject) -> None:
         for index, statement in enumerate(policy.policy_statements):
@@ -146,6 +213,9 @@ class A1PolicyService:
                 "Unsupported policy scope_type '"
                 f"{scope_type}'. Supported scope types: {supported}"
             )
+
+        # Section-5 representative encoding checks for common A1 attribute fields.
+        self._validate_encoded_scope_attributes(policy)
 
     def transition_policy_status(
         self,

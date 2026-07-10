@@ -375,3 +375,35 @@ def test_deliver_ei_job_result_repeated_failure_is_non_buffering_and_determinist
         {"Content-Type": "application/json"},
     ]
     assert helper.get_ei_job_status("default", "job-result-contract")["eiJobStatus"] == "DISABLED"
+
+
+def test_ei_service_summary_exposes_ts103988_type_definition_catalog() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    summary = helper.build_service_summary()
+
+    assert summary["type_definition_catalog"]["source_reference"] == "TS 103 988 section 5.2"
+    assert summary["type_definition_catalog"]["types"]["UEGeoandVel"] == "3.0.1"
+
+
+def test_create_ei_job_rejects_invalid_eitype_identifier_format() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+    helper._ei_types["bad id"] = {
+        "ei_type_id": "bad id",
+        "description": "Invalid ID for negative-path validation",
+        "ei_schema": {"type": "object", "required": ["eiTypeId", "jobDefinition", "jobResultUri"]},
+        "ei_status_schema": {"type": "object", "required": ["eiJobStatus"]},
+        "ei_result_schema": {"type": "object", "required": ["jobResult"]},
+        "supports_ei_job_creation": True,
+    }
+
+    with pytest.raises(ValueError, match="identifier"):
+        helper.create_or_replace_ei_job(
+            "bad id",
+            "job-invalid-type-id",
+            {
+                "eiTypeId": "bad id",
+                "jobDefinition": {"name": "bad-id"},
+                "jobResultUri": "https://consumer.example.com/result",
+            },
+        )

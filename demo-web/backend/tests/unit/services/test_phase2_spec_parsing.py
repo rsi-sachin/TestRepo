@@ -19,6 +19,7 @@ from app.parsers.pdf_parser import PdfParser
 from app.parsers.docx_parser import DocxParser
 from app.parsers.test_clause_extractor import TestClauseExtractor
 from app.models.oran import SpecType, HttpMethod, ScenarioType
+from app.models.oran import TestClause
 from app.services.spec_parser_service import SpecParserService
 
 
@@ -300,3 +301,34 @@ class TestSpecParserService:
             spec_type=SpecType.TS_103_989,
         )
         assert self.service._determine_complexity(clause) in ("INTERMEDIATE", "ADVANCED")
+
+    def test_cross_reference_uses_ts103988_status_code_enrichment(self):
+        base_clause = TestClause(
+            clause_number="5.2.1",
+            title="Policy Create Behavior",
+            description="Validate policy create status",
+            methodology="Send PUT request",
+            expected_result="Created",
+            spec_type=SpecType.TS_103_989,
+            raw_text="Send PUT /policies/{id}",
+        )
+        type_clause = TestClause(
+            clause_number="5.2.1",
+            title="Policy Create Behavior",
+            description="Type-definition aligned status",
+            methodology="Reference status mapping",
+            expected_result="HTTP 201 Created",
+            spec_type=SpecType.TS_103_988,
+            raw_text="Expected result: HTTP 201 Created",
+        )
+
+        enriched = self.service.cross_reference_specs(
+            {
+                SpecType.TS_103_989: [base_clause],
+                SpecType.TS_103_988: [type_clause],
+            }
+        )
+
+        assert len(enriched) == 1
+        assert enriched[0].semantics.expected_status == 201
+        assert enriched[0].enrichment_sources["status_code"] == "TS_103_988"

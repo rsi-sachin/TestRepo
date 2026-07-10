@@ -256,6 +256,35 @@ def test_policy_resources_reject_unsupported_methods_with_405(client: TestClient
     assert status_put.status_code == 405
 
 
+def test_policy_create_rejects_invalid_section5_encoded_scope_attribute(client: TestClient) -> None:
+    response = client.put(
+        "/api/oran/a1/policytypes/default/policies/policy-invalid-encoding",
+        json={
+            "scope": {
+                "scope_type": "cell",
+                "scope_value": "001",
+                "amfRegionId": "ZZ",
+            },
+            "policy_statements": [{"id": "stmt-invalid-encoding", "action": "allow"}],
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.headers["content-type"].startswith("application/problem+json")
+    detail = response.json()["detail"]
+    assert detail["title"] == "Invalid Policy Request"
+    assert "amfRegionId" in detail["detail"]
+
+
+def test_a1p_service_summary_exposes_ts103988_type_definition_catalog(client: TestClient) -> None:
+    response = client.get("/api/oran/services/A1-P")
+
+    assert response.status_code == 200
+    catalog = response.json()["summary"]["type_definition_catalog"]
+    assert catalog["source_reference"] == "TS 103 988 section 5.2"
+    assert catalog["types"]["QoSTarget"] == "4.0.1"
+
+
 def test_policy_content_taxonomy_profile_is_accepted(client: TestClient) -> None:
     response = client.put(
         "/api/oran/a1/policytypes/default/policies/policy-taxonomy-api-1",

@@ -4,6 +4,7 @@ Enrichment-information specific A1 service helpers.
 
 import logging
 from copy import deepcopy
+import re
 from threading import Lock
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -27,6 +28,12 @@ logger = logging.getLogger(__name__)
 
 class A1EnrichmentInformationService:
     """Service-specific metadata and validation for A1-EI."""
+
+    _TYPE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
+    _TYPE_DEFINITION_CATALOG = {
+        "common": "1.0.0",
+        "UEGeoandVel": "3.0.1",
+    }
 
     def __init__(self, registry: A1ServiceRegistry | None = None) -> None:
         self.registry = registry or A1ServiceRegistry()
@@ -75,12 +82,24 @@ class A1EnrichmentInformationService:
             "recommended_specs": [spec.value for spec in self.get_supported_specs()],
             "primary_resources": self.definition.resource_domains,
             "supported_ei_types": self.list_ei_type_ids(),
+            "type_definition_catalog": {
+                "source_reference": "TS 103 988 section 5.2",
+                "types": deepcopy(self._TYPE_DEFINITION_CATALOG),
+            },
             "a1_ml_support": {
                 "status": "out_of_scope",
                 "reference": "TS 103 983 section 5",
                 "note": "A1-EI is implemented in MVP; A1-ML exchange is not included in current scope.",
             },
         }
+
+    def _validate_ei_type_identifier(self, ei_type_id: str) -> None:
+        if not isinstance(ei_type_id, str) or not ei_type_id:
+            raise ValueError("EI type identifier must be a non-empty string")
+        if self._TYPE_ID_RE.fullmatch(ei_type_id) is None:
+            raise ValueError(
+                "EI type identifier may only contain letters, numbers, dot, underscore, or dash"
+            )
 
     def reconcile_ei_jobs_after_restart(self, recovered_job_ids: Optional[List[str]] = None) -> Dict[str, str]:
         """Reconcile EI job lifecycle state after restart without buffering assumptions.
@@ -212,6 +231,8 @@ class A1EnrichmentInformationService:
             payload_ei_type_id = str(ei_job.get("eiTypeId", ""))
             if not payload_ei_type_id:
                 raise ValueError("EI job payload missing required fields: eiTypeId")
+
+            self._validate_ei_type_identifier(payload_ei_type_id)
             if payload_ei_type_id != ei_type_id:
                 raise ValueError(
                     "eiTypeId in EI job payload does not match requested EI type"

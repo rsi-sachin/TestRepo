@@ -274,3 +274,37 @@ def test_eijobs_filter_unknown_eitype_returns_problem_details() -> None:
     detail = response.json()["detail"]
     assert detail["title"] == "EI Type Not Found"
     assert detail["status"] == 404
+
+
+def test_a1ei_service_summary_exposes_ts103988_type_definition_catalog() -> None:
+    app = FastAPI()
+    app.include_router(oran.router, prefix="/api/oran")
+    client = TestClient(app)
+
+    response = client.get("/api/oran/services/A1-EI")
+
+    assert response.status_code == 200
+    catalog = response.json()["summary"]["type_definition_catalog"]
+    assert catalog["source_reference"] == "TS 103 988 section 5.2"
+    assert catalog["types"]["UEGeoandVel"] == "3.0.1"
+
+
+def test_ei_job_create_rejects_invalid_eitype_identifier_format() -> None:
+    app = FastAPI()
+    app.include_router(oran.router, prefix="/api/oran")
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/oran/a1/eitypes/default/eijobs/invalid-format-job",
+        json={
+            "eiTypeId": "default bad",
+            "jobDefinition": {"workload": "baseline"},
+            "jobResultUri": "https://example.com/ei-result",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.headers["content-type"].startswith("application/problem+json")
+    detail = response.json()["detail"]
+    assert detail["title"] == "Invalid EI Job Request"
+    assert "identifier" in detail["detail"]
