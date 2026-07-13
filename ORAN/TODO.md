@@ -257,6 +257,43 @@ Exit Criteria:
   - [x] Dispatch post-analysis test-policy orchestration for TS 103 988 Section 5. Executed 2026-07-10.
     - Gate result: pass after P0 closure (86 passed, clause actions closed, execution evidence persisted under `ORAN/docs/coverage/evidence/ts103988-section5-20260710132538/`).
     - Hardening completion: module/e2e/nonfunctional suites executed (13 passed) with artifacts under `ORAN/docs/coverage/evidence/ts103988-section5-hardening-20260710133538/`.
+  - [x] Analyze Section 8 of TS 103 988 in `ORAN/docs/`. Completed 2026-07-13.
+  - [x] Dispatch post-analysis test-policy orchestration for TS 103 988 Section 8. Executed 2026-07-13.
+    - Gate result: fail-closed for full closure because typed UEGeoandVel model coverage remains incomplete, but artifact creation and targeted execution evidence completed successfully under `ORAN/docs/coverage/evidence/ts103988-section8-20260713161022/`.
+
+- [x] **Analyze and partially implement TS 103 988 Section 8 — A1-EI data model**
+  - **Completed analysis / in-progress implementation:** 2026-07-13 | **Branch:** `feature/ORAN_MVP_1_Py3_13`
+  - **Skill used:** `document-analysis-a1td` (primary), `document-cross-reference-analysis` (single mode orchestrator), `post-analysis-test-policy-orchestration`
+  - **Trace IDs:** ORAN-FTM-003, ORAN-FTM-004, ORAN-FTM-020, ORAN-FTM-021
+  - **Document:** `ORAN/docs/ts_103988v090000p.pdf` (v9.0.0)
+  - **Sections analyzed:** §8.1 through §8.5
+  - **Current status:** Analysis complete, policy artifacts generated, and an initial typed `UEGeoandVel` implementation slice is now in place. Full Section 8 closure is still pending for result-object, constraints-object, and broader clause coverage.
+  - **Key findings:**
+    - Section 8 defines the A1-EI data model for callbacks, EI job status, UE geo-location/velocity job definitions, EI job results, and EI job constraints.
+    - The repository previously enforced only generic EI CRUD/callback/status behavior, without typed validation for `GadShapeType`, `VelocityDescType`, or the `UEGeoandVel` job-definition structure.
+    - Full closure still requires additional typed constraints/result handling and clause-level test expansion.
+  - **Implementation actions taken:**
+    - Added Section 8 enums and typed models to `demo-web/backend/app/models/oran.py` for `JobStatusType`, `GadShapeType`, `VelocityDescType`, `UeGeoAndVelEIDescription`, `UeGeoAndVelEIConstraints`, `UeGeoAndVelEIResult`, and `EiJobConstraintsObject`.
+    - Added spec-aligned schema fields on `EiTypeObject` and introduced a first-class `UEGeoandVel` EI type in `demo-web/backend/app/services/a1_enrichment_service.py`.
+    - Wired typed `jobDefinition` validation for `UEGeoandVel` EI job create/update flow and strict `eiJobStatus` enum validation.
+    - Preserved backward compatibility for generic EI conformance harness flows by making the harness prefer the `default` EI type for generic CRUD checks.
+  - **Code scope updated:**
+    - `demo-web/backend/app/models/oran.py`
+    - `demo-web/backend/app/services/a1_enrichment_service.py`
+    - `demo-web/backend/app/modules/conformance_harness/service.py`
+  - **Tests added / updated:**
+    - `demo-web/backend/tests/unit/services/test_a1_enrichment_service.py` (extended with Section 8 typed validation cases)
+    - `demo-web/backend/tests/interface/api/test_oran_a1_ei_api.py` (extended with Section 8 typed API validation cases)
+    - `demo-web/backend/tests/conformance/test_ei_job_operations.py` (validated for compatibility after harness update)
+  - **Verification:**
+    - Section 8 artifact/evidence run: `41 passed, 0 failed`
+    - Post-implementation focused validation: `39 passed, 0 failed`
+    - Completion gate: `fail` for full Section 8 closure, `pass` for the implemented typed validation slice
+  - **Artifacts:**
+    - `ORAN/docs/test-policy/ts_103988_section8_test_policy_report.md`
+    - `ORAN/docs/coverage/ts_103988_section8_clause_coverage_matrix.md`
+    - `ORAN/docs/coverage/ts_103988_section8_verification_run_summary.md`
+    - `ORAN/docs/coverage/evidence/ts103988-section8-20260713161022/`
 
 - [ ] Add unit and module-level tests for newly added A1 service selection and service modules.
   - Scope: `backend/app/services/a1_service_registry.py`, `backend/app/services/a1_policy_service.py`, `backend/app/services/a1_enrichment_service.py`, `backend/app/api/oran.py`, and related model updates.

@@ -14,11 +14,15 @@ from pydantic import ValidationError
 from app.models.a1_service import A1ServiceDefinition, A1ServiceType
 from app.models.oran import (
     EiJobObject,
+    EiJobConstraintsObject,
     EiJobResultObject,
     EiJobStatusObject,
     EiTypeObject,
     EiTypeStatusObject,
     SpecType,
+    UeGeoAndVelEIConstraints,
+    UeGeoAndVelEIDescription,
+    UeGeoAndVelEIResult,
 )
 from app.services.a1_errors import A1ConflictError
 from app.services.a1_service_registry import A1ServiceRegistry
@@ -53,6 +57,44 @@ class A1EnrichmentInformationService:
                 ei_result_schema={
                     "type": "object",
                     "required": ["jobResult"],
+                },
+                supports_ei_job_creation=True,
+            ),
+            "UEGeoandVel": EiTypeObject(
+                ei_type_id="UEGeoandVel",
+                description="UE geo-location and velocity enrichment job type",
+                ei_schema={
+                    "type": "object",
+                    "required": ["eiTypeId", "jobDefinition", "jobResultUri"],
+                },
+                eiJobDefinitionSchema={
+                    "title": "UeGeoAndVelEIDescription",
+                    "required": [
+                        "gadShape",
+                        "granularityPeriod",
+                        "reportingPeriod",
+                        "reportingAmount",
+                    ],
+                },
+                ei_status_schema={
+                    "type": "object",
+                    "required": ["eiJobStatus"],
+                },
+                eiJobStatusSchema={
+                    "title": "EiJobStatusObject",
+                    "required": ["eiJobStatus"],
+                },
+                ei_result_schema={
+                    "type": "object",
+                    "required": ["jobResult"],
+                },
+                eiJobResultSchema={
+                    "title": "UeGeoAndVelEIResult",
+                    "required": ["timeStamp", "ueId", "gadShape", "geoLocation"],
+                },
+                eiJobConstraintsSchema={
+                    "title": "UeGeoAndVelEIConstraints",
+                    "required": ["supportedGadShapes"],
                 },
                 supports_ei_job_creation=True,
             )
@@ -204,12 +246,40 @@ class A1EnrichmentInformationService:
             )
         return matching[0]
 
-    @staticmethod
-    def _normalize_job_definition(ei_job: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_job_definition(self, ei_type_id: str, ei_job: Dict[str, Any]) -> Dict[str, Any]:
         job_definition = ei_job.get("jobDefinition")
         if not isinstance(job_definition, dict):
             raise ValueError("EI job payload field jobDefinition must be an object")
+        if ei_type_id == "UEGeoandVel":
+            try:
+                return UeGeoAndVelEIDescription.model_validate(job_definition).model_dump(mode="json")
+            except ValidationError as exc:
+                raise ValueError(f"EI job definition for {ei_type_id} failed validation: {exc}") from exc
         return deepcopy(job_definition)
+
+    def validate_ei_job_constraints(self, ei_type_id: str, constraints_obj: Dict[str, Any]) -> Dict[str, Any]:
+        if not isinstance(constraints_obj, dict):
+            raise ValueError("EI job constraints payload must be an object")
+
+        try:
+            payload = EiJobConstraintsObject.model_validate(constraints_obj)
+        except ValidationError as exc:
+            raise ValueError("EI job constraints payload must include jobConstraints") from exc
+
+        if ei_type_id == "UEGeoandVel":
+            try:
+                return UeGeoAndVelEIConstraints.model_validate(payload.jobConstraints).model_dump(mode="json")
+            except ValidationError as exc:
+                raise ValueError(f"EI job constraints for {ei_type_id} failed validation: {exc}") from exc
+        return deepcopy(payload.jobConstraints)
+
+    def validate_ei_job_result(self, ei_type_id: str, result_obj: Dict[str, Any]) -> Dict[str, Any]:
+        if ei_type_id == "UEGeoandVel":
+            try:
+                return UeGeoAndVelEIResult.model_validate(result_obj).model_dump(mode="json")
+            except ValidationError as exc:
+                raise ValueError(f"EI job result for {ei_type_id} failed validation: {exc}") from exc
+        return deepcopy(result_obj)
 
     def create_or_replace_ei_job(
         self,
@@ -262,7 +332,7 @@ class A1EnrichmentInformationService:
             merged_job.update(deepcopy(ei_job))
 
             merged_job["eiTypeId"] = payload_ei_type_id
-            merged_job["jobDefinition"] = self._normalize_job_definition(merged_job)
+            merged_job["jobDefinition"] = self._normalize_job_definition(ei_type_id, merged_job)
 
             if notification_destination is not None and "jobStatusNotificationUri" not in merged_job:
                 merged_job["jobStatusNotificationUri"] = notification_destination
@@ -372,7 +442,9 @@ class A1EnrichmentInformationService:
         try:
             payload = EiJobStatusObject.model_validate(status_obj)
         except ValidationError as exc:
-            raise ValueError("EI status payload must include eiJobStatus") from exc
+            if "eiJobStatus" not in status_obj:
+                raise ValueError("EI status payload must include eiJobStatus") from exc
+            raise ValueError("EI status payload contains invalid eiJobStatus") from exc
 
         if not payload.eiJobStatus:
             raise ValueError("EI status payload must include eiJobStatus")

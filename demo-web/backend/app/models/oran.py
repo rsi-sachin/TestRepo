@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class SpecType(str, Enum):
@@ -208,19 +208,137 @@ class OranExecutionResult(BaseModel):
 # ======== PHASE 2A: A1-EI Models ========
 
 
+class JobStatusType(str, Enum):
+    """Section 8.2.2.1 EI job status values."""
+
+    ENABLED = "ENABLED"
+    DISABLED = "DISABLED"
+
+
+class GadShapeType(str, Enum):
+    """Section 8.2.2.2 geographic area descriptor shapes."""
+
+    POINT = "POINT"
+    POINT_UNCERTAINTY_CIRCLE = "POINT_UNCERTAINTY_CIRCLE"
+    POINT_UNCERTAINTY_ELLIPSE = "POINT_UNCERTAINTY_ELLIPSE"
+    POLYGON = "POLYGON"
+    POINT_ALTITUDE = "POINT_ALTITUDE"
+    POINT_ALTITUDE_UNCERTAINTY = "POINT_ALTITUDE_UNCERTAINTY"
+    ELLIPSOID_ARC = "ELLIPSOID_ARC"
+
+
+class VelocityDescType(str, Enum):
+    """Section 8.2.2.3 UE velocity descriptor values."""
+
+    H_VELOCITY = "H_VELOCITY"
+    HV_VELOCITY = "HV_VELOCITY"
+    H_VELOCITY_UNCERTAINTY = "H_VELOCITY_UNCERTAINTY"
+    HV_VELOCITY_UNCERTAINTY = "HV_VELOCITY_UNCERTAINTY"
+
+
+class UeGeoAndVelEIDescription(BaseModel):
+    """Section 8.3.2.2 UE geo-location and velocity EI job definition."""
+
+    gadShape: GadShapeType = Field(..., description="GAD shape for UE geo-location information")
+    velocityDesc: Optional[VelocityDescType] = Field(
+        None,
+        description="Optional UE velocity description type",
+    )
+    granularityPeriod: int = Field(..., description="Periodic measurement interval in milliseconds")
+    reportingPeriod: int = Field(..., description="Periodic reporting interval in milliseconds")
+    reportingAmount: int = Field(..., description="Number of periodic reports")
+
+    @model_validator(mode="after")
+    def validate_positive_periods(self) -> "UeGeoAndVelEIDescription":
+        for field_name in ("granularityPeriod", "reportingPeriod", "reportingAmount"):
+            if getattr(self, field_name) <= 0:
+                raise ValueError(f"{field_name} must be greater than 0")
+        return self
+
+
+class UeGeoAndVelEIConstraints(BaseModel):
+    """Section 8.3.4.2 UE geo-location and velocity EI job constraints."""
+
+    supportedGadShapes: List[GadShapeType] = Field(
+        ...,
+        description="Supported GAD shapes for UE geo-location results",
+    )
+    supportedVelocityDescs: List[VelocityDescType] = Field(
+        default_factory=list,
+        description="Supported velocity descriptor values",
+    )
+
+    @model_validator(mode="after")
+    def validate_supported_shapes(self) -> "UeGeoAndVelEIConstraints":
+        if not self.supportedGadShapes:
+            raise ValueError("supportedGadShapes must contain at least one value")
+        return self
+
+
+class UeGeoAndVelEIResult(BaseModel):
+    """Section 8.3.3.2 UE geo-location and velocity EI job result."""
+
+    timeStamp: datetime = Field(..., description="UTC timestamp for enrichment information")
+    ueId: str = Field(..., description="UE identifier")
+    gadShape: GadShapeType = Field(..., description="GAD shape used for geo-location payload")
+    geoLocation: Dict[str, Any] = Field(..., description="Shape-specific geo-location object")
+    velocityDesc: Optional[VelocityDescType] = Field(
+        None,
+        description="Optional UE velocity description type",
+    )
+    velocity: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Shape-specific velocity object",
+    )
+
+    @model_validator(mode="after")
+    def validate_payload_shape(self) -> "UeGeoAndVelEIResult":
+        if not self.ueId:
+            raise ValueError("ueId must be a non-empty string")
+        if not self.geoLocation:
+            raise ValueError("geoLocation must be a non-empty object")
+        if self.velocityDesc is None and self.velocity is not None:
+            raise ValueError("velocity requires velocityDesc to be present")
+        if self.velocityDesc is not None and not self.velocity:
+            raise ValueError("velocity must be present when velocityDesc is included")
+        return self
+
+
+class EiJobConstraintsObject(BaseModel):
+    """Representation of an EI job constraints payload."""
+
+    jobConstraints: Dict[str, Any] = Field(..., description="EI job constraints payload")
+
+
 class EiTypeObject(BaseModel):
     """Representation of an EI type as used by the A1-EI service."""
 
     ei_type_id: str = Field(..., description="EI type identifier")
     description: Optional[str] = Field(None, description="EI type description")
     ei_schema: Dict[str, Any] = Field(default_factory=dict, description="JSON schema for EiJobObject")
+    eiJobDefinitionSchema: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Section 8 EI job definition schema",
+    )
     ei_status_schema: Dict[str, Any] = Field(
         default_factory=dict,
         description="JSON schema for EiJobStatusObject",
     )
+    eiJobStatusSchema: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Section 8 EI job status schema",
+    )
     ei_result_schema: Dict[str, Any] = Field(
         default_factory=dict,
         description="JSON schema for EiJobResultObject",
+    )
+    eiJobResultSchema: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Section 8 EI job result schema",
+    )
+    eiJobConstraintsSchema: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Section 8 EI job constraints schema",
     )
     supports_ei_job_creation: bool = Field(
         default=True,
@@ -254,7 +372,7 @@ class EiJobObject(BaseModel):
 class EiJobStatusObject(BaseModel):
     """Representation of EI job status feedback."""
 
-    eiJobStatus: str = Field(..., description="Annex A EI job status value")
+    eiJobStatus: JobStatusType = Field(..., description="Annex A EI job status value")
 
 
 class EiJobResultObject(BaseModel):

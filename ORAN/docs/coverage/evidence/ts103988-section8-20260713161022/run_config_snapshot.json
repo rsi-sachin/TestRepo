@@ -1,0 +1,25 @@
+{
+  "runId": "ts103988-section8-20260713161022",
+  "document": "ORAN/docs/ts_103988v090000p.pdf",
+  "section_scope": "section8",
+  "timestamp": "2026-07-13T16:10:22.7880590+05:30",
+  "commit_sha": "71bfcf0",
+  "branch": "feature/ORAN_MVP_1_Py3_13",
+  "environment": "Windows + Python 3.13.13 virtual environment",
+  "working_directory": "c:/TestRepo/demo-web/backend",
+  "command": "python -m pytest tests/unit/services/test_a1_enrichment_service.py tests/interface/api/test_oran_a1_ei_api.py tests/conformance/test_ei_job_operations.py tests/conformance/test_ts103983_section5_ei_lifecycle_resilience.py tests/conformance/test_ts103988_section5_common_types.py tests/interface/api/test_ts103988_section5_interface_faults.py -q --junitxml ../../ORAN/docs/coverage/evidence/ts103988-section8-20260713161022/pytest_junit.xml",
+  "targeted_tests": [
+    "tests/unit/services/test_a1_enrichment_service.py",
+    "tests/interface/api/test_oran_a1_ei_api.py",
+    "tests/conformance/test_ei_job_operations.py",
+    "tests/conformance/test_ts103983_section5_ei_lifecycle_resilience.py",
+    "tests/conformance/test_ts103988_section5_common_types.py",
+    "tests/interface/api/test_ts103988_section5_interface_faults.py"
+  ],
+  "selected_trace_ids": [
+    "ORAN-FTM-003",
+    "ORAN-FTM-004",
+    "ORAN-FTM-020",
+    "ORAN-FTM-021"
+  ]
+}

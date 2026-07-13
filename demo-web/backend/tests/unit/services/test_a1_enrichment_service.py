@@ -407,3 +407,78 @@ def test_create_ei_job_rejects_invalid_eitype_identifier_format() -> None:
                 "jobResultUri": "https://consumer.example.com/result",
             },
         )
+
+
+def test_create_uegeoandvel_job_accepts_section8_typed_definition() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    created_job, was_created = helper.create_or_replace_ei_job(
+        "UEGeoandVel",
+        "job-typed-001",
+        {
+            "eiTypeId": "UEGeoandVel",
+            "jobDefinition": {
+                "gadShape": "POINT",
+                "granularityPeriod": 100,
+                "reportingPeriod": 1000,
+                "reportingAmount": 5,
+            },
+            "jobResultUri": "https://consumer.example.com/typed-result",
+        },
+    )
+
+    assert was_created is True
+    assert created_job["ei_job"]["jobDefinition"]["gadShape"] == "POINT"
+    assert created_job["ei_job"]["jobDefinition"]["reportingAmount"] == 5
+
+
+def test_create_uegeoandvel_job_rejects_invalid_gad_shape() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    with pytest.raises(ValueError, match="gadShape"):
+        helper.create_or_replace_ei_job(
+            "UEGeoandVel",
+            "job-typed-invalid-shape",
+            {
+                "eiTypeId": "UEGeoandVel",
+                "jobDefinition": {
+                    "gadShape": "NOT_A_SHAPE",
+                    "granularityPeriod": 100,
+                    "reportingPeriod": 1000,
+                    "reportingAmount": 5,
+                },
+                "jobResultUri": "https://consumer.example.com/typed-result",
+            },
+        )
+
+
+def test_create_uegeoandvel_job_rejects_non_positive_reporting_amount() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    with pytest.raises(ValueError, match="reportingAmount"):
+        helper.create_or_replace_ei_job(
+            "UEGeoandVel",
+            "job-typed-invalid-amount",
+            {
+                "eiTypeId": "UEGeoandVel",
+                "jobDefinition": {
+                    "gadShape": "POINT",
+                    "granularityPeriod": 100,
+                    "reportingPeriod": 1000,
+                    "reportingAmount": 0,
+                },
+                "jobResultUri": "https://consumer.example.com/typed-result",
+            },
+        )
+
+
+def test_notify_ei_job_status_rejects_invalid_status_value() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    with pytest.raises(ValueError, match="invalid eiJobStatus"):
+        asyncio.run(
+            helper.notify_ei_job_status(
+                "https://consumer.example.com/ei-status",
+                {"eiJobStatus": "BROKEN"},
+            )
+        )

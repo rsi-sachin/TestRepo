@@ -873,7 +873,7 @@ class ConformanceHarnessService:
             }
         )
 
-        ei_type_id = ei_type_ids[0] if ei_type_ids else "default"
+        ei_type_id = "default" if "default" in ei_type_ids else (ei_type_ids[0] if ei_type_ids else "default")
         try:
             ei_type = ei_service.get_ei_type(ei_type_id)
             query_type_ok = ei_type["ei_type_id"] == ei_type_id
@@ -1118,7 +1118,7 @@ class ConformanceHarnessService:
                 }
             )
 
-        ei_type_id = ei_type_ids[0] if ei_type_ids else "default"
+        ei_type_id = "default" if "default" in ei_type_ids else (ei_type_ids[0] if ei_type_ids else "default")
         ei_job_id = f"ei-job-{run_id}"
         create_job = {
             "eiTypeId": ei_type_id,
