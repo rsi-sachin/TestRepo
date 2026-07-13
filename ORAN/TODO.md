@@ -260,6 +260,41 @@ Exit Criteria:
   - [x] Analyze Section 8 of TS 103 988 in `ORAN/docs/`. Completed 2026-07-13.
   - [x] Dispatch post-analysis test-policy orchestration for TS 103 988 Section 8. Executed 2026-07-13.
     - Gate result: fail-closed for full closure because typed UEGeoandVel model coverage remains incomplete, but artifact creation and targeted execution evidence completed successfully under `ORAN/docs/coverage/evidence/ts103988-section8-20260713161022/`.
+  - [x] Analyze Section 9 of TS 103 988 in `ORAN/docs/`. Completed 2026-07-13.
+    - Analysis artifact: `ORAN/docs/coverage/ts_103988_section9_gap_analysis.md`.
+    - Current assessment: partial implementation overlap exists via the `UEGeoandVel` typed validation slice, but Section 9 remains gap-heavy versus the normative schema, especially for canonical `EiTypeId`, compound `scope`-based job definitions, constraints field naming, and array/discriminator result validation.
+  - [x] Dispatch post-analysis test-policy orchestration for TS 103 988 Section 9. Executed 2026-07-13.
+    - Gate result: fail-closed for full closure because Section 9 still has seven partial clauses, but the Section 9 evidence bundle and focused verification artifacts were created successfully under `ORAN/docs/coverage/evidence/ts103988-section9-20260713164329/`.
+
+- [x] **Implement TS 103 988 Section 9 alignment slice — A1-EI concrete type definition**
+  - **Completed implementation slice:** 2026-07-13 | **Branch:** `feature/ORAN_MVP_1_Py3_13`
+  - **Skills used:** `document-analysis-a1td` (primary), `document-cross-reference-analysis` (single mode orchestrator), `post-analysis-test-policy-orchestration`
+  - **Trace IDs:** ORAN-FTM-022, ORAN-FTM-021, ORAN-FTM-003, ORAN-FTM-004
+  - **Document:** `ORAN/docs/ts_103988v090000p.pdf` (v9.0.0)
+  - **Sections aligned:** §9.1.1, §9.1.2.1, §9.1.2.2, §9.1.2.3, §9.2.1.1, §9.2.1.2.2, §9.2.1.3.1, §9.2.1.3.2, §9.2.1.3.3, §9.2.1.3.4
+  - **Implementation actions taken:**
+    - Added `ORAN-FTM-022` to `ORAN/docs/feature_traceability_map.md` for Section 9 alignment.
+    - Updated `demo-web/backend/app/models/oran.py` with a compound Section 9 `UEGeoandVel` job-definition model, stricter numeric bounds, canonical constraints property naming, and stronger array-based result validation.
+    - Updated `demo-web/backend/app/services/a1_enrichment_service.py` to normalize the canonical `ORAN_UEGeoandVel_3.0.1` EI type ID, expose Section 9 schema metadata, and enforce compound job/constraints/result validation.
+    - Updated focused unit and API tests in `demo-web/backend/tests/unit/services/test_a1_enrichment_service.py` and `demo-web/backend/tests/interface/api/test_oran_a1_ei_api.py`.
+  - **Verification:**
+    - Focused unit validation: `11 passed, 13 deselected`
+    - Focused API validation: `4 passed, 11 deselected`
+    - Persisted combined verification slice: `16 passed, 23 deselected`
+    - Completion gate: `fail` for full Section 9 closure, `pass` for the implemented alignment slice and evidence persistence
+  - **Follow-up gaps queued:**
+    - `9.1.1`: add explicit major-version compatibility assertions for canonical versus alias EI type handling.
+    - `9.1.2.2`: add common-schema linkage and compatibility-behavior tests.
+    - `9.1.2.3`: add a schema-metadata assertion that the exposed `$id` embeds the exact EI type identifier.
+    - `9.2.1.2.2`: add negative tests rejecting unsupported `scope` members (`groupId`, `sliceId`, `qosId`, `cellId`).
+    - `9.2.1.3.1`: add upper-bound and extra-field negative coverage for compound job definitions.
+    - `9.2.1.3.2`: add invalid-enum, empty-array, and alias-conflict tests for constraints handling.
+    - `9.2.1.3.4`: extend discriminator coverage for all remaining geo-location and velocity subtype payloads beyond the current point, polygon, and circle checks.
+  - **Artifacts:**
+    - `ORAN/docs/test-policy/ts_103988_section9_test_policy_report.md`
+    - `ORAN/docs/coverage/ts_103988_section9_clause_coverage_matrix.md`
+    - `ORAN/docs/coverage/ts_103988_section9_verification_run_summary.md`
+    - `ORAN/docs/coverage/evidence/ts103988-section9-20260713164329/`
 
 - [x] **Analyze and partially implement TS 103 988 Section 8 — A1-EI data model**
   - **Completed analysis / in-progress implementation:** 2026-07-13 | **Branch:** `feature/ORAN_MVP_1_Py3_13`

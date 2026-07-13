@@ -310,7 +310,7 @@ def test_ei_job_create_rejects_invalid_eitype_identifier_format() -> None:
     assert "identifier" in detail["detail"]
 
 
-def test_section8_typed_uegeoandvel_job_can_be_created() -> None:
+def test_section9_compound_uegeoandvel_job_can_be_created() -> None:
     oran.a1_ei_service._ei_jobs.clear()
     oran.a1_ei_service._notification_destinations.clear()
 
@@ -321,22 +321,27 @@ def test_section8_typed_uegeoandvel_job_can_be_created() -> None:
     response = client.put(
         "/api/oran/a1/eitypes/UEGeoandVel/eijobs/typed-job-1",
         json={
-            "eiTypeId": "UEGeoandVel",
+            "eiTypeId": "ORAN_UEGeoandVel_3.0.1",
             "jobDefinition": {
-                "gadShape": "POINT",
-                "granularityPeriod": 100,
-                "reportingPeriod": 1000,
-                "reportingAmount": 3,
+                "scope": {"ueId": "ue-api-001"},
+                "ueGeoandVelEIDescription": {
+                    "gadShape": "POINT",
+                    "granularityPeriod": 100,
+                    "reportingPeriod": 1000,
+                    "reportingAmount": 3,
+                },
             },
             "jobResultUri": "https://example.com/typed-result",
         },
     )
 
     assert response.status_code == 201
-    assert response.json()["ei_job"]["jobDefinition"]["gadShape"] == "POINT"
+    assert response.json()["ei_job"]["eiTypeId"] == "ORAN_UEGeoandVel_3.0.1"
+    assert response.json()["ei_job"]["jobDefinition"]["scope"]["ueId"] == "ue-api-001"
+    assert response.json()["ei_job"]["jobDefinition"]["ueGeoandVelEIDescription"]["gadShape"] == "POINT"
 
 
-def test_section8_typed_uegeoandvel_job_rejects_invalid_gad_shape() -> None:
+def test_section9_compound_uegeoandvel_job_rejects_invalid_gad_shape() -> None:
     app = FastAPI()
     app.include_router(oran.router, prefix="/api/oran")
     client = TestClient(app)
@@ -344,12 +349,15 @@ def test_section8_typed_uegeoandvel_job_rejects_invalid_gad_shape() -> None:
     response = client.put(
         "/api/oran/a1/eitypes/UEGeoandVel/eijobs/typed-job-bad-shape",
         json={
-            "eiTypeId": "UEGeoandVel",
+            "eiTypeId": "ORAN_UEGeoandVel_3.0.1",
             "jobDefinition": {
-                "gadShape": "BAD_SHAPE",
-                "granularityPeriod": 100,
-                "reportingPeriod": 1000,
-                "reportingAmount": 3,
+                "scope": {"ueId": "ue-api-002"},
+                "ueGeoandVelEIDescription": {
+                    "gadShape": "BAD_SHAPE",
+                    "granularityPeriod": 100,
+                    "reportingPeriod": 1000,
+                    "reportingAmount": 3,
+                },
             },
             "jobResultUri": "https://example.com/typed-result",
         },
@@ -360,3 +368,31 @@ def test_section8_typed_uegeoandvel_job_rejects_invalid_gad_shape() -> None:
     detail = response.json()["detail"]
     assert detail["title"] == "Invalid EI Job Request"
     assert "gadShape" in detail["detail"]
+
+
+def test_section9_compound_uegeoandvel_job_rejects_missing_scope() -> None:
+    app = FastAPI()
+    app.include_router(oran.router, prefix="/api/oran")
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/oran/a1/eitypes/UEGeoandVel/eijobs/typed-job-no-scope",
+        json={
+            "eiTypeId": "ORAN_UEGeoandVel_3.0.1",
+            "jobDefinition": {
+                "ueGeoandVelEIDescription": {
+                    "gadShape": "POINT",
+                    "granularityPeriod": 100,
+                    "reportingPeriod": 1000,
+                    "reportingAmount": 3,
+                }
+            },
+            "jobResultUri": "https://example.com/typed-result",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.headers["content-type"].startswith("application/problem+json")
+    detail = response.json()["detail"]
+    assert detail["title"] == "Invalid EI Job Request"
+    assert "scope" in detail["detail"]

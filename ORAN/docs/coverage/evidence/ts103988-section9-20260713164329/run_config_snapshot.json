@@ -1,0 +1,22 @@
+{
+  "runId": "ts103988-section9-20260713164329",
+  "document": "ORAN/docs/ts_103988v090000p.pdf",
+  "sectionScope": "section9",
+  "branch": "feature/ORAN_MVP_1_Py3_13",
+  "baselineCommitSha": "3599c5513c513c9df011c4666b5e01c994aed74d",
+  "environment": {
+    "os": "Windows",
+    "python": "3.13.13",
+    "pytest": "8.4.1"
+  },
+  "commands": [
+    "pytest tests/unit/services/test_a1_enrichment_service.py -k \"uegeoandvel or result or constraints\"",
+    "pytest tests/interface/api/test_oran_a1_ei_api.py -k \"section9 or eitype_identifier_format\"",
+    "pytest tests/unit/services/test_a1_enrichment_service.py tests/interface/api/test_oran_a1_ei_api.py -k \"uegeoandvel or result or constraints or section9 or eitype_identifier_format\" --junitxml \"..\\..\\ORAN\\docs\\coverage\\evidence\\ts103988-section9-20260713164329\\pytest_junit.xml\""
+  ],
+  "results": {
+    "unit": "11 passed, 13 deselected",
+    "interface": "4 passed, 11 deselected",
+    "combined": "16 passed, 23 deselected"
+  }
+}

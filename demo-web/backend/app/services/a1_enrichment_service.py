@@ -19,6 +19,7 @@ from app.models.oran import (
     EiJobStatusObject,
     EiTypeObject,
     EiTypeStatusObject,
+    UeGeoAndVelEiJobDefinition,
     SpecType,
     UeGeoAndVelEIConstraints,
     UeGeoAndVelEIDescription,
@@ -33,6 +34,10 @@ logger = logging.getLogger(__name__)
 class A1EnrichmentInformationService:
     """Service-specific metadata and validation for A1-EI."""
 
+    _CANONICAL_UE_GEO_AND_VEL_TYPE_ID = "ORAN_UEGeoandVel_3.0.1"
+    _EI_TYPE_ALIASES = {
+        "UEGeoandVel": _CANONICAL_UE_GEO_AND_VEL_TYPE_ID,
+    }
     _TYPE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
     _TYPE_DEFINITION_CATALOG = {
         "common": "1.0.0",
@@ -60,21 +65,17 @@ class A1EnrichmentInformationService:
                 },
                 supports_ei_job_creation=True,
             ),
-            "UEGeoandVel": EiTypeObject(
-                ei_type_id="UEGeoandVel",
+            self._CANONICAL_UE_GEO_AND_VEL_TYPE_ID: EiTypeObject(
+                ei_type_id=self._CANONICAL_UE_GEO_AND_VEL_TYPE_ID,
                 description="UE geo-location and velocity enrichment job type",
                 ei_schema={
                     "type": "object",
                     "required": ["eiTypeId", "jobDefinition", "jobResultUri"],
                 },
                 eiJobDefinitionSchema={
-                    "title": "UeGeoAndVelEIDescription",
-                    "required": [
-                        "gadShape",
-                        "granularityPeriod",
-                        "reportingPeriod",
-                        "reportingAmount",
-                    ],
+                    "$id": "https://schemas.o-ran.org/jsonschemas/a1td/oran_uegeoandvel_3.0.1",
+                    "title": "UeGeoAndVelEiJobDefinition",
+                    "required": ["scope", "ueGeoandVelEIDescription"],
                 },
                 ei_status_schema={
                     "type": "object",
@@ -90,6 +91,7 @@ class A1EnrichmentInformationService:
                 },
                 eiJobResultSchema={
                     "title": "UeGeoAndVelEIResult",
+                    "type": "array",
                     "required": ["timeStamp", "ueId", "gadShape", "geoLocation"],
                 },
                 eiJobConstraintsSchema={
@@ -142,6 +144,14 @@ class A1EnrichmentInformationService:
             raise ValueError(
                 "EI type identifier may only contain letters, numbers, dot, underscore, or dash"
             )
+
+    def _resolve_ei_type_id(self, ei_type_id: str) -> str:
+        if ei_type_id in self._ei_types:
+            return ei_type_id
+        return self._EI_TYPE_ALIASES.get(ei_type_id, ei_type_id)
+
+    def _normalize_payload_ei_type_id(self, ei_type_id: str) -> str:
+        return self._EI_TYPE_ALIASES.get(ei_type_id, ei_type_id)
 
     def reconcile_ei_jobs_after_restart(self, recovered_job_ids: Optional[List[str]] = None) -> Dict[str, str]:
         """Reconcile EI job lifecycle state after restart without buffering assumptions.
@@ -201,7 +211,8 @@ class A1EnrichmentInformationService:
     def get_ei_type(self, ei_type_id: str) -> Dict[str, Any]:
         """Return one EI type definition."""
         with self._lock:
-            ei_type = self._ei_types.get(ei_type_id)
+            resolved_ei_type_id = self._resolve_ei_type_id(ei_type_id)
+            ei_type = self._ei_types.get(resolved_ei_type_id)
             if ei_type is None:
                 raise KeyError(f"EI type not found: {ei_type_id}")
             return self._ei_type_to_dict(ei_type)
@@ -209,7 +220,8 @@ class A1EnrichmentInformationService:
     def get_ei_type_status(self, ei_type_id: str) -> Dict[str, Any]:
         """Return status metadata for one EI type."""
         with self._lock:
-            ei_type = self._ei_types.get(ei_type_id)
+            resolved_ei_type_id = self._resolve_ei_type_id(ei_type_id)
+            ei_type = self._ei_types.get(resolved_ei_type_id)
             if ei_type is None:
                 raise KeyError(f"EI type not found: {ei_type_id}")
 
@@ -222,7 +234,7 @@ class A1EnrichmentInformationService:
             )
 
             return EiTypeStatusObject(
-                eiTypeId=ei_type_id,
+                eiTypeId=resolved_ei_type_id,
                 eiTypeStatus=status,
                 statusReason=reason,
             ).model_dump(mode="json")
@@ -232,9 +244,10 @@ class A1EnrichmentInformationService:
         with self._lock:
             if ei_type_id is None:
                 return sorted({job_id for (_, job_id) in self._ei_jobs})
-            if ei_type_id not in self._ei_types:
+            resolved_ei_type_id = self._resolve_ei_type_id(ei_type_id)
+            if resolved_ei_type_id not in self._ei_types:
                 raise KeyError(f"EI type not found: {ei_type_id}")
-            return sorted(job_id for (stored_type, job_id) in self._ei_jobs if stored_type == ei_type_id)
+            return sorted(job_id for (stored_type, job_id) in self._ei_jobs if stored_type == resolved_ei_type_id)
 
     def _resolve_key_by_job_id(self, ei_job_id: str) -> Tuple[str, str]:
         matching = [key for key in self._ei_jobs if key[1] == ei_job_id]
@@ -250,9 +263,9 @@ class A1EnrichmentInformationService:
         job_definition = ei_job.get("jobDefinition")
         if not isinstance(job_definition, dict):
             raise ValueError("EI job payload field jobDefinition must be an object")
-        if ei_type_id == "UEGeoandVel":
+        if ei_type_id == self._CANONICAL_UE_GEO_AND_VEL_TYPE_ID:
             try:
-                return UeGeoAndVelEIDescription.model_validate(job_definition).model_dump(mode="json")
+                return UeGeoAndVelEiJobDefinition.model_validate(job_definition).model_dump(mode="json")
             except ValidationError as exc:
                 raise ValueError(f"EI job definition for {ei_type_id} failed validation: {exc}") from exc
         return deepcopy(job_definition)
@@ -266,19 +279,26 @@ class A1EnrichmentInformationService:
         except ValidationError as exc:
             raise ValueError("EI job constraints payload must include jobConstraints") from exc
 
-        if ei_type_id == "UEGeoandVel":
+        resolved_ei_type_id = self._resolve_ei_type_id(ei_type_id)
+        if resolved_ei_type_id == self._CANONICAL_UE_GEO_AND_VEL_TYPE_ID:
             try:
                 return UeGeoAndVelEIConstraints.model_validate(payload.jobConstraints).model_dump(mode="json")
             except ValidationError as exc:
-                raise ValueError(f"EI job constraints for {ei_type_id} failed validation: {exc}") from exc
+                raise ValueError(f"EI job constraints for {resolved_ei_type_id} failed validation: {exc}") from exc
         return deepcopy(payload.jobConstraints)
 
     def validate_ei_job_result(self, ei_type_id: str, result_obj: Dict[str, Any]) -> Dict[str, Any]:
-        if ei_type_id == "UEGeoandVel":
+        resolved_ei_type_id = self._resolve_ei_type_id(ei_type_id)
+        if resolved_ei_type_id == self._CANONICAL_UE_GEO_AND_VEL_TYPE_ID:
+            if not isinstance(result_obj, list) or not result_obj:
+                raise ValueError(f"EI job result for {resolved_ei_type_id} must be a non-empty array")
             try:
-                return UeGeoAndVelEIResult.model_validate(result_obj).model_dump(mode="json")
+                return [
+                    UeGeoAndVelEIResult.model_validate(item).model_dump(mode="json")
+                    for item in result_obj
+                ]
             except ValidationError as exc:
-                raise ValueError(f"EI job result for {ei_type_id} failed validation: {exc}") from exc
+                raise ValueError(f"EI job result for {resolved_ei_type_id} failed validation: {exc}") from exc
         return deepcopy(result_obj)
 
     def create_or_replace_ei_job(
@@ -290,7 +310,8 @@ class A1EnrichmentInformationService:
     ) -> Tuple[Dict[str, Any], bool]:
         """Create or update an EI job record."""
         with self._lock:
-            ei_type = self._ei_types.get(ei_type_id)
+            resolved_ei_type_id = self._resolve_ei_type_id(ei_type_id)
+            ei_type = self._ei_types.get(resolved_ei_type_id)
             if ei_type is None:
                 raise KeyError(f"EI type not found: {ei_type_id}")
             if not self._ei_type_supports_job_creation(ei_type):
@@ -303,13 +324,14 @@ class A1EnrichmentInformationService:
                 raise ValueError("EI job payload missing required fields: eiTypeId")
 
             self._validate_ei_type_identifier(payload_ei_type_id)
-            if payload_ei_type_id != ei_type_id:
+            normalized_payload_ei_type_id = self._normalize_payload_ei_type_id(payload_ei_type_id)
+            if normalized_payload_ei_type_id != resolved_ei_type_id:
                 raise ValueError(
                     "eiTypeId in EI job payload does not match requested EI type"
                 )
 
             existing_conflicts = [
-                key for key in self._ei_jobs if key[1] == ei_job_id and key[0] != ei_type_id
+                key for key in self._ei_jobs if key[1] == ei_job_id and key[0] != resolved_ei_type_id
             ]
             if existing_conflicts:
                 raise A1ConflictError(
@@ -325,14 +347,14 @@ class A1EnrichmentInformationService:
                     "EI job payload missing required fields: " + ", ".join(sorted(missing_fields))
                 )
 
-            key = (ei_type_id, ei_job_id)
+            key = (resolved_ei_type_id, ei_job_id)
             was_created = key not in self._ei_jobs
             existing_job = deepcopy(self._ei_jobs[key]["ei_job"]) if key in self._ei_jobs else {}
             merged_job = deepcopy(existing_job)
             merged_job.update(deepcopy(ei_job))
 
-            merged_job["eiTypeId"] = payload_ei_type_id
-            merged_job["jobDefinition"] = self._normalize_job_definition(ei_type_id, merged_job)
+            merged_job["eiTypeId"] = resolved_ei_type_id
+            merged_job["jobDefinition"] = self._normalize_job_definition(resolved_ei_type_id, merged_job)
 
             if notification_destination is not None and "jobStatusNotificationUri" not in merged_job:
                 merged_job["jobStatusNotificationUri"] = notification_destination
@@ -343,14 +365,14 @@ class A1EnrichmentInformationService:
                 merged_job["jobResultUri"] = existing_job["jobResultUri"]
 
             job_model = EiJobObject(
-                eiTypeId=payload_ei_type_id,
+                eiTypeId=resolved_ei_type_id,
                 jobDefinition=merged_job.get("jobDefinition", {}),
                 jobStatusNotificationUri=merged_job.get("jobStatusNotificationUri"),
                 jobResultUri=merged_job.get("jobResultUri"),
             )
 
             stored_job = {
-                "ei_type_id": ei_type_id,
+                "ei_type_id": resolved_ei_type_id,
                 "ei_job_id": ei_job_id,
                 "ei_job": job_model.model_dump(mode="json"),
             }
@@ -394,7 +416,7 @@ class A1EnrichmentInformationService:
     def get_ei_job(self, ei_type_id: str, ei_job_id: str) -> Dict[str, Any]:
         """Get an EI job by type and job id."""
         with self._lock:
-            key = (ei_type_id, ei_job_id)
+            key = (self._resolve_ei_type_id(ei_type_id), ei_job_id)
             ei_job = self._ei_jobs.get(key)
             if ei_job is None:
                 raise KeyError(f"EI job not found for eiTypeId={ei_type_id}, eiJobId={ei_job_id}")
@@ -403,7 +425,7 @@ class A1EnrichmentInformationService:
     def delete_ei_job(self, ei_type_id: str, ei_job_id: str) -> None:
         """Delete an EI job and related status/callback metadata."""
         with self._lock:
-            key = (ei_type_id, ei_job_id)
+            key = (self._resolve_ei_type_id(ei_type_id), ei_job_id)
             if key not in self._ei_jobs:
                 raise KeyError(f"EI job not found for eiTypeId={ei_type_id}, eiJobId={ei_job_id}")
 
@@ -413,7 +435,7 @@ class A1EnrichmentInformationService:
     def get_ei_job_status(self, ei_type_id: str, ei_job_id: str) -> Dict[str, Any]:
         """Get EI job delivery status."""
         with self._lock:
-            key = (ei_type_id, ei_job_id)
+            key = (self._resolve_ei_type_id(ei_type_id), ei_job_id)
             ei_job = self._ei_jobs.get(key)
             if ei_job is None:
                 raise KeyError(f"EI job status not found for eiTypeId={ei_type_id}, eiJobId={ei_job_id}")
@@ -422,7 +444,7 @@ class A1EnrichmentInformationService:
     def get_ei_job_notification_destination(self, ei_type_id: str, ei_job_id: str) -> Optional[str]:
         """Return the subscribed EI job status notification URI, if present."""
         with self._lock:
-            key = (ei_type_id, ei_job_id)
+            key = (self._resolve_ei_type_id(ei_type_id), ei_job_id)
             ei_job = self._ei_jobs.get(key)
             if ei_job is None:
                 raise KeyError(f"EI job not found for eiTypeId={ei_type_id}, eiJobId={ei_job_id}")
@@ -431,7 +453,7 @@ class A1EnrichmentInformationService:
     def get_ei_job_result_destination(self, ei_type_id: str, ei_job_id: str) -> Optional[str]:
         """Return the EI job result delivery URI, if present."""
         with self._lock:
-            key = (ei_type_id, ei_job_id)
+            key = (self._resolve_ei_type_id(ei_type_id), ei_job_id)
             ei_job = self._ei_jobs.get(key)
             if ei_job is None:
                 raise KeyError(f"EI job not found for eiTypeId={ei_type_id}, eiJobId={ei_job_id}")
@@ -474,6 +496,13 @@ class A1EnrichmentInformationService:
 
         if payload.jobResult in (None, {}):
             raise ValueError("EI result payload must include jobResult")
+
+        if isinstance(payload.jobResult, list):
+            for item in payload.jobResult:
+                try:
+                    UeGeoAndVelEIResult.model_validate(item)
+                except ValidationError as exc:
+                    raise ValueError(f"EI result payload contains invalid Section 9 result item: {exc}") from exc
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
