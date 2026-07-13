@@ -409,27 +409,32 @@ def test_create_ei_job_rejects_invalid_eitype_identifier_format() -> None:
         )
 
 
-def test_create_uegeoandvel_job_accepts_section8_typed_definition() -> None:
+def test_create_uegeoandvel_job_accepts_section9_compound_definition() -> None:
     helper = A1EnrichmentInformationService(A1ServiceRegistry())
 
     created_job, was_created = helper.create_or_replace_ei_job(
         "UEGeoandVel",
         "job-typed-001",
         {
-            "eiTypeId": "UEGeoandVel",
+            "eiTypeId": "ORAN_UEGeoandVel_3.0.1",
             "jobDefinition": {
-                "gadShape": "POINT",
-                "granularityPeriod": 100,
-                "reportingPeriod": 1000,
-                "reportingAmount": 5,
+                "scope": {"ueId": "ue-001"},
+                "ueGeoandVelEIDescription": {
+                    "gadShape": "POINT",
+                    "granularityPeriod": 100,
+                    "reportingPeriod": 1000,
+                    "reportingAmount": 5,
+                },
             },
             "jobResultUri": "https://consumer.example.com/typed-result",
         },
     )
 
     assert was_created is True
-    assert created_job["ei_job"]["jobDefinition"]["gadShape"] == "POINT"
-    assert created_job["ei_job"]["jobDefinition"]["reportingAmount"] == 5
+    assert created_job["ei_job"]["eiTypeId"] == "ORAN_UEGeoandVel_3.0.1"
+    assert created_job["ei_job"]["jobDefinition"]["scope"]["ueId"] == "ue-001"
+    assert created_job["ei_job"]["jobDefinition"]["ueGeoandVelEIDescription"]["gadShape"] == "POINT"
+    assert created_job["ei_job"]["jobDefinition"]["ueGeoandVelEIDescription"]["reportingAmount"] == 5
 
 
 def test_create_uegeoandvel_job_rejects_invalid_gad_shape() -> None:
@@ -440,12 +445,15 @@ def test_create_uegeoandvel_job_rejects_invalid_gad_shape() -> None:
             "UEGeoandVel",
             "job-typed-invalid-shape",
             {
-                "eiTypeId": "UEGeoandVel",
+                "eiTypeId": "ORAN_UEGeoandVel_3.0.1",
                 "jobDefinition": {
-                    "gadShape": "NOT_A_SHAPE",
-                    "granularityPeriod": 100,
-                    "reportingPeriod": 1000,
-                    "reportingAmount": 5,
+                    "scope": {"ueId": "ue-002"},
+                    "ueGeoandVelEIDescription": {
+                        "gadShape": "NOT_A_SHAPE",
+                        "granularityPeriod": 100,
+                        "reportingPeriod": 1000,
+                        "reportingAmount": 5,
+                    },
                 },
                 "jobResultUri": "https://consumer.example.com/typed-result",
             },
@@ -460,15 +468,156 @@ def test_create_uegeoandvel_job_rejects_non_positive_reporting_amount() -> None:
             "UEGeoandVel",
             "job-typed-invalid-amount",
             {
-                "eiTypeId": "UEGeoandVel",
+                "eiTypeId": "ORAN_UEGeoandVel_3.0.1",
                 "jobDefinition": {
-                    "gadShape": "POINT",
-                    "granularityPeriod": 100,
-                    "reportingPeriod": 1000,
-                    "reportingAmount": 0,
+                    "scope": {"ueId": "ue-003"},
+                    "ueGeoandVelEIDescription": {
+                        "gadShape": "POINT",
+                        "granularityPeriod": 100,
+                        "reportingPeriod": 1000,
+                        "reportingAmount": 0,
+                    },
                 },
                 "jobResultUri": "https://consumer.example.com/typed-result",
             },
+        )
+
+
+def test_create_uegeoandvel_job_rejects_missing_scope_wrapper() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    with pytest.raises(ValueError, match="scope"):
+        helper.create_or_replace_ei_job(
+            "UEGeoandVel",
+            "job-typed-missing-scope",
+            {
+                "eiTypeId": "ORAN_UEGeoandVel_3.0.1",
+                "jobDefinition": {
+                    "ueGeoandVelEIDescription": {
+                        "gadShape": "POINT",
+                        "granularityPeriod": 100,
+                        "reportingPeriod": 1000,
+                        "reportingAmount": 5,
+                    },
+                },
+                "jobResultUri": "https://consumer.example.com/typed-result",
+            },
+        )
+
+
+def test_validate_uegeoandvel_constraints_uses_section9_property_names() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    validated = helper.validate_ei_job_constraints(
+        "UEGeoandVel",
+        {
+            "jobConstraints": {
+                "supportedGadShapes": ["POINT"],
+                "supportedVelocityTypes": ["H_VELOCITY"],
+            }
+        },
+    )
+
+    assert validated == {
+        "supportedGadShapes": ["POINT"],
+        "supportedVelocityTypes": ["H_VELOCITY"],
+    }
+
+
+def test_validate_uegeoandvel_result_requires_array_payload() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    with pytest.raises(ValueError, match="non-empty array"):
+        helper.validate_ei_job_result(
+            "UEGeoandVel",
+            {
+                "timeStamp": "2026-07-13T12:00:00Z",
+                "ueId": "ue-004",
+                "gadShape": "POINT",
+                "geoLocation": {"lon": 10.0, "lat": 20.0},
+            },
+        )
+
+
+def test_validate_uegeoandvel_result_accepts_section9_array_payload() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    validated = helper.validate_ei_job_result(
+        "UEGeoandVel",
+        [
+            {
+                "timeStamp": "2026-07-13T12:00:00Z",
+                "ueId": "ue-005",
+                "gadShape": "POINT",
+                "geoLocation": {"lon": 10.0, "lat": 20.0},
+                "velocityDesc": "H_VELOCITY",
+                "velocity": {"speed": 30},
+            }
+        ],
+    )
+
+    assert validated[0]["ueId"] == "ue-005"
+
+
+def test_validate_uegeoandvel_result_accepts_polygon_payload() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    validated = helper.validate_ei_job_result(
+        "UEGeoandVel",
+        [
+            {
+                "timeStamp": "2026-07-13T12:05:00Z",
+                "ueId": "ue-006",
+                "gadShape": "POLYGON",
+                "geoLocation": [
+                    {"lon": 10.0, "lat": 20.0},
+                    {"lon": 11.0, "lat": 21.0},
+                    {"lon": 12.0, "lat": 22.0},
+                ],
+            }
+        ],
+    )
+
+    assert validated[0]["gadShape"] == "POLYGON"
+    assert len(validated[0]["geoLocation"]) == 3
+
+
+def test_validate_uegeoandvel_result_rejects_short_polygon_payload() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    with pytest.raises(ValueError, match="polygon with 3 to 15 points"):
+        helper.validate_ei_job_result(
+            "UEGeoandVel",
+            [
+                {
+                    "timeStamp": "2026-07-13T12:06:00Z",
+                    "ueId": "ue-007",
+                    "gadShape": "POLYGON",
+                    "geoLocation": [
+                        {"lon": 10.0, "lat": 20.0},
+                        {"lon": 11.0, "lat": 21.0},
+                    ],
+                }
+            ],
+        )
+
+
+def test_validate_uegeoandvel_result_rejects_circle_payload_without_uncertainty() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    with pytest.raises(ValueError, match="geoLocation is missing required fields: uncertainty"):
+        helper.validate_ei_job_result(
+            "UEGeoandVel",
+            [
+                {
+                    "timeStamp": "2026-07-13T12:07:00Z",
+                    "ueId": "ue-008",
+                    "gadShape": "POINT_UNCERTAINTY_CIRCLE",
+                    "geoLocation": {
+                        "point": {"lon": 10.0, "lat": 20.0}
+                    },
+                }
+            ],
         )
 
 

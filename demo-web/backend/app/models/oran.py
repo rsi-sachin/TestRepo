@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class SpecType(str, Enum):
@@ -239,14 +239,31 @@ class VelocityDescType(str, Enum):
 class UeGeoAndVelEIDescription(BaseModel):
     """Section 8.3.2.2 UE geo-location and velocity EI job definition."""
 
+    model_config = ConfigDict(extra="forbid")
+
     gadShape: GadShapeType = Field(..., description="GAD shape for UE geo-location information")
     velocityDesc: Optional[VelocityDescType] = Field(
         None,
         description="Optional UE velocity description type",
     )
-    granularityPeriod: int = Field(..., description="Periodic measurement interval in milliseconds")
-    reportingPeriod: int = Field(..., description="Periodic reporting interval in milliseconds")
-    reportingAmount: int = Field(..., description="Number of periodic reports")
+    granularityPeriod: int = Field(
+        ...,
+        ge=1,
+        le=60000,
+        description="Periodic measurement interval in milliseconds",
+    )
+    reportingPeriod: int = Field(
+        ...,
+        ge=1,
+        le=60000,
+        description="Periodic reporting interval in milliseconds",
+    )
+    reportingAmount: int = Field(
+        ...,
+        ge=1,
+        le=3600000,
+        description="Number of periodic reports",
+    )
 
     @model_validator(mode="after")
     def validate_positive_periods(self) -> "UeGeoAndVelEIDescription":
@@ -256,17 +273,48 @@ class UeGeoAndVelEIDescription(BaseModel):
         return self
 
 
+class EiScopeObject(BaseModel):
+    """Section 9.2.1.3.1 EI scope object for UEGeoandVel."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ueId: str = Field(..., min_length=1, description="Single UE identifier")
+
+
+class UeGeoAndVelEiJobDefinition(BaseModel):
+    """Section 9.2.1.3.1 compound UEGeoandVel job definition schema."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    scope: EiScopeObject = Field(..., description="EI job scope")
+    ueGeoandVelEIDescription: UeGeoAndVelEIDescription = Field(
+        ...,
+        description="UE geo-location and velocity EI description",
+    )
+
+
 class UeGeoAndVelEIConstraints(BaseModel):
     """Section 8.3.4.2 UE geo-location and velocity EI job constraints."""
+
+    model_config = ConfigDict(extra="forbid")
 
     supportedGadShapes: List[GadShapeType] = Field(
         ...,
         description="Supported GAD shapes for UE geo-location results",
     )
-    supportedVelocityDescs: List[VelocityDescType] = Field(
+    supportedVelocityTypes: List[VelocityDescType] = Field(
         default_factory=list,
         description="Supported velocity descriptor values",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_velocity_field(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "supportedVelocityTypes" not in data and "supportedVelocityDescs" in data:
+            payload = dict(data)
+            payload["supportedVelocityTypes"] = payload.pop("supportedVelocityDescs")
+            return payload
+        return data
 
     @model_validator(mode="after")
     def validate_supported_shapes(self) -> "UeGeoAndVelEIConstraints":
@@ -278,10 +326,12 @@ class UeGeoAndVelEIConstraints(BaseModel):
 class UeGeoAndVelEIResult(BaseModel):
     """Section 8.3.3.2 UE geo-location and velocity EI job result."""
 
+    model_config = ConfigDict(extra="forbid")
+
     timeStamp: datetime = Field(..., description="UTC timestamp for enrichment information")
     ueId: str = Field(..., description="UE identifier")
     gadShape: GadShapeType = Field(..., description="GAD shape used for geo-location payload")
-    geoLocation: Dict[str, Any] = Field(..., description="Shape-specific geo-location object")
+    geoLocation: Any = Field(..., description="Shape-specific geo-location payload")
     velocityDesc: Optional[VelocityDescType] = Field(
         None,
         description="Optional UE velocity description type",
@@ -295,13 +345,56 @@ class UeGeoAndVelEIResult(BaseModel):
     def validate_payload_shape(self) -> "UeGeoAndVelEIResult":
         if not self.ueId:
             raise ValueError("ueId must be a non-empty string")
-        if not self.geoLocation:
-            raise ValueError("geoLocation must be a non-empty object")
+        if self.geoLocation in (None, {}, []):
+            raise ValueError("geoLocation must be a non-empty payload")
         if self.velocityDesc is None and self.velocity is not None:
             raise ValueError("velocity requires velocityDesc to be present")
         if self.velocityDesc is not None and not self.velocity:
             raise ValueError("velocity must be present when velocityDesc is included")
+        if self.gadShape == GadShapeType.POINT:
+            self._validate_point(self.geoLocation, "geoLocation")
+        elif self.gadShape == GadShapeType.POLYGON:
+            if not isinstance(self.geoLocation, list) or not 3 <= len(self.geoLocation) <= 15:
+                raise ValueError("geoLocation must be a polygon with 3 to 15 points for POLYGON gadShape")
+            for index, point in enumerate(self.geoLocation):
+                self._validate_point(point, f"geoLocation[{index}]")
+        elif self.gadShape == GadShapeType.POINT_UNCERTAINTY_CIRCLE:
+            self._validate_required_object_fields(self.geoLocation, "geoLocation", ["point", "uncertainty"])
+            self._validate_point(self.geoLocation["point"], "geoLocation.point")
+        elif self.gadShape == GadShapeType.POINT_UNCERTAINTY_ELLIPSE:
+            self._validate_required_object_fields(
+                self.geoLocation,
+                "geoLocation",
+                ["point", "uncertaintyEllipse", "confidence"],
+            )
+            self._validate_point(self.geoLocation["point"], "geoLocation.point")
+        elif self.gadShape in {
+            GadShapeType.POINT_ALTITUDE,
+            GadShapeType.POINT_ALTITUDE_UNCERTAINTY,
+            GadShapeType.ELLIPSOID_ARC,
+        }:
+            if not isinstance(self.geoLocation, dict) or not self.geoLocation:
+                raise ValueError(f"geoLocation must be a non-empty object for {self.gadShape.value}")
+
+        if self.velocityDesc is not None:
+            if not isinstance(self.velocity, dict) or not self.velocity:
+                raise ValueError("velocity must be a non-empty object when velocityDesc is included")
         return self
+
+    @staticmethod
+    def _validate_required_object_fields(payload: Any, field_name: str, required_fields: List[str]) -> None:
+        if not isinstance(payload, dict):
+            raise ValueError(f"{field_name} must be an object")
+        missing = [name for name in required_fields if name not in payload]
+        if missing:
+            raise ValueError(f"{field_name} is missing required fields: {', '.join(missing)}")
+
+    @staticmethod
+    def _validate_point(payload: Any, field_name: str) -> None:
+        if not isinstance(payload, dict):
+            raise ValueError(f"{field_name} must be an object")
+        if "lon" not in payload or "lat" not in payload:
+            raise ValueError(f"{field_name} must include lon and lat")
 
 
 class EiJobConstraintsObject(BaseModel):
@@ -378,7 +471,7 @@ class EiJobStatusObject(BaseModel):
 class EiJobResultObject(BaseModel):
     """Representation of an EI job result payload."""
 
-    jobResult: Dict[str, Any] = Field(..., description="Delivered EI job result payload")
+    jobResult: Any = Field(..., description="Delivered EI job result payload")
 
 
 # ======== PHASE 2 MODELS: Spec Parsing Pipeline ========
