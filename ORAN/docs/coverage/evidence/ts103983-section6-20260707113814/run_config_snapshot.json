@@ -1,0 +1,20 @@
+{
+  "runId": "ts103983-section6-20260707113814",
+  "document": "ORAN/docs/ts_103983v040000p.pdf",
+  "section": "6",
+  "timestamp": "2026-07-07T11:38:14+05:30",
+  "environment": {
+    "os": "Windows",
+    "python": "c:/TestRepo/.venv/Scripts/python.exe",
+    "workingDirectory": "c:/TestRepo/demo-web/backend"
+  },
+  "git": {
+    "commit": "ff67d431c49d29044e049fccf2f600fc7c54f000",
+    "branch": "feature/ORAN_MVP_1_Py3_13"
+  },
+  "testCommand": "c:/TestRepo/.venv/Scripts/python.exe -m pytest tests/interface/api/test_oran_a1_policy_api.py tests/interface/api/test_oran_a1_ei_api.py tests/conformance/test_a1_policy_conformance_4_2_1.py tests/conformance/test_a1_policy_conformance_4_2_2.py tests/conformance/test_ei_job_operations.py tests/conformance/test_execution_evidence.py tests/conformance/test_simulator_capabilities.py --junitxml ../../ORAN/docs/coverage/evidence/ts103983-section6-20260707113814/pytest_junit.xml -q",
+  "result": {
+    "summary": "94 passed, 25 warnings in 3.35s",
+    "status": "pass"
+  }
+}

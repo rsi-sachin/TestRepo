@@ -41,3 +41,12 @@
 - When the user asks to create or share a pull request URL, always also provide:
   - a proposed PR title
   - a concise PR summary suitable for the PR description or opening note
+
+## Commit Documentation Sync Policy
+
+- At the end of each commit, update `ORAN/FEATURE_PLAN.md` with the latest implementation and verification status relevant to the committed changes.
+- In the same commit cycle, also update any related reference documents impacted by the change set, including when applicable:
+  - `ORAN/docs/feature_traceability_map.md`
+  - `ORAN/TODO.md`
+  - coverage or test-policy artifacts under `ORAN/docs/coverage/` and `ORAN/docs/test-policy/`
+- Do not finalize a commit until documentation and reference status are synchronized with the code changes.

@@ -1,0 +1,18 @@
+{
+  "runId": "ts103988-section5-hardening-20260710133538",
+  "timestamp": "2026-07-10T13:35:38+05:30",
+  "commit_sha": "ec4ee85",
+  "branch": "feature/ORAN_MVP_1_Py3_13",
+  "environment": {
+    "os": "Windows",
+    "python": "3.13.13",
+    "workspace": "c:/TestRepo"
+  },
+  "command": "python -m pytest tests/module/oran/test_ts103988_section5_type_catalog_module.py tests/e2e/test_ts103988_section5_catalog_e2e.py tests/nonfunctional/memory/test_ts103988_section5_memory_behavior.py tests/nonfunctional/load/test_ts103988_section5_load.py tests/nonfunctional/stress/test_ts103988_section5_stress.py tests/nonfunctional/parameter/test_ts103988_section5_parameter_passing.py tests/interface/api/test_ts103988_section5_interface_faults.py -q --junitxml ../../ORAN/docs/coverage/evidence/ts103988-section5-hardening-20260710133538/pytest_junit.xml",
+  "selection_scope": "TS 103 988 section5 hardening suites",
+  "result_summary": {
+    "passed": 13,
+    "failed": 0,
+    "warnings": 25
+  }
+}

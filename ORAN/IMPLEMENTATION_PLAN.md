@@ -7,6 +7,29 @@ Extend demo-web (existing FastAPI + Vanilla JS TTS execution platform) to add O-
 
 **Approach**: Incremental extension with 4 phases - (1) Core ORAN services, (2) Spec parsing pipeline, (3) Test generation engine, (4) UI integration. Each phase independently testable.
 
+## Current Implementation Delta (2026-07-02)
+
+Recent A1 protocol-alignment work has advanced beyond the original baseline plan and is now reflected in implementation and verification artifacts.
+
+- TS 103 987 Section 6 API-definition alignment is complete for A1-P and A1-EI runtime/OpenAPI response modeling.
+- TS 103 987 Annex A strict A1-EI alignment is complete for canonical EI payload fields and EI job resource handling.
+- OpenAPI callback metadata is now exposed for policy status notifications and EI status/result callbacks.
+
+### Verified outcomes
+
+- Section 6 verification snapshot: interface regression 20 passed, 0 failed; combined interface + conformance run 107 passed, 0 failed.
+- Annex A strict-mode snapshot: focused regression 38 passed, 0 failed.
+
+### Residual gap (tracked)
+
+- Runtime exposure remains application-prefixed under /api/oran/... instead of standalone server-root deployment paths matching Annex A server URL blocks.
+
+### Cross-reference anchors
+
+- Status board and summary: ORAN/FEATURE_PLAN.md
+- Trace rows: ORAN/docs/feature_traceability_map.md (ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004)
+- Task log and completion record: ORAN/TODO.md
+
 ---
 
 ## Steps

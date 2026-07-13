@@ -1,0 +1,18 @@
+{
+  "runId": "ts103988-section5-20260710132538",
+  "timestamp": "2026-07-10T13:25:38+05:30",
+  "commit_sha": "ec4ee85",
+  "branch": "feature/ORAN_MVP_1_Py3_13",
+  "environment": {
+    "os": "Windows",
+    "python": "3.13.13",
+    "workspace": "c:/TestRepo"
+  },
+  "command": "python -m pytest tests/unit/services/test_a1_policy_service.py tests/unit/services/test_a1_enrichment_service.py tests/interface/api/test_oran_a1_policy_api.py tests/interface/api/test_oran_a1_ei_api.py tests/unit/services/test_phase2_spec_parsing.py tests/conformance/test_ts103988_section5_common_types.py -q --junitxml ../../ORAN/docs/coverage/evidence/ts103988-section5-20260710132538/pytest_junit.xml",
+  "selection_scope": "TS 103 988 section5 P0 closure set",
+  "result_summary": {
+    "passed": 86,
+    "failed": 0,
+    "warnings": 27
+  }
+}

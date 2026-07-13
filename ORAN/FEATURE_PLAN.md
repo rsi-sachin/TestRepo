@@ -1,7 +1,26 @@
 # ORAN Feature Plan
 
-Last updated: 2026-06-30 (status refresh after Section 4.2.1/4.2.2 completion)
+Last updated: 2026-07-02 (aligned with TS 103 987 Section 6/Annex A and TS 103 983 Section 4 conformance/topology contract progress)
 Primary objective: Deliver a conformance-first ORAN implementation for System Integrators with module-separated code ownership, module-level traceability, and auditable conformance coverage.
+
+This is the main guiding document for planning and execution.
+Detailed feature/module/component trace metadata is maintained in:
+
+- ORAN/docs/feature_traceability_map.md
+
+## 0. Document Usage Model (Single-Entry Navigation)
+
+Use this file as the primary entry point for planning, status interpretation, and execution sequencing.
+
+- Plan-level decisions, delivery gates, and module sequencing are defined here.
+- Detailed trace rows (Trace ID, code scope, source clauses, verification evidence) are defined in ORAN/docs/feature_traceability_map.md.
+- Sprint/task execution details are tracked in ORAN/TODO.md.
+
+Update rule:
+
+1. Update ORAN/docs/feature_traceability_map.md first for any feature/module/component implementation delta.
+2. Reflect only summarized status deltas in this FEATURE_PLAN.md.
+3. Keep references bidirectional so a reader can navigate from this file to trace rows and evidence quickly.
 
 ## 1. Scope and Architecture Baseline
 
@@ -58,7 +77,7 @@ A module can move to Complete only when all three conditions pass:
 - DUT readiness checks implemented and passing
 - Simulator capability verification implemented and passing
 - Evidence collector and validator implemented and passing
-- TS 103 989 section 4.2.1 and 4.2.2 conformance suite (30 tests) passing
+- TS 103 989 section 4.2.1 and 4.2.2 conformance suite passing
 
 ### O1 and E2 hard gates (this phase)
 
@@ -71,14 +90,28 @@ A module can move to Complete only when all three conditions pass:
 
 | Module | Status | Conformance Coverage | Evidence Anchor |
 |---|---|---|---|
-| Non-RT RIC + A1 Interface | In Progress | TS 103 989 section 4.2.1/4.2.2 executable conformance implemented and passing (30 tests); broader module completion pending | ORAN-FTM-001,002,003,004,013 |
-| O1 Interface | TBD | Not started | ORAN-FTM-015 |
-| E2 Interface | TBD | Not started | ORAN-FTM-014 |
-| Near-RT RIC Simulator | TBD | Not started | ORAN-FTM-016 |
-| E2 Nodes Simulator | TBD | Not started | ORAN-FTM-016 |
-| RAN User Intent Simulator | TBD | Not started | ORAN-FTM-016 |
-| Internal/External Info Sources Simulator | TBD | Not started | ORAN-FTM-017 |
-| Conformance Harness | Complete | DUT readiness, simulator capability verification, and evidence checks implemented; conformance suites passing | ORAN-FTM-018, ORAN-FTM-013 |
+| Non-RT RIC + A1 Interface | In Progress | TS 103 989 section 4.2.1/4.2.2 conformance passing; TS 103 989 section 7 interoperability passing; TS 103 987 section 6 API-definition alignment verified; TS 103 987 Annex A strict EI payload/resource alignment verified; TS 103 983 section 4 principle-level conformance suite passing | ORAN-FTM-001, ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004, ORAN-FTM-013, ORAN-FTM-014, ORAN-FTM-015 |
+| O1 Interface | In Progress | TS 103 983 section 4.1.2 topology/contract checks passing at validator and stub-contract level (integration-path tests pending) | ORAN-FTM-015 |
+| E2 Interface | In Progress | TS 103 983 section 4.1.2 topology/contract checks passing at validator and stub-contract level (integration-path tests pending) | ORAN-FTM-015 |
+| Near-RT RIC Simulator | TBD | Not started | Trace row pending in ORAN/docs/feature_traceability_map.md |
+| E2 Nodes Simulator | TBD | Not started | Trace row pending in ORAN/docs/feature_traceability_map.md |
+| RAN User Intent Simulator | TBD | Not started | Trace row pending in ORAN/docs/feature_traceability_map.md |
+| Internal/External Info Sources Simulator | In Progress | TS 103 983 section 4.1.2 topology/contract checks passing at stub-contract level (behavioral simulator flows pending) | ORAN-FTM-015 |
+| Conformance Harness | Complete | DUT readiness, simulator capability verification, and evidence checks implemented; conformance suites passing | ORAN-FTM-013, ORAN-FTM-014 |
+
+### Current verified snapshot (from latest trace updates)
+
+- TS 103 987 Section 6 API-definition alignment completed for A1 policy/EI/API router scope.
+- Interface regression: 20 passed, 0 failed.
+- Combined interface + conformance verification: 107 passed, 0 failed.
+- TS 103 987 Annex A strict EI alignment completed for canonical EI job payload/resource handling and callback metadata exposure.
+- Strict-mode focused regression: 38 passed, 0 failed.
+- TS 103 983 section 4 conformance principles suite added and passing: 10 passed, 0 failed.
+- TS 103 983 section 4.1.2 topology and interface-contract suite added and passing: 8 passed, 0 failed.
+- TS 103 983 section 4 clause matrix status: covered=4, partial=4, missing=1.
+- Residual deployment-path gap remains: application-prefixed API roots are still used for runtime exposure.
+- Residual section-4 gaps remain for A1-ML implementation scope and full O1/E2 integration-level message flows.
+- See ORAN/docs/feature_traceability_map.md rows: ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004, ORAN-FTM-015.
 
 ## 5. Already In Place vs TBD
 
@@ -96,14 +129,18 @@ A module can move to Complete only when all three conditions pass:
   - demo-web/backend/tests/conformance/test_a1_policy_conformance_4_2_1.py
   - demo-web/backend/tests/conformance/test_a1_policy_conformance_4_2_2.py
   - demo-web/backend/tests/conformance/simulator_capability_verification.py
+  - demo-web/backend/tests/conformance/test_ts103983_section4_principles.py
+  - demo-web/backend/tests/conformance/test_ts103983_section4_topology_contracts.py
   - demo-web/backend/app/services/conformance_service.py
   - demo-web/backend/app/modules/conformance_harness/
+  - ORAN/docs/coverage/ts_103983_section4_clause_coverage_matrix.md
 
 ### TBD or incomplete
 
-- O1 interface module (contracts, API, tests)
-- E2 interface module (contracts, API, tests)
-- Simulators for Near-RT RIC, E2 Nodes, RAN User intent, info sources
+- O1 interface module full API/integration behavior (contract-level validation complete)
+- E2 interface module full API/integration behavior (contract-level validation complete)
+- Simulators for Near-RT RIC, E2 Nodes, RAN User intent, info sources (topology contracts in place; scenario behaviors pending)
+- A1-ML scope decision and baseline implementation/tests for TS 103 983 section 4.1.3.3 and 4.4
 - Module-level conformance dashboards and coverage reporting
 
 ## 6. Skills Usage Policy
@@ -135,7 +172,16 @@ Each matrix row must include source section references extracted through skill-a
 - Failing gates: list of blockers with owner
 - Evidence artifact links: logs, reports, and test IDs
 
-## 9. Deployment Target
+## 9. Cross-Reference Index
+
+- Strategic execution plan: ORAN/FEATURE_PLAN.md (this document)
+- Trace row details and verification mapping: ORAN/docs/feature_traceability_map.md
+- Sprint/task execution log: ORAN/TODO.md
+- Coverage and policy artifacts:
+  - ORAN/docs/coverage/
+  - ORAN/docs/test-policy/
+
+## 10. Deployment Target
 
 - Development: Docker Compose
 - Production: single-node VM

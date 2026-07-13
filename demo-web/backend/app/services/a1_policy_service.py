@@ -4,12 +4,14 @@ Policy-management specific A1 service helpers.
 
 import logging
 from copy import deepcopy
+import re
 from typing import Dict, List, Optional, Tuple
 
 import httpx
 
 from app.models.a1_service import A1ServiceDefinition, A1ServiceType
 from app.models.a1_policy_models import PolicyObject, PolicyStatusObject, PolicyTypeObject
+from app.models.a1_policy_models import PolicyTypeStatusObject
 
 logger = logging.getLogger(__name__)
 from app.models.oran import SpecType
@@ -18,6 +20,39 @@ from app.services.a1_service_registry import A1ServiceRegistry
 
 class A1PolicyService:
     """Service-specific metadata and validation for A1-P."""
+
+    _SUPPORTED_SCOPE_TYPES = {
+        "ue",
+        "ue_group",
+        "slice",
+        "qos_flow",
+        "cell",
+    }
+    _SCOPE_TYPE_ALIASES = {
+        "ue-group": "ue_group",
+        "uegroup": "ue_group",
+        "qos-flow": "qos_flow",
+        "qosflow": "qos_flow",
+    }
+    _ALLOWED_STATUS_TRANSITIONS = {
+        "ACCEPTED": {"ENFORCED", "NOT_ENFORCED"},
+        "ENFORCED": {"ENFORCED", "NOT_ENFORCED"},
+        "NOT_ENFORCED": {"ENFORCED", "NOT_ENFORCED"},
+    }
+    _SUPPORTED_POLICY_STATEMENT_CATEGORIES = {"objective", "resource"}
+    _HEX_RE = re.compile(r"^[0-9A-Fa-f]+$")
+    _TYPE_DEFINITION_CATALOG = {
+        "common": "1.0.0",
+        "QoSTarget": "4.0.1",
+        "QoETarget": "4.0.1",
+        "TrafficSteeringPreference": "4.0.1",
+        "QoSandTSP": "4.0.1",
+        "QoEandTSP": "4.0.1",
+        "UELevelTarget": "3.0.1",
+        "SliceSLATarget": "3.0.0",
+        "LoadBalancing": "1.0.2",
+        "EnergySaving": "2.0.0",
+    }
 
     def __init__(self, registry: A1ServiceRegistry | None = None) -> None:
         self.registry = registry or A1ServiceRegistry()
@@ -60,7 +95,156 @@ class A1PolicyService:
             "definition": self.definition.model_dump(mode="json"),
             "recommended_specs": [spec.value for spec in self.get_supported_specs()],
             "primary_resources": self.definition.resource_domains,
+            "policy_content_profile": {
+                "name": "objective_resource_v1",
+                "supported_categories": sorted(self._SUPPORTED_POLICY_STATEMENT_CATEGORIES),
+                "legacy_statements_allowed": True,
+            },
+            "type_definition_catalog": {
+                "source_reference": "TS 103 988 section 5.2",
+                "types": deepcopy(self._TYPE_DEFINITION_CATALOG),
+            },
+            "a1_ml_support": {
+                "status": "out_of_scope",
+                "reference": "TS 103 983 section 5",
+                "note": "A1-P and A1-EI are implemented; A1-ML is not part of the current MVP baseline.",
+            },
         }
+
+    def _validate_hex_attr(self, scope: Dict[str, object], name: str, length: int) -> None:
+        value = scope.get(name)
+        if value is None:
+            return
+        if not isinstance(value, str) or len(value) != length or self._HEX_RE.fullmatch(value) is None:
+            raise ValueError(f"Scope attribute {name} must be a {length}-character hexadecimal string")
+
+    def _validate_int_attr(self, scope: Dict[str, object], name: str, upper: int) -> None:
+        value = scope.get(name)
+        if value is None:
+            return
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0 or value > upper:
+            raise ValueError(f"Scope attribute {name} must be an integer between 0 and {upper}")
+
+    def _validate_encoded_scope_attributes(self, policy: PolicyObject) -> None:
+        scope = policy.scope
+        self._validate_hex_attr(scope, "ranUeId", 16)
+        self._validate_hex_attr(scope, "amfRegionId", 2)
+        self._validate_hex_attr(scope, "mmeGroupId", 4)
+        self._validate_hex_attr(scope, "mmeCode", 2)
+        self._validate_int_attr(scope, "amfUeNgapId", (1 << 40) - 1)
+        self._validate_int_attr(scope, "mmeUeS1apId", (1 << 32) - 1)
+        self._validate_int_attr(scope, "gnbCuUeF1apId", (1 << 32) - 1)
+        self._validate_int_attr(scope, "gnbCuCpUeE1apId", (1 << 32) - 1)
+
+        amf_set_id = scope.get("amfSetId")
+        if amf_set_id is not None:
+            if (
+                not isinstance(amf_set_id, str)
+                or len(amf_set_id) != 3
+                or self._HEX_RE.fullmatch(amf_set_id) is None
+                or amf_set_id[0] not in {"0", "1", "2", "3"}
+            ):
+                raise ValueError(
+                    "Scope attribute amfSetId must be a 3-character hexadecimal string with first nibble 0-3"
+                )
+
+        amf_pointer = scope.get("amfPointer")
+        if amf_pointer is not None:
+            if (
+                not isinstance(amf_pointer, str)
+                or len(amf_pointer) != 2
+                or self._HEX_RE.fullmatch(amf_pointer) is None
+                or amf_pointer[0] not in {"0", "1", "2", "3"}
+            ):
+                raise ValueError(
+                    "Scope attribute amfPointer must be a 2-character hexadecimal string with first nibble 0-3"
+                )
+
+    def _validate_policy_content(self, policy: PolicyObject) -> None:
+        for index, statement in enumerate(policy.policy_statements):
+            if not isinstance(statement, dict):
+                raise ValueError(f"Policy statement at index {index} must be an object")
+
+            # Backward-compatible mode: legacy statements with no explicit category are accepted.
+            category = statement.get("category")
+            if category in (None, ""):
+                continue
+
+            normalized_category = str(category).strip().lower()
+            if normalized_category not in self._SUPPORTED_POLICY_STATEMENT_CATEGORIES:
+                supported = ", ".join(sorted(self._SUPPORTED_POLICY_STATEMENT_CATEGORIES))
+                raise ValueError(
+                    f"Unsupported policy statement category '{category}'. "
+                    f"Supported categories: {supported}"
+                )
+
+            if normalized_category == "objective":
+                payload = statement.get("objective")
+                if not isinstance(payload, dict) or not payload:
+                    raise ValueError(
+                        f"Policy statement at index {index} with category objective must include "
+                        "a non-empty objective object"
+                    )
+
+            if normalized_category == "resource":
+                payload = statement.get("resource")
+                if not isinstance(payload, dict) or not payload:
+                    raise ValueError(
+                        f"Policy statement at index {index} with category resource must include "
+                        "a non-empty resource object"
+                    )
+
+    def _normalize_scope_type(self, scope_type: object) -> str:
+        normalized = str(scope_type).strip().lower().replace(" ", "_")
+        normalized = self._SCOPE_TYPE_ALIASES.get(normalized, normalized)
+        return normalized
+
+    def _validate_policy_scope(self, policy: PolicyObject) -> None:
+        scope_type = policy.scope.get("scope_type")
+        scope_value = policy.scope.get("scope_value")
+
+        if scope_type in (None, "") or scope_value in (None, ""):
+            raise ValueError("Policy scope must include non-empty scope_type and scope_value")
+
+        normalized_scope_type = self._normalize_scope_type(scope_type)
+        if normalized_scope_type not in self._SUPPORTED_SCOPE_TYPES:
+            supported = ", ".join(sorted(self._SUPPORTED_SCOPE_TYPES))
+            raise ValueError(
+                "Unsupported policy scope_type '"
+                f"{scope_type}'. Supported scope types: {supported}"
+            )
+
+        # Section-5 representative encoding checks for common A1 attribute fields.
+        self._validate_encoded_scope_attributes(policy)
+
+    def transition_policy_status(
+        self,
+        policy_type_id: str,
+        policy_id: str,
+        new_status: str,
+        reason: Optional[str] = None,
+    ) -> PolicyStatusObject:
+        """Apply explicit lifecycle transitions aligned with section-5 semantics."""
+        key = (policy_type_id, policy_id)
+        existing = self._policy_status.get(key)
+        if existing is None:
+            raise KeyError(f"Policy status not found for policyTypeId={policy_type_id}, policyId={policy_id}")
+
+        normalized_new = str(new_status).strip().upper()
+        normalized_current = existing.enforcement_status.strip().upper()
+
+        allowed = self._ALLOWED_STATUS_TRANSITIONS.get(normalized_current, set())
+        if normalized_new not in allowed:
+            raise ValueError(
+                "Invalid policy status transition "
+                f"{normalized_current} -> {normalized_new}; "
+                f"allowed transitions: {sorted(allowed)}"
+            )
+
+        existing.enforcement_status = normalized_new
+        existing.enforcement_reason = reason
+        self._policy_status[key] = deepcopy(existing)
+        return deepcopy(existing)
 
     def list_policy_type_ids(self) -> List[str]:
         """Return known policy type identifiers."""
@@ -78,6 +262,24 @@ class A1PolicyService:
         if policy_type is None:
             raise KeyError(f"Policy type not found: {policy_type_id}")
         return deepcopy(policy_type)
+
+    def get_policy_type_status(self, policy_type_id: str) -> PolicyTypeStatusObject:
+        """Return status metadata for one policy type."""
+        policy_type = self._policy_types.get(policy_type_id)
+        if policy_type is None:
+            raise KeyError(f"Policy type not found: {policy_type_id}")
+
+        status = "ENABLED" if policy_type.supports_policy_creation else "DISABLED"
+        reason = (
+            "Policy type is available for policy create/update operations"
+            if status == "ENABLED"
+            else "Policy type is currently unavailable for policy create/update operations"
+        )
+        return PolicyTypeStatusObject(
+            policy_type_id=policy_type_id,
+            policy_type_status=status,
+            status_reason=reason,
+        )
 
     def create_or_replace_policy(
         self,
@@ -97,6 +299,8 @@ class A1PolicyService:
             raise KeyError(f"Policy type not found: {policy_type_id}")
         if not policy_type.supports_policy_creation:
             raise ValueError(f"Policy creation is not supported for policy type: {policy_type_id}")
+        self._validate_policy_scope(policy)
+        self._validate_policy_content(policy)
 
         key = (policy_type_id, policy_id)
         was_created = key not in self._policies
@@ -111,6 +315,12 @@ class A1PolicyService:
                 policy_id=policy_id,
                 enforcement_status="ACCEPTED",
                 enforcement_reason="Policy accepted for evaluation by A1-P Producer",
+            )
+        else:
+            self._policy_status[key] = PolicyStatusObject(
+                policy_id=policy_id,
+                enforcement_status="ACCEPTED",
+                enforcement_reason="Policy updated and accepted for re-evaluation by A1-P Producer",
             )
         return deepcopy(self._policies[key]), was_created
 
@@ -158,6 +368,24 @@ class A1PolicyService:
         if response.status_code not in (200, 204):
             logger.warning(
                 "Policy status notification to %s returned unexpected status %d",
+                destination,
+                response.status_code,
+            )
+
+    async def notify_policy_type_status(
+        self, destination: str, status_obj: PolicyTypeStatusObject
+    ) -> None:
+        """Send outbound policy-type status notification to the consumer callback URI."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                destination,
+                json=status_obj.model_dump(mode="json"),
+                headers={"Content-Type": "application/json"},
+                timeout=10.0,
+            )
+        if response.status_code not in (200, 204):
+            logger.warning(
+                "Policy type status notification to %s returned unexpected status %d",
                 destination,
                 response.status_code,
             )

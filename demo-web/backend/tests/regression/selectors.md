@@ -10,6 +10,22 @@ pytest -q `
   tests/conformance/test_execution_evidence.py
 ```
 
+## TS 103 983 §4 conformance principles smoke run
+
+```powershell
+cd demo-web/backend
+pytest -q `
+  tests/conformance/test_ts103983_section4_principles.py
+```
+
+## TS 103 983 §4.1.2 topology contracts smoke run
+
+```powershell
+cd demo-web/backend
+pytest -q `
+  tests/conformance/test_ts103983_section4_topology_contracts.py
+```
+
 ## Targeted smoke run (§5.2.x policy + §5.2.3 policy types)
 
 ```powershell
@@ -43,6 +59,8 @@ pytest -q `
   tests/conformance/test_non_rt_ric_dut_readiness.py `
   tests/conformance/test_simulator_capabilities.py `
   tests/conformance/test_execution_evidence.py `
+  tests/conformance/test_ts103983_section4_principles.py `
+  tests/conformance/test_ts103983_section4_topology_contracts.py `
   tests/component/api/test_problem_details_component.py `
   tests/unit/services/test_a1_policy_service.py `
   tests/unit/services/test_a1_service_registry.py `

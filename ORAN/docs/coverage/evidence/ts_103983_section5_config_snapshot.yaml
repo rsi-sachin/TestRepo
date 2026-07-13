@@ -1,0 +1,10 @@
+run_id: "6d51d75d-2612-4883-8b00-663e149121dc"
+timestamp: "2026-07-07T11:03:35.0012652+05:30"
+branch: "feature/ORAN_MVP_1_Py3_13"
+commit_sha: "96e0ebe4b6391b929618d1e94102525c0eec7a66"
+workspace: "c:/TestRepo"
+python_environment:
+  type: "venv"
+  version: "3.13.14"
+  executable: "c:/TestRepo/.venv/Scripts/python.exe"
+test_command: "pytest tests/unit/services/test_a1_policy_service.py tests/interface/api/test_oran_a1_policy_api.py tests/unit/services/test_a1_enrichment_service.py tests/conformance/test_ts103983_section5_ei_lifecycle_resilience.py tests/conformance/test_ts103983_section5_policy_scope_identifiers.py tests/conformance/test_ts103983_section5_policy_lifecycle_transitions.py tests/conformance/test_ts103983_section5_capability_summary.py tests/interface/api/test_oran_a1_ei_api.py"

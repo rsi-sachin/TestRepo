@@ -15,10 +15,12 @@ from app.models.a1_service import A1ServiceRegistryResponse
 from app.models.a1_policy_models import (
     PolicyObject,
     PolicyStatusObject,
+    PolicyTypeStatusObject,
     PolicyTypeObject,
     ProblemDetails,
 )
 from app.models.oran import (
+    EiTypeStatusObject,
     OranTestCatalog,
     OranTestCase,
     OranExecutionResult,
@@ -35,6 +37,7 @@ from app.services.catalog_generator_service import CatalogGeneratorService
 from app.services.a1_service_registry import A1ServiceRegistry
 from app.services.a1_policy_service import A1PolicyService
 from app.services.a1_enrichment_service import A1EnrichmentInformationService
+from app.services.a1_errors import A1ConflictError
 from app.services.rule_learner_service import RuleLearnerService
 from app.repositories.rule_pack_repository import RulePackRepository
 from app.models.rule_pack import RulePack, RulePackSummary
@@ -98,7 +101,177 @@ def _raise_problem(status_code: int, title: str, detail: str, instance: str | No
     raise HTTPException(
         status_code=status_code,
         detail=_problem(status_code=status_code, title=title, detail=detail, instance=instance),
+        headers={"Content-Type": "application/problem+json"},
     )
+
+
+_A1_PROBLEM_RESPONSE_DEFINITIONS: Dict[int, Dict[str, object]] = {
+    400: {
+        "description": "Bad Request",
+        "model": ProblemDetails,
+        "content": {"application/problem+json": {}},
+    },
+    404: {
+        "description": "Not Found",
+        "model": ProblemDetails,
+        "content": {"application/problem+json": {}},
+    },
+    405: {
+        "description": "Method Not Allowed",
+        "model": ProblemDetails,
+        "content": {"application/problem+json": {}},
+    },
+    409: {
+        "description": "Conflict",
+        "model": ProblemDetails,
+        "content": {"application/problem+json": {}},
+    },
+    500: {
+        "description": "Internal Server Error",
+        "model": ProblemDetails,
+        "content": {"application/problem+json": {}},
+    },
+}
+
+_POLICY_STATUS_CALLBACK_OPENAPI: Dict[str, object] = {
+    "policyStatusNotification": {
+        "{$request.query.notificationDestination}": {
+            "post": {
+                "description": "Notify about status for this policy",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PolicyStatusObject"
+                            }
+                        }
+                    },
+                },
+                "responses": {
+                    "204": {"description": "Notification received"},
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {"application/problem+json": {}},
+                    },
+                },
+            }
+        }
+    }
+}
+
+_POLICY_TYPE_STATUS_CALLBACK_OPENAPI: Dict[str, object] = {
+    "policyTypeStatusNotification": {
+        "{$request.query.notificationDestination}": {
+            "post": {
+                "description": "Notify about status for this policy type",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PolicyTypeStatusObject"
+                            }
+                        }
+                    },
+                },
+                "responses": {
+                    "204": {"description": "Notification received"},
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {"application/problem+json": {}},
+                    },
+                },
+            }
+        }
+    }
+}
+
+_EI_CALLBACKS_OPENAPI: Dict[str, object] = {
+    "jobStatusNotification": {
+        "{$request.body.jobStatusNotificationUri}": {
+            "post": {
+                "description": "Notify about status changes for this EI job",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EiJobStatusObject"
+                            }
+                        }
+                    },
+                },
+                "responses": {
+                    "204": {"description": "Notification received"},
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {"application/problem+json": {}},
+                    },
+                },
+            }
+        }
+    },
+    "jobResult": {
+        "{$request.body.jobResultUri}": {
+            "post": {
+                "description": "Deliver result for this EI job",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EiJobResultObject"
+                            }
+                        }
+                    },
+                },
+                "responses": {
+                    "204": {"description": "Information received"},
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {"application/problem+json": {}},
+                    },
+                },
+            }
+        }
+    },
+}
+
+_EI_TYPE_STATUS_CALLBACK_OPENAPI: Dict[str, object] = {
+    "eiTypeStatusNotification": {
+        "{$request.query.notificationDestination}": {
+            "post": {
+                "description": "Notify about status for this EI type",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EiTypeStatusObject"
+                            }
+                        }
+                    },
+                },
+                "responses": {
+                    "204": {"description": "Notification received"},
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {"application/problem+json": {}},
+                    },
+                },
+            }
+        }
+    }
+}
+
+
+def _a1_problem_responses(*status_codes: int) -> Dict[int, Dict[str, object]]:
+    return {
+        status_code: _A1_PROBLEM_RESPONSE_DEFINITIONS[status_code]
+        for status_code in status_codes
+        if status_code in _A1_PROBLEM_RESPONSE_DEFINITIONS
+    }
 
 
 @router.get("/services", response_model=A1ServiceRegistryResponse)
@@ -128,7 +301,11 @@ async def list_policy_types() -> List[str]:
     return a1_policy_service.list_policy_type_ids()
 
 
-@router.get("/a1/policytypes/{policy_type_id}", response_model=PolicyTypeObject)
+@router.get(
+    "/a1/policytypes/{policy_type_id}",
+    response_model=PolicyTypeObject,
+    responses=_a1_problem_responses(404, 405),
+)
 async def get_policy_type(policy_type_id: str):
     """Get a single policy type object."""
     try:
@@ -137,7 +314,63 @@ async def get_policy_type(policy_type_id: str):
         _raise_problem(404, "Policy Type Not Found", str(e), instance=f"/a1/policytypes/{policy_type_id}")
 
 
-@router.get("/a1/policytypes/{policy_type_id}/policies", response_model=List[str])
+@router.get(
+    "/a1/policytypes/{policy_type_id}/status",
+    response_model=PolicyTypeStatusObject,
+    responses=_a1_problem_responses(404, 405),
+)
+async def get_policy_type_status(policy_type_id: str):
+    """Get policy type status resource (section-6 policy type status procedure)."""
+    try:
+        return a1_policy_service.get_policy_type_status(policy_type_id)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "Policy Type Status Not Found",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/status",
+        )
+
+
+@router.post(
+    "/a1/policytypes/{policy_type_id}/status/notify",
+    status_code=204,
+    responses=_a1_problem_responses(400, 404, 405),
+    openapi_extra={"callbacks": _POLICY_TYPE_STATUS_CALLBACK_OPENAPI},
+)
+async def notify_policy_type_status(
+    policy_type_id: str,
+    status: PolicyTypeStatusObject,
+    notification_destination: str = Query(..., alias="notificationDestination"),
+):
+    """Trigger policy type status notification to a callback URI."""
+    try:
+        a1_policy_service.get_policy_type(policy_type_id)
+        if status.policy_type_id != policy_type_id:
+            raise ValueError("policy_type_id in payload must match policy_type_id in path")
+        await a1_policy_service.notify_policy_type_status(notification_destination, status)
+        return Response(status_code=204)
+    except KeyError as e:
+        _raise_problem(
+            404,
+            "Policy Type Not Found",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/status/notify",
+        )
+    except ValueError as e:
+        _raise_problem(
+            400,
+            "Invalid Policy Type Status Notification",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/status/notify",
+        )
+
+
+@router.get(
+    "/a1/policytypes/{policy_type_id}/policies",
+    response_model=List[str],
+    responses=_a1_problem_responses(404, 405),
+)
 async def list_policy_ids(policy_type_id: str) -> List[str]:
     """List all policy identifiers for a given policy type (§5.2.4.2)."""
     try:
@@ -154,6 +387,8 @@ async def list_policy_ids(policy_type_id: str) -> List[str]:
 @router.put(
     "/a1/policytypes/{policy_type_id}/policies/{policy_id}",
     response_model=PolicyObject,
+    responses=_a1_problem_responses(400, 404, 405, 409, 500),
+    openapi_extra={"callbacks": _POLICY_STATUS_CALLBACK_OPENAPI},
 )
 async def create_or_replace_policy(
     policy_type_id: str,
@@ -191,6 +426,13 @@ async def create_or_replace_policy(
             str(e),
             instance=f"/a1/policytypes/{policy_type_id}/policies/{policy_id}",
         )
+    except A1ConflictError as e:
+        _raise_problem(
+            409,
+            "Policy Conflict",
+            str(e),
+            instance=f"/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+        )
     except ValueError as e:
         _raise_problem(
             400,
@@ -200,7 +442,11 @@ async def create_or_replace_policy(
         )
 
 
-@router.get("/a1/policytypes/{policy_type_id}/policies/{policy_id}", response_model=PolicyObject)
+@router.get(
+    "/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+    response_model=PolicyObject,
+    responses=_a1_problem_responses(404, 405),
+)
 async def get_policy(policy_type_id: str, policy_id: str):
     """Get one policy object."""
     try:
@@ -214,7 +460,11 @@ async def get_policy(policy_type_id: str, policy_id: str):
         )
 
 
-@router.delete("/a1/policytypes/{policy_type_id}/policies/{policy_id}", status_code=204)
+@router.delete(
+    "/a1/policytypes/{policy_type_id}/policies/{policy_id}",
+    status_code=204,
+    responses=_a1_problem_responses(404, 405),
+)
 async def delete_policy(policy_type_id: str, policy_id: str):
     """Delete one policy object."""
     try:
@@ -232,6 +482,7 @@ async def delete_policy(policy_type_id: str, policy_id: str):
 @router.get(
     "/a1/policytypes/{policy_type_id}/policies/{policy_id}/status",
     response_model=PolicyStatusObject,
+    responses=_a1_problem_responses(404, 405),
 )
 async def get_policy_status(policy_type_id: str, policy_id: str):
     """Get policy status resource."""
@@ -252,7 +503,11 @@ async def list_ei_types() -> List[str]:
     return a1_ei_service.list_ei_type_ids()
 
 
-@router.get("/a1/eijobs", response_model=List[str])
+@router.get(
+    "/a1/eijobs",
+    response_model=List[str],
+    responses=_a1_problem_responses(404, 405),
+)
 async def list_ei_job_ids(ei_type_id: Optional[str] = Query(None, alias="eiTypeId")) -> List[str]:
     """List EI job identifiers, optionally filtered by EI type (§5.3.4.2)."""
     try:
@@ -261,33 +516,26 @@ async def list_ei_job_ids(ei_type_id: Optional[str] = Query(None, alias="eiTypeI
         _raise_problem(404, "EI Type Not Found", str(e), instance="/a1/eijobs")
 
 
-@router.get("/a1/eitypes/{ei_type_id}")
-async def get_ei_type(ei_type_id: str) -> Dict[str, object]:
-    """Get a single EI type definition (§5.3.1)."""
-    try:
-        return a1_ei_service.get_ei_type(ei_type_id)
-    except KeyError as e:
-        _raise_problem(404, "EI Type Not Found", str(e), instance=f"/a1/eitypes/{ei_type_id}")
+def _validate_annex_a_ei_payload(ei_job: Dict[str, object]) -> None:
+    missing = [
+        field
+        for field in ("eiTypeId", "jobDefinition", "jobResultUri")
+        if ei_job.get(field) in (None, "")
+    ]
+    if missing:
+        raise ValueError("EI job payload missing required Annex A fields: " + ", ".join(missing))
 
 
-@router.get("/a1/eitypes/{ei_type_id}/eijobs", response_model=List[str])
-async def list_ei_job_ids_for_type(ei_type_id: str) -> List[str]:
-    """List EI job identifiers for a given EI type (§5.3.3)."""
-    try:
-        return a1_ei_service.list_ei_job_ids(ei_type_id)
-    except KeyError as e:
-        _raise_problem(404, "EI Type Not Found", str(e), instance=f"/a1/eitypes/{ei_type_id}/eijobs")
-
-
-@router.put("/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}")
-async def create_or_replace_ei_job(
+async def _upsert_ei_job(
+    *,
     ei_type_id: str,
     ei_job_id: str,
     ei_job: Dict[str, object],
     response: Response,
-    notification_destination: Optional[str] = Query(None, alias="notificationDestination"),
+    notification_destination: Optional[str],
+    instance_path: str,
+    location_path: str,
 ) -> Dict[str, object]:
-    """Create or update an EI job (§5.3.2/§5.3.4)."""
     try:
         if notification_destination is not None and "jobStatusNotificationUri" not in ei_job:
             ei_job = {**ei_job, "jobStatusNotificationUri": notification_destination}
@@ -299,7 +547,7 @@ async def create_or_replace_ei_job(
         )
         if was_created:
             response.status_code = 201
-            response.headers["Location"] = f"/api/oran/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}"
+            response.headers["Location"] = location_path
         else:
             response.status_code = 200
         return result
@@ -308,8 +556,187 @@ async def create_or_replace_ei_job(
             404,
             "EI Type Not Found",
             str(e),
-            instance=f"/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
+            instance=instance_path,
         )
+    except A1ConflictError as e:
+        _raise_problem(
+            409,
+            "EI Job Conflict",
+            str(e),
+            instance=instance_path,
+        )
+    except ValueError as e:
+        _raise_problem(
+            400,
+            "Invalid EI Job Request",
+            str(e),
+            instance=instance_path,
+        )
+
+
+@router.put(
+    "/a1/eijobs/{ei_job_id}",
+    response_model=Dict[str, object],
+    responses=_a1_problem_responses(400, 404, 405, 409, 500),
+    openapi_extra={"callbacks": _EI_CALLBACKS_OPENAPI},
+)
+async def create_or_replace_ei_job_annex_a(
+    ei_job_id: str,
+    ei_job: Dict[str, object],
+    response: Response,
+    notification_destination: Optional[str] = Query(None, alias="notificationDestination"),
+) -> Dict[str, object]:
+    """Create or update EI job using Annex A canonical path (§A.3)."""
+    try:
+        _validate_annex_a_ei_payload(ei_job)
+    except ValueError as e:
+        _raise_problem(400, "Invalid EI Job Request", str(e), instance=f"/a1/eijobs/{ei_job_id}")
+
+    ei_type_id = str(ei_job.get("eiTypeId"))
+    return await _upsert_ei_job(
+        ei_type_id=ei_type_id,
+        ei_job_id=ei_job_id,
+        ei_job=ei_job,
+        response=response,
+        notification_destination=notification_destination,
+        instance_path=f"/a1/eijobs/{ei_job_id}",
+        location_path=f"/api/oran/a1/eijobs/{ei_job_id}",
+    )
+
+
+@router.get(
+    "/a1/eijobs/{ei_job_id}",
+    response_model=Dict[str, object],
+    responses=_a1_problem_responses(404, 405, 409),
+)
+async def get_ei_job_annex_a(ei_job_id: str) -> Dict[str, object]:
+    """Get EI job using Annex A canonical path (§A.3)."""
+    try:
+        return a1_ei_service.get_ei_job_by_id(ei_job_id)
+    except KeyError as e:
+        _raise_problem(404, "EI Job Not Found", str(e), instance=f"/a1/eijobs/{ei_job_id}")
+    except A1ConflictError as e:
+        _raise_problem(409, "EI Job Conflict", str(e), instance=f"/a1/eijobs/{ei_job_id}")
+
+
+@router.delete(
+    "/a1/eijobs/{ei_job_id}",
+    status_code=204,
+    responses=_a1_problem_responses(404, 405, 409),
+)
+async def delete_ei_job_annex_a(ei_job_id: str):
+    """Delete EI job using Annex A canonical path (§A.3)."""
+    try:
+        a1_ei_service.delete_ei_job_by_id(ei_job_id)
+        return Response(status_code=204)
+    except KeyError as e:
+        _raise_problem(404, "EI Job Not Found", str(e), instance=f"/a1/eijobs/{ei_job_id}")
+    except A1ConflictError as e:
+        _raise_problem(409, "EI Job Conflict", str(e), instance=f"/a1/eijobs/{ei_job_id}")
+
+
+@router.get(
+    "/a1/eijobs/{ei_job_id}/status",
+    response_model=Dict[str, object],
+    responses=_a1_problem_responses(404, 405, 409),
+)
+async def get_ei_job_status_annex_a(ei_job_id: str) -> Dict[str, object]:
+    """Get EI job status using Annex A canonical path (§A.3)."""
+    try:
+        return a1_ei_service.get_ei_job_status_by_id(ei_job_id)
+    except KeyError as e:
+        _raise_problem(404, "EI Job Status Not Found", str(e), instance=f"/a1/eijobs/{ei_job_id}/status")
+    except A1ConflictError as e:
+        _raise_problem(409, "EI Job Conflict", str(e), instance=f"/a1/eijobs/{ei_job_id}/status")
+
+
+@router.get(
+    "/a1/eitypes/{ei_type_id}",
+    response_model=Dict[str, object],
+    responses=_a1_problem_responses(404, 405),
+)
+async def get_ei_type(ei_type_id: str) -> Dict[str, object]:
+    """Get a single EI type definition (§5.3.1)."""
+    try:
+        return a1_ei_service.get_ei_type(ei_type_id)
+    except KeyError as e:
+        _raise_problem(404, "EI Type Not Found", str(e), instance=f"/a1/eitypes/{ei_type_id}")
+
+
+@router.get(
+    "/a1/eitypes/{ei_type_id}/status",
+    response_model=EiTypeStatusObject,
+    responses=_a1_problem_responses(404, 405),
+)
+async def get_ei_type_status(ei_type_id: str) -> Dict[str, object]:
+    """Get EI type status resource (section-6 EI type status procedure)."""
+    try:
+        return a1_ei_service.get_ei_type_status(ei_type_id)
+    except KeyError as e:
+        _raise_problem(404, "EI Type Status Not Found", str(e), instance=f"/a1/eitypes/{ei_type_id}/status")
+
+
+@router.post(
+    "/a1/eitypes/{ei_type_id}/status/notify",
+    status_code=204,
+    responses=_a1_problem_responses(400, 404, 405),
+    openapi_extra={"callbacks": _EI_TYPE_STATUS_CALLBACK_OPENAPI},
+)
+async def notify_ei_type_status(
+    ei_type_id: str,
+    status: EiTypeStatusObject,
+    notification_destination: str = Query(..., alias="notificationDestination"),
+):
+    """Trigger EI type status notification to a callback URI."""
+    try:
+        a1_ei_service.get_ei_type(ei_type_id)
+        if status.eiTypeId != ei_type_id:
+            raise ValueError("eiTypeId in payload must match ei_type_id in path")
+        await a1_ei_service.notify_ei_type_status(
+            notification_destination,
+            status.model_dump(mode="json"),
+        )
+        return Response(status_code=204)
+    except KeyError as e:
+        _raise_problem(404, "EI Type Not Found", str(e), instance=f"/a1/eitypes/{ei_type_id}/status/notify")
+    except ValueError as e:
+        _raise_problem(
+            400,
+            "Invalid EI Type Status Notification",
+            str(e),
+            instance=f"/a1/eitypes/{ei_type_id}/status/notify",
+        )
+
+
+@router.get(
+    "/a1/eitypes/{ei_type_id}/eijobs",
+    response_model=List[str],
+    responses=_a1_problem_responses(404, 405),
+)
+async def list_ei_job_ids_for_type(ei_type_id: str) -> List[str]:
+    """List EI job identifiers for a given EI type (§5.3.3)."""
+    try:
+        return a1_ei_service.list_ei_job_ids(ei_type_id)
+    except KeyError as e:
+        _raise_problem(404, "EI Type Not Found", str(e), instance=f"/a1/eitypes/{ei_type_id}/eijobs")
+
+
+@router.put(
+    "/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
+    response_model=Dict[str, object],
+    responses=_a1_problem_responses(400, 404, 405, 409, 500),
+    openapi_extra={"callbacks": _EI_CALLBACKS_OPENAPI},
+)
+async def create_or_replace_ei_job(
+    ei_type_id: str,
+    ei_job_id: str,
+    ei_job: Dict[str, object],
+    response: Response,
+    notification_destination: Optional[str] = Query(None, alias="notificationDestination"),
+) -> Dict[str, object]:
+    """Create or update an EI job (§5.3.2/§5.3.4)."""
+    try:
+        _validate_annex_a_ei_payload(ei_job)
     except ValueError as e:
         _raise_problem(
             400,
@@ -318,8 +745,22 @@ async def create_or_replace_ei_job(
             instance=f"/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
         )
 
+    return await _upsert_ei_job(
+        ei_type_id=ei_type_id,
+        ei_job_id=ei_job_id,
+        ei_job=ei_job,
+        response=response,
+        notification_destination=notification_destination,
+        instance_path=f"/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
+        location_path=f"/api/oran/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
+    )
 
-@router.get("/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}")
+
+@router.get(
+    "/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
+    response_model=Dict[str, object],
+    responses=_a1_problem_responses(404, 405),
+)
 async def get_ei_job(ei_type_id: str, ei_job_id: str) -> Dict[str, object]:
     """Get one EI job (§5.3.3)."""
     try:
@@ -333,7 +774,11 @@ async def get_ei_job(ei_type_id: str, ei_job_id: str) -> Dict[str, object]:
         )
 
 
-@router.delete("/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}", status_code=204)
+@router.delete(
+    "/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}",
+    status_code=204,
+    responses=_a1_problem_responses(404, 405),
+)
 async def delete_ei_job(ei_type_id: str, ei_job_id: str):
     """Delete one EI job (§5.3.5)."""
     try:
@@ -348,7 +793,11 @@ async def delete_ei_job(ei_type_id: str, ei_job_id: str):
         )
 
 
-@router.get("/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}/status")
+@router.get(
+    "/a1/eitypes/{ei_type_id}/eijobs/{ei_job_id}/status",
+    response_model=Dict[str, object],
+    responses=_a1_problem_responses(404, 405),
+)
 async def get_ei_job_status(ei_type_id: str, ei_job_id: str) -> Dict[str, object]:
     """Get EI job status resource (§5.3.6)."""
     try:
