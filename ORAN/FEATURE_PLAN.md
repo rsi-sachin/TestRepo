@@ -1,6 +1,6 @@
 # ORAN Feature Plan
 
-Last updated: 2026-07-14 (aligned with TS 103 988 Section 9 follow-up gap closure and TS 103 989 section 4.2.1/4.2.2 gate remediation tracking)
+Last updated: 2026-07-14 (aligned with TS 103 988 Section 9 follow-up gap closure, TS 103 989 section 4.2.1/4.2.2 gate remediation tracking, and Integrator Platform architecture design)
 Primary objective: Deliver a conformance-first ORAN implementation for System Integrators with module-separated code ownership, module-level traceability, and auditable conformance coverage.
 
 This is the main guiding document for planning and execution.
@@ -86,11 +86,19 @@ A module can move to Complete only when all three conditions pass:
 - Correlation and observability checks in place
 - Conformance coverage status reported in module matrix
 
+### Hypothesis-Driven Closure Policy (Non-RT RIC + A1)
+
+- Working hypothesis: current Non-RT RIC + A1 implementation is production-grade for its declared scope.
+- Validation method: execute conformance suites first; treat observed failures as implementation-gap discovery events.
+- Closure rule: remaining gaps are prioritized and implemented when a target conformance/integration test fails due to missing behavior.
+- Evidence rule: every failure must map to traceability rows, a concrete fix, and a rerun verdict artifact before closure.
+- Promotion rule: move to Complete only when required conformance suites are green for the declared scope and no open fail-closed actions remain.
+
 ## 4. Module Status Board
 
 | Module | Status | Conformance Coverage | Evidence Anchor |
 |---|---|---|---|
-| Non-RT RIC + A1 Interface | In Progress | TS 103 989 section 4.2.1/4.2.2 conformance gate currently blocked by policy-status enum regression (`70 passed, 6 failed` on 2026-07-14); TS 103 989 section 7 interoperability passing; TS 103 987 section 6 API-definition alignment verified; TS 103 987 Annex A strict EI payload/resource alignment verified; TS 103 983 section 4 principle-level conformance suite passing | ORAN-FTM-001, ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004, ORAN-FTM-013, ORAN-FTM-014, ORAN-FTM-015 |
+| Non-RT RIC + A1 Interface | In Progress | TS 103 989 section 4.2.1/4.2.2 conformance gate currently blocked by policy-status enum regression (`70 passed, 6 failed` on 2026-07-14 — remediation in progress); TS 103 989 section 7 interoperability passing; TS 103 987 section 6 API-definition alignment verified; TS 103 987 Annex A strict EI payload/resource alignment verified; TS 103 983 section 4 principle-level conformance suite passing; TS 103 983 sections 7/8 analyzed (signalling procedure gaps identified); TS 103 988 section 5 common types conformance passing (99 tests); TS 103 988 section 6 A1-P data model complete (106 tests); TS 103 988 section 8 typed UEGeoandVel model slice in progress (41 tests); TS 103 988 section 9 follow-up gap set closed for implemented alignment slice | ORAN-FTM-001, ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004, ORAN-FTM-013, ORAN-FTM-014, ORAN-FTM-015, ORAN-FTM-017, ORAN-FTM-020, ORAN-FTM-021, ORAN-FTM-022 |
 | O1 Interface | In Progress | TS 103 983 section 4.1.2 topology/contract checks passing at validator and stub-contract level (integration-path tests pending) | ORAN-FTM-015 |
 | E2 Interface | In Progress | TS 103 983 section 4.1.2 topology/contract checks passing at validator and stub-contract level (integration-path tests pending) | ORAN-FTM-015 |
 | Near-RT RIC Simulator | TBD | Not started | Trace row pending in ORAN/docs/feature_traceability_map.md |
@@ -113,9 +121,16 @@ A module can move to Complete only when all three conditions pass:
 - TS 103 983 section 4 conformance principles suite added and passing: 10 passed, 0 failed.
 - TS 103 983 section 4.1.2 topology and interface-contract suite added and passing: 8 passed, 0 failed.
 - TS 103 983 section 4 clause matrix status: covered=4, partial=4, missing=1.
+- TS 103 983 sections 7 and 8 analyzed (2026-07-09); signalling procedure status procedures added to API/service layers; section-6 scoped regression: 94 passed, 0 failed; broader regression: 98 passed, 0 failed. Trace ID: ORAN-FTM-017.
+- TS 103 988 section 4 analyzed (2026-07-09); no open implementation gaps identified.
+- TS 103 988 section 5 common types: JSON encoding and type-catalog metadata enforcement completed (2026-07-10); 99 passed, 0 failed. Trace IDs: ORAN-FTM-020, ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-007.
+- TS 103 988 section 6 A1-P data model Phase 1: PolicyScopeValidator, 10 scope identifiers, 8 objective types, 9 policy type combination rules implemented (2026-07-10); 106 passed, 0 failed. Trace ID: ORAN-FTM-020.
+- TS 103 988 section 8 A1-EI data model: typed UEGeoandVel model slice (JobStatusType, GadShapeType, VelocityDescType, constraints, result) implemented (2026-07-13); 41 passed, 0 failed for initial slice; full closure pending. Trace IDs: ORAN-FTM-003, ORAN-FTM-004, ORAN-FTM-020, ORAN-FTM-021.
+- TS 103 988 section 9 A1-EI concrete type alignment slice: canonical ORAN_UEGeoandVel_3.0.1 EI type ID, compound job definition, stricter bounds, and discriminator-based result validation implemented (2026-07-13); 16 passed for slice; 7 partial clauses queued for follow-up. Trace IDs: ORAN-FTM-022, ORAN-FTM-021, ORAN-FTM-003, ORAN-FTM-004.
 - Residual deployment-path gap remains: application-prefixed API roots are still used for runtime exposure.
 - Residual section-4 gaps remain for A1-ML implementation scope and full O1/E2 integration-level message flows.
-- See ORAN/docs/feature_traceability_map.md rows: ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004, ORAN-FTM-015.
+- Residual TS 103 988 section 8/9 full closure pending: typed constraints/result handling and 7 partial clauses (9.1.1, 9.1.2.2, 9.1.2.3, 9.2.1.2.2, 9.2.1.3.1, 9.2.1.3.2, 9.2.1.3.4) need additional tests.
+- See ORAN/docs/feature_traceability_map.md rows: ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004, ORAN-FTM-015, ORAN-FTM-017, ORAN-FTM-020, ORAN-FTM-021, ORAN-FTM-022.
 
 ## 5. Already In Place vs TBD
 
@@ -135,9 +150,43 @@ A module can move to Complete only when all three conditions pass:
   - demo-web/backend/tests/conformance/simulator_capability_verification.py
   - demo-web/backend/tests/conformance/test_ts103983_section4_principles.py
   - demo-web/backend/tests/conformance/test_ts103983_section4_topology_contracts.py
+  - demo-web/backend/tests/conformance/test_ts103988_section5_common_types.py
   - demo-web/backend/app/services/conformance_service.py
   - demo-web/backend/app/modules/conformance_harness/
   - ORAN/docs/coverage/ts_103983_section4_clause_coverage_matrix.md
+- TS 103 988 Section 5 type-catalog and encoding enforcement:
+  - demo-web/backend/app/services/a1_policy_service.py (3GPP attribute encoding validation)
+  - demo-web/backend/app/services/a1_enrichment_service.py (EI type identifier lexical validation, type-catalog metadata)
+  - demo-web/backend/tests/module/oran/test_ts103988_section5_type_catalog_module.py
+  - demo-web/backend/tests/e2e/test_ts103988_section5_catalog_e2e.py
+  - demo-web/backend/tests/nonfunctional/memory/test_ts103988_section5_memory_behavior.py
+  - demo-web/backend/tests/nonfunctional/load/test_ts103988_section5_load.py
+  - demo-web/backend/tests/nonfunctional/stress/test_ts103988_section5_stress.py
+  - demo-web/backend/tests/nonfunctional/parameter/test_ts103988_section5_parameter_passing.py
+  - demo-web/backend/tests/interface/api/test_ts103988_section5_interface_faults.py
+  - ORAN/docs/coverage/ts_103988_section5_clause_coverage_matrix.md
+  - ORAN/docs/coverage/evidence/ts103988-section5-20260710132538/
+  - ORAN/docs/coverage/evidence/ts103988-section5-hardening-20260710133538/
+- TS 103 988 Section 6 A1-P data model (Phase 1):
+  - demo-web/backend/app/models/validators/a1_policy_validator.py
+  - demo-web/backend/app/data/models/a1_statement_components.py
+  - demo-web/backend/app/data/models/a1_scope_identifiers.py
+  - demo-web/backend/tests/unit/models/test_policy_scope_validator.py
+  - demo-web/backend/tests/unit/models/test_a1_components_and_scopes.py
+  - ORAN/docs/section_6_4_1_2_allowed_combinations.md
+- TS 103 988 Sections 8 and 9 A1-EI typed model slice:
+  - demo-web/backend/app/models/oran.py (UEGeoandVel, JobStatusType, GadShapeType, VelocityDescType, constraints, result, Section 9 compound job definition)
+  - demo-web/backend/app/services/a1_enrichment_service.py (canonical EI type ID normalization, Section 9 schema metadata)
+  - demo-web/backend/tests/unit/services/test_a1_enrichment_service.py (extended for Sections 8 and 9)
+  - demo-web/backend/tests/interface/api/test_oran_a1_ei_api.py (extended for Sections 8 and 9)
+  - ORAN/docs/coverage/ts_103988_section8_clause_coverage_matrix.md
+  - ORAN/docs/coverage/ts_103988_section9_clause_coverage_matrix.md
+  - ORAN/docs/coverage/evidence/ts103988-section8-20260713161022/
+  - ORAN/docs/coverage/evidence/ts103988-section9-20260713164329/
+- TS 103 983 Section 6 signalling procedures and status procedures:
+  - ORAN/docs/coverage/ts_103983_section6_clause_coverage_matrix.md
+  - ORAN/docs/coverage/ts_103983_section6_gap_analysis.md
+  - ORAN/docs/coverage/evidence/ts103983-section6-20260707113814/
 
 ### TBD or incomplete
 
@@ -146,6 +195,13 @@ A module can move to Complete only when all three conditions pass:
 - Simulators for Near-RT RIC, E2 Nodes, RAN User intent, info sources (topology contracts in place; scenario behaviors pending)
 - A1-ML scope decision and baseline implementation/tests for TS 103 983 section 4.1.3.3 and 4.4
 - Module-level conformance dashboards and coverage reporting
+- TS 103 988 section 8 full closure: additional typed constraints/result handling and clause-level test expansion
+- TS 103 988 section 9 full closure: 7 partial clauses (9.1.1, 9.1.2.2, 9.1.2.3, 9.2.1.2.2, 9.2.1.3.1, 9.2.1.3.2, 9.2.1.3.4) require negative tests, boundary tests, and discriminator coverage for remaining geo-location/velocity subtypes
+- TS 103 988 section 6 Phase 2 (optional): binary encoding/serialization support for policy statements
+- TS 103 983 sections 7/8 implementation gaps: analysis artifacts exist; implementation actions pending
+- RCA Skill creation: failure identification, correlation, root-cause analysis, and test-orchestration handoff
+- View Script modal regression fix for generated catalogs (UI bug)
+- Backend field review after UI simplification (Complexity attribute and HTTP Method filtering scope)
 
 ## 6. Skills Usage Policy
 
@@ -181,6 +237,8 @@ Each matrix row must include source section references extracted through skill-a
 - Strategic execution plan: ORAN/FEATURE_PLAN.md (this document)
 - Trace row details and verification mapping: ORAN/docs/feature_traceability_map.md
 - Sprint/task execution log: ORAN/TODO.md
+- MVP multi-agent orchestration contract: ORAN/MVP_INTEGRATOR_MCP_CONTRACT.md
+- Integrator Platform architecture and implementation plan: ORAN/INTEGRATOR_PLATFORM_ARCHITECTURE.md
 - Coverage and policy artifacts:
   - ORAN/docs/coverage/
   - ORAN/docs/test-policy/

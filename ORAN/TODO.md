@@ -1,7 +1,7 @@
 # Demo-Web ORAN Integration - TODO List
 
 **Project:** Extend demo-web with O-RAN A1 test generation capabilities  
-**Last Updated:** 2026-07-10  
+**Last Updated:** 2026-07-13  
 **Status:** Phase 1 Complete (TS 103 988 Section 6 A1-P Data Model), TS 103 989 section 4.4/Section 7 interoperability complete, TS 103 983 section 6 complete, Phase 2-4 pending
 
 ## Task Update: TS 103 988 Section 6 A1-P Type Definitions Implementation
@@ -214,6 +214,144 @@ Execution Plan:
 
 Exit Criteria:
 - Task is closed as N/A after environment verification.
+
+---
+
+## Integration Testing (Next Phase)
+
+### [P1-ENH] Hypothesis Validation: Non-RT RIC + A1 as Production-Grade EUT
+Priority: P1-ENH
+Status: Planned
+Owner Track: ORAN conformance + integration testing
+
+Objective:
+- Test the hypothesis that existing Non-RT RIC + A1 (Entity Under Test) is production-grade for declared A1 scope.
+
+Scope:
+- Identify and execute conformance suites applicable to Non-RT RIC + A1.
+- Evaluate pass/fail verdicts and capture fail-closed evidence.
+- For failed tests, identify concrete implementation gaps, implement fixes, and rerun until green.
+- Identify the minimal simulator set required to run these tests deterministically.
+
+Target test families (initial set):
+- TS 103 989 section 4.2.1 and 4.2.2 conformance suites.
+- TS 103 989 section 7 interoperability suites (A1-P and A1-EI).
+- TS 103 987 section 6 and Annex A API/payload contract suites.
+- TS 103 988 sections 5/6/8/9 clause coverage suites (including currently partial section 8/9 clauses).
+- TS 103 983 section 4/6 principle and signalling procedure suites relevant to A1 scope.
+
+Execution plan:
+- [ ] Step 1: Build the conformance execution matrix for the above suites with selectors, expected verdicts, and trace IDs.
+- [ ] Step 2: Define and start with minimal simulator composition:
+  - Non-RT RIC + A1 EUT (production path under test)
+  - A1 peer behavior simulator (for policy/EI callback and lifecycle interactions)
+  - Internal/External info-source simulator (EI job data and notification paths)
+  - Optional toggles for Near-RT RIC and E2 Nodes only when a test requires cross-interface dependencies
+- [ ] Step 3: Run targeted conformance first, then broader integration regressions.
+- [ ] Step 4: For each failed test, produce failure triage record:
+  - failing clause/test id, observed behavior, expected behavior, root cause hypothesis
+  - code scope and traceability mapping (ORAN/docs/feature_traceability_map.md)
+  - fix action and rerun evidence link
+- [ ] Step 5: Implement missing behavior fixes and rerun until suite-level gates are green.
+- [ ] Step 6: Publish minimal simulator bill of materials (BOM) per test family and a stable test profile for repeatable execution.
+
+Exit criteria:
+- All selected target conformance suites executed with published verdict summary.
+- Every failing verdict has either:
+  - a merged fix + passing rerun evidence, or
+  - an approved deferred action with risk owner and target date.
+- Minimal simulator BOM is documented and validated by at least one successful full rerun.
+- Hypothesis verdict explicitly recorded as one of: Confirmed, Partially Confirmed, Rejected.
+
+Artifacts:
+- ORAN/docs/coverage/non_rt_ric_a1_hypothesis_verdict.md
+- ORAN/docs/coverage/non_rt_ric_a1_execution_matrix.md
+- ORAN/docs/coverage/non_rt_ric_a1_minimal_simulator_bom.md
+- ORAN/docs/coverage/evidence/non-rt-ric-a1-hypothesis-<timestamp>/
+- ORAN/MVP_INTEGRATOR_MCP_CONTRACT.md (agent contracts, matrix schema, twin profile schema, fail-closed rules)
+
+### [P1-ENH] Integrator Platform Architecture and Implementation
+Priority: P1-ENH
+Status: Planned
+Architecture reference: ORAN/INTEGRATOR_PLATFORM_ARCHITECTURE.md
+Contract reference: ORAN/MVP_INTEGRATOR_MCP_CONTRACT.md
+Added: 2026-07-14
+
+Objective:
+- Implement the Integrator Platform as described in ORAN/INTEGRATOR_PLATFORM_ARCHITECTURE.md.
+- This is a three-phase rollout: test setup baseline, MCP orchestration skeleton, then full agentic loop.
+
+Phase A — Test Setup Baseline (do this first):
+- [ ] Lock and document minimal twin profile `a1_minimal_twin_v1` (component composition, config, data seed).
+- [ ] Implement A1 peer behavior simulator (`demo-web/backend/app/modules/simulators/a1_peer/`) for policy/EI lifecycle interactions.
+- [ ] Verify Info Sources simulator behavioral flows are sufficient for Phase A suites; extend if gaps exist.
+- [ ] Run full Non-RT RIC + A1 conformance suite set manually with twin profile active.
+- [ ] Confirm end-to-end artifact capture (junit XML, evidence bundle, matrix verdicts).
+- [ ] Publish `non_rt_ric_a1_minimal_simulator_bom.json`.
+
+Phase B — MCP Orchestration Skeleton:
+- [ ] Implement orchestrator state machine and run registry in `integrator_orchestrator_service.py`.
+- [ ] Implement agent request/response envelope validation (schema-based, not free-form).
+- [ ] Implement execution matrix generation service (`integrator_matrix_service.py`).
+- [ ] Wire PlanScope, Matrix, Execution, and VerdictGate as minimal chain.
+- [ ] Implement verdict gate evaluator in `integrator_verdict_service.py` with deterministic rules.
+- [ ] Verify repeat runs are reproducible from same twin profile + selectors.
+
+Phase C — Full Agentic Loop:
+- [ ] Implement TriageRCAAgent with structured `failure_triage_ledger.json` output.
+- [ ] Implement GapFixOrchestratorAgent (`integrator_triage_service.py`) with fix task creation and rerun trigger.
+- [ ] Add fail-closed guard at FIX_AND_RERUN stage.
+- [ ] Implement Model Router with integrator-configurable LLM profile.
+- [ ] Run end-to-end dry run and publish final hypothesis verdict artifact.
+
+Exit criteria:
+- Phase A: deterministic twin runs with full evidence capture; BOM published.
+- Phase B: automated run produces all mandatory JSON artifacts; verdict computed by rule engine.
+- Phase C: failed rows trigger triage → fix → rerun loop; final verdict is auditable end-to-end.
+
+Artifacts:
+- ORAN/INTEGRATOR_PLATFORM_ARCHITECTURE.md (this architecture document)
+- ORAN/MVP_INTEGRATOR_MCP_CONTRACT.md (agent contracts, schemas, gate rules)
+- demo-web/backend/app/modules/simulators/a1_peer/
+- demo-web/backend/app/services/integrator_orchestrator_service.py
+- demo-web/backend/app/services/integrator_matrix_service.py
+- demo-web/backend/app/services/integrator_verdict_service.py
+- demo-web/backend/app/services/integrator_triage_service.py
+- ORAN/docs/coverage/non_rt_ric_a1_execution_matrix.json
+- ORAN/docs/coverage/non_rt_ric_a1_minimal_simulator_bom.json
+- ORAN/docs/coverage/non_rt_ric_a1_hypothesis_verdict.json
+
+---
+
+### [P1-ENH] Implement MVP Integrator MCP Contract
+Priority: P1-ENH
+Status: Superseded by: [P1-ENH] Integrator Platform Architecture and Implementation (see above)
+Owner Track: ORAN platform orchestration + quality engineering
+
+Objective:
+- Implement the contract defined in ORAN/MVP_INTEGRATOR_MCP_CONTRACT.md as an executable MCP multi-agent workflow for Non-RT RIC + A1 hypothesis validation.
+
+Implementation scope:
+- Build MCP orchestration skeleton with run-state machine (`INIT -> ... -> COMPLETE`) and fail-closed transitions.
+- Implement agent I/O envelope validation (request/response schema) for all MVP agents.
+- Implement execution matrix generation and update lifecycle (`execution_matrix.json`).
+- Implement digital twin profile loading and minimal simulator composition selection.
+- Implement triage ledger and fix-action handoff contracts.
+- Implement verdict gate evaluator (`Confirmed|Partially Confirmed|Rejected`) with deterministic rules.
+
+Execution plan:
+- [ ] Step 1: Create orchestrator service and run registry (`run_id`, state, artifact index).
+- [ ] Step 2: Implement agent adapters for PlanScope, SpecAnalysis, CodeArchitecture, ScenarioDerivation, ComponentClassifier, TestPlanMatrix.
+- [ ] Step 3: Implement ExecutionAgent integration with test runner and evidence collector.
+- [ ] Step 4: Implement TriageRCA + GapFixOrchestrator contract outputs and rerun trigger.
+- [ ] Step 5: Implement VerdictGateAgent deterministic evaluator and fail-closed gate computation.
+- [ ] Step 6: Run end-to-end dry run on Non-RT RIC + A1 with `a1_minimal_twin_v1` and publish artifacts.
+
+Exit criteria:
+- A full run produces all mandatory JSON artifacts listed in the contract.
+- Execution matrix rows contain verdict/evidence and rerun linkage where applicable.
+- Final hypothesis verdict is computed by rule engine (not free-form text only).
+- At least one repeat run is reproducible from the same twin profile and selectors.
 
 ---
 
