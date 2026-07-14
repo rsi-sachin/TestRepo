@@ -1,0 +1,96 @@
+{
+  "run_id": "phase_a_20260714_113620",
+  "timestamp": "2026-07-14T11:36:20.559789",
+  "twin_profile": "a1_minimal_twin_v1",
+  "test_suites": {
+    "TS_103_989_4_2_1": {
+      "suite_name": "TS_103_989_4_2_1",
+      "test_file": "demo-web/backend/tests/conformance/test_a1_policy_conformance_4_2_1.py",
+      "success": false,
+      "return_code": 4,
+      "junit_file": "phase_a_20260714_113620\\TS_103_989_4_2_1_junit.xml",
+      "test_summary": "",
+      "executed_at": "2026-07-14T11:36:21.660192"
+    },
+    "TS_103_989_4_2_2": {
+      "suite_name": "TS_103_989_4_2_2",
+      "test_file": "demo-web/backend/tests/conformance/test_a1_policy_conformance_4_2_2.py",
+      "success": false,
+      "return_code": 4,
+      "junit_file": "phase_a_20260714_113620\\TS_103_989_4_2_2_junit.xml",
+      "test_summary": "",
+      "executed_at": "2026-07-14T11:36:23.014913"
+    },
+    "TS_103_989_7": {
+      "suite_name": "TS_103_989_7",
+      "test_file": "demo-web/backend/tests/conformance/test_interoperability_clause7_suites.py",
+      "success": false,
+      "return_code": 4,
+      "junit_file": "phase_a_20260714_113620\\TS_103_989_7_junit.xml",
+      "test_summary": "",
+      "executed_at": "2026-07-14T11:36:24.169695"
+    },
+    "TS_103_987_API": {
+      "suite_name": "TS_103_987_API",
+      "test_file": "demo-web/backend/tests/conformance/test_simulator_capabilities.py",
+      "success": false,
+      "return_code": 4,
+      "junit_file": "phase_a_20260714_113620\\TS_103_987_API_junit.xml",
+      "test_summary": "",
+      "executed_at": "2026-07-14T11:36:25.229681"
+    },
+    "TS_103_988_5": {
+      "suite_name": "TS_103_988_5",
+      "test_file": "demo-web/backend/tests/conformance/test_ts103988_section5_common_types.py",
+      "success": false,
+      "return_code": 4,
+      "junit_file": "phase_a_20260714_113620\\TS_103_988_5_junit.xml",
+      "test_summary": "",
+      "executed_at": "2026-07-14T11:36:26.356093"
+    },
+    "Non_RT_RIC_DUT": {
+      "suite_name": "Non_RT_RIC_DUT",
+      "test_file": "demo-web/backend/tests/conformance/test_non_rt_ric_dut_readiness.py",
+      "success": false,
+      "return_code": 4,
+      "junit_file": "phase_a_20260714_113620\\Non_RT_RIC_DUT_junit.xml",
+      "test_summary": "",
+      "executed_at": "2026-07-14T11:36:27.588551"
+    },
+    "TS_103_983_4_5": {
+      "suite_name": "TS_103_983_4_5",
+      "test_file": "demo-web/backend/tests/conformance/test_ts103983_section4_principles.py",
+      "success": false,
+      "return_code": 4,
+      "junit_file": "phase_a_20260714_113620\\TS_103_983_4_5_junit.xml",
+      "test_summary": "",
+      "executed_at": "2026-07-14T11:36:28.663540"
+    },
+    "EI_Job_Ops": {
+      "suite_name": "EI_Job_Ops",
+      "test_file": "demo-web/backend/tests/conformance/test_ei_job_operations.py",
+      "success": false,
+      "return_code": 4,
+      "junit_file": "phase_a_20260714_113620\\EI_Job_Ops_junit.xml",
+      "test_summary": "",
+      "executed_at": "2026-07-14T11:36:29.738414"
+    },
+    "Exec_Evidence": {
+      "suite_name": "Exec_Evidence",
+      "test_file": "demo-web/backend/tests/conformance/test_execution_evidence.py",
+      "success": false,
+      "return_code": 4,
+      "junit_file": "phase_a_20260714_113620\\Exec_Evidence_junit.xml",
+      "test_summary": "",
+      "executed_at": "2026-07-14T11:36:30.830356"
+    }
+  },
+  "totals": {
+    "suites_executed": 9,
+    "suites_passed": 0,
+    "suites_failed": 9,
+    "total_tests": 0,
+    "total_passed": 0,
+    "total_failed": 0
+  }
+}

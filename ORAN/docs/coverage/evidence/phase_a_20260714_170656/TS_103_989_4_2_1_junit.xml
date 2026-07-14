@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="1" time="0.421" timestamp="2026-07-14T17:06:57.496516+05:30" hostname="C40LAP-5142T"><testcase classname="" name="demo-web.backend.tests.conformance.test_a1_policy_conformance_4_2_1" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\TestRepo\demo-web\backend\tests\conformance\test_a1_policy_conformance_4_2_1.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\sachin_gupta\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+demo-web\backend\tests\conformance\test_a1_policy_conformance_4_2_1.py:1: in &lt;module&gt;
+    from app.modules.conformance_harness.service import ConformanceHarnessService
+E   ModuleNotFoundError: No module named 'app'</error></testcase></testsuite></testsuites>
