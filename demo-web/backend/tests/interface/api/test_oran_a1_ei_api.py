@@ -396,3 +396,45 @@ def test_section9_compound_uegeoandvel_job_rejects_missing_scope() -> None:
     detail = response.json()["detail"]
     assert detail["title"] == "Invalid EI Job Request"
     assert "scope" in detail["detail"]
+
+
+def test_section9_eitype_rejects_non_compatible_major_version_via_api() -> None:
+    app = FastAPI()
+    app.include_router(oran.router, prefix="/api/oran")
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/oran/a1/eitypes/UEGeoandVel/eijobs/typed-job-major-mismatch",
+        json={
+            "eiTypeId": "ORAN_UEGeoandVel_4.0.1",
+            "jobDefinition": {
+                "scope": {"ueId": "ue-api-major-mismatch"},
+                "ueGeoandVelEIDescription": {
+                    "gadShape": "POINT",
+                    "granularityPeriod": 100,
+                    "reportingPeriod": 1000,
+                    "reportingAmount": 3,
+                },
+            },
+            "jobResultUri": "https://example.com/typed-result",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.headers["content-type"].startswith("application/problem+json")
+    detail = response.json()["detail"]
+    assert detail["title"] == "Invalid EI Job Request"
+    assert "does not match requested EI type" in detail["detail"]
+
+
+def test_section9_service_summary_exposes_exact_schema_id_and_common_linkage() -> None:
+    app = FastAPI()
+    app.include_router(oran.router, prefix="/api/oran")
+    client = TestClient(app)
+
+    response = client.get("/api/oran/a1/eitypes/UEGeoandVel")
+
+    assert response.status_code == 200
+    schema = response.json()["eiJobDefinitionSchema"]
+    assert schema["$id"].endswith("ORAN_UEGeoandVel_3.0.1")
+    assert schema["x-commonSchemaRef"] == "TS_103_988_common_1.0.0"

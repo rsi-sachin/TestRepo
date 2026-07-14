@@ -631,3 +631,316 @@ def test_notify_ei_job_status_rejects_invalid_status_value() -> None:
                 {"eiJobStatus": "BROKEN"},
             )
         )
+
+
+def test_section9_eitype_alias_and_canonical_major_version_compatibility() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    created_job, was_created = helper.create_or_replace_ei_job(
+        "ORAN_UEGeoandVel_3.0.1",
+        "job-major-version-ok",
+        {
+            "eiTypeId": "UEGeoandVel",
+            "jobDefinition": {
+                "scope": {"ueId": "ue-major-ok"},
+                "ueGeoandVelEIDescription": {
+                    "gadShape": "POINT",
+                    "granularityPeriod": 100,
+                    "reportingPeriod": 200,
+                    "reportingAmount": 3,
+                },
+            },
+            "jobResultUri": "https://consumer.example.com/result-major-ok",
+        },
+    )
+
+    assert was_created is True
+    assert created_job["ei_job"]["eiTypeId"] == "ORAN_UEGeoandVel_3.0.1"
+
+
+def test_section9_eitype_rejects_non_compatible_major_version() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    with pytest.raises(ValueError, match="does not match requested EI type"):
+        helper.create_or_replace_ei_job(
+            "UEGeoandVel",
+            "job-major-version-bad",
+            {
+                "eiTypeId": "ORAN_UEGeoandVel_4.0.1",
+                "jobDefinition": {
+                    "scope": {"ueId": "ue-major-bad"},
+                    "ueGeoandVelEIDescription": {
+                        "gadShape": "POINT",
+                        "granularityPeriod": 100,
+                        "reportingPeriod": 200,
+                        "reportingAmount": 3,
+                    },
+                },
+                "jobResultUri": "https://consumer.example.com/result-major-bad",
+            },
+        )
+
+
+def test_section9_eitype_schema_metadata_exposes_exact_id_and_common_linkage() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    ei_type = helper.get_ei_type("UEGeoandVel")
+    schema = ei_type["eiJobDefinitionSchema"]
+
+    assert schema["$id"].endswith("ORAN_UEGeoandVel_3.0.1")
+    assert schema["x-commonSchemaRef"] == "TS_103_988_common_1.0.0"
+
+
+@pytest.mark.parametrize("unsupported_scope_member", ["groupId", "sliceId", "qosId", "cellId"])
+def test_section9_compound_job_rejects_unsupported_scope_members(unsupported_scope_member: str) -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    with pytest.raises(ValueError, match=unsupported_scope_member):
+        helper.create_or_replace_ei_job(
+            "UEGeoandVel",
+            f"job-bad-scope-{unsupported_scope_member}",
+            {
+                "eiTypeId": "ORAN_UEGeoandVel_3.0.1",
+                "jobDefinition": {
+                    "scope": {
+                        "ueId": "ue-scope",
+                        unsupported_scope_member: "not-supported",
+                    },
+                    "ueGeoandVelEIDescription": {
+                        "gadShape": "POINT",
+                        "granularityPeriod": 100,
+                        "reportingPeriod": 1000,
+                        "reportingAmount": 5,
+                    },
+                },
+                "jobResultUri": "https://consumer.example.com/result-scope",
+            },
+        )
+
+
+def test_section9_compound_job_rejects_description_extra_fields() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    with pytest.raises(ValueError, match="unexpectedField"):
+        helper.create_or_replace_ei_job(
+            "UEGeoandVel",
+            "job-extra-field",
+            {
+                "eiTypeId": "ORAN_UEGeoandVel_3.0.1",
+                "jobDefinition": {
+                    "scope": {"ueId": "ue-extra"},
+                    "ueGeoandVelEIDescription": {
+                        "gadShape": "POINT",
+                        "granularityPeriod": 100,
+                        "reportingPeriod": 1000,
+                        "reportingAmount": 5,
+                        "unexpectedField": "x",
+                    },
+                },
+                "jobResultUri": "https://consumer.example.com/result-extra",
+            },
+        )
+
+
+@pytest.mark.parametrize(
+    ("field_name", "field_value"),
+    [
+        ("granularityPeriod", 60001),
+        ("reportingPeriod", 60001),
+        ("reportingAmount", 3600001),
+    ],
+)
+def test_section9_compound_job_rejects_upper_bound_violations(field_name: str, field_value: int) -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+    description = {
+        "gadShape": "POINT",
+        "granularityPeriod": 100,
+        "reportingPeriod": 1000,
+        "reportingAmount": 5,
+    }
+    description[field_name] = field_value
+
+    with pytest.raises(ValueError, match=field_name):
+        helper.create_or_replace_ei_job(
+            "UEGeoandVel",
+            f"job-upper-bound-{field_name}",
+            {
+                "eiTypeId": "ORAN_UEGeoandVel_3.0.1",
+                "jobDefinition": {
+                    "scope": {"ueId": "ue-upper-bound"},
+                    "ueGeoandVelEIDescription": description,
+                },
+                "jobResultUri": "https://consumer.example.com/result-upper-bound",
+            },
+        )
+
+
+def test_section9_constraints_reject_empty_supported_velocity_types_when_provided() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    with pytest.raises(ValueError, match="supportedVelocityTypes"):
+        helper.validate_ei_job_constraints(
+            "UEGeoandVel",
+            {
+                "jobConstraints": {
+                    "supportedGadShapes": ["POINT"],
+                    "supportedVelocityTypes": [],
+                }
+            },
+        )
+
+
+def test_section9_constraints_reject_alias_conflict_between_legacy_and_canonical_fields() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    with pytest.raises(ValueError, match="supportedVelocityDescs"):
+        helper.validate_ei_job_constraints(
+            "UEGeoandVel",
+            {
+                "jobConstraints": {
+                    "supportedGadShapes": ["POINT"],
+                    "supportedVelocityTypes": ["H_VELOCITY"],
+                    "supportedVelocityDescs": ["HV_VELOCITY"],
+                }
+            },
+        )
+
+
+def test_section9_constraints_reject_invalid_velocity_enum() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    with pytest.raises(ValueError, match="supportedVelocityTypes"):
+        helper.validate_ei_job_constraints(
+            "UEGeoandVel",
+            {
+                "jobConstraints": {
+                    "supportedGadShapes": ["POINT"],
+                    "supportedVelocityTypes": ["NOT_VALID"],
+                }
+            },
+        )
+
+
+def test_section9_result_accepts_point_altitude_uncertainty_payload() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    validated = helper.validate_ei_job_result(
+        "UEGeoandVel",
+        [
+            {
+                "timeStamp": "2026-07-14T03:00:00Z",
+                "ueId": "ue-alt-unc",
+                "gadShape": "POINT_ALTITUDE_UNCERTAINTY",
+                "geoLocation": {
+                    "point": {"lon": 10.0, "lat": 20.0},
+                    "altitude": 150,
+                    "uncertainty": 5,
+                },
+            }
+        ],
+    )
+
+    assert validated[0]["gadShape"] == "POINT_ALTITUDE_UNCERTAINTY"
+
+
+def test_section9_result_accepts_ellipsoid_arc_payload() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    validated = helper.validate_ei_job_result(
+        "UEGeoandVel",
+        [
+            {
+                "timeStamp": "2026-07-14T03:01:00Z",
+                "ueId": "ue-ellipsoid",
+                "gadShape": "ELLIPSOID_ARC",
+                "geoLocation": {
+                    "center": {"lon": 10.0, "lat": 20.0},
+                    "innerRadius": 50,
+                    "uncertaintyRadius": 10,
+                    "offsetAngle": 30,
+                    "includedAngle": 45,
+                },
+                "velocityDesc": "HV_VELOCITY_UNCERTAINTY",
+                "velocity": {"hSpeed": 20, "bearing": 40, "vSpeed": 3, "uncertainty": 2},
+            }
+        ],
+    )
+
+    assert validated[0]["gadShape"] == "ELLIPSOID_ARC"
+    assert validated[0]["velocityDesc"] == "HV_VELOCITY_UNCERTAINTY"
+
+
+def test_section9_result_accepts_point_uncertainty_ellipse_payload() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    validated = helper.validate_ei_job_result(
+        "UEGeoandVel",
+        [
+            {
+                "timeStamp": "2026-07-14T03:02:00Z",
+                "ueId": "ue-ellipse",
+                "gadShape": "POINT_UNCERTAINTY_ELLIPSE",
+                "geoLocation": {
+                    "point": {"lon": 10.0, "lat": 20.0},
+                    "uncertaintyEllipse": {
+                        "semiMajor": 100,
+                        "semiMinor": 60,
+                        "orientation": 15,
+                    },
+                    "confidence": 0.95,
+                },
+            }
+        ],
+    )
+
+    assert validated[0]["gadShape"] == "POINT_UNCERTAINTY_ELLIPSE"
+
+
+def test_section9_result_accepts_point_altitude_payload() -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    validated = helper.validate_ei_job_result(
+        "UEGeoandVel",
+        [
+            {
+                "timeStamp": "2026-07-14T03:03:00Z",
+                "ueId": "ue-alt",
+                "gadShape": "POINT_ALTITUDE",
+                "geoLocation": {
+                    "point": {"lon": 10.0, "lat": 20.0},
+                    "altitude": 120,
+                },
+            }
+        ],
+    )
+
+    assert validated[0]["gadShape"] == "POINT_ALTITUDE"
+
+
+@pytest.mark.parametrize(
+    "velocity_desc",
+    [
+        "H_VELOCITY",
+        "HV_VELOCITY",
+        "H_VELOCITY_UNCERTAINTY",
+        "HV_VELOCITY_UNCERTAINTY",
+    ],
+)
+def test_section9_result_accepts_all_velocity_descriptor_variants(velocity_desc: str) -> None:
+    helper = A1EnrichmentInformationService(A1ServiceRegistry())
+
+    validated = helper.validate_ei_job_result(
+        "UEGeoandVel",
+        [
+            {
+                "timeStamp": "2026-07-14T03:04:00Z",
+                "ueId": "ue-velocity",
+                "gadShape": "POINT",
+                "geoLocation": {"lon": 10.0, "lat": 20.0},
+                "velocityDesc": velocity_desc,
+                "velocity": {"speed": 35, "bearing": 70, "verticalSpeed": 2, "uncertainty": 1},
+            }
+        ],
+    )
+
+    assert validated[0]["velocityDesc"] == velocity_desc

@@ -283,13 +283,13 @@ Exit Criteria:
     - Persisted combined verification slice: `16 passed, 23 deselected`
     - Completion gate: `fail` for full Section 9 closure, `pass` for the implemented alignment slice and evidence persistence
   - **Follow-up gaps queued:**
-    - `9.1.1`: add explicit major-version compatibility assertions for canonical versus alias EI type handling.
-    - `9.1.2.2`: add common-schema linkage and compatibility-behavior tests.
-    - `9.1.2.3`: add a schema-metadata assertion that the exposed `$id` embeds the exact EI type identifier.
-    - `9.2.1.2.2`: add negative tests rejecting unsupported `scope` members (`groupId`, `sliceId`, `qosId`, `cellId`).
-    - `9.2.1.3.1`: add upper-bound and extra-field negative coverage for compound job definitions.
-    - `9.2.1.3.2`: add invalid-enum, empty-array, and alias-conflict tests for constraints handling.
-    - `9.2.1.3.4`: extend discriminator coverage for all remaining geo-location and velocity subtype payloads beyond the current point, polygon, and circle checks.
+    - `9.1.1`: add explicit major-version compatibility assertions for canonical versus alias EI type handling. ✅ Closed 2026-07-14.
+    - `9.1.2.2`: add common-schema linkage and compatibility-behavior tests. ✅ Closed 2026-07-14.
+    - `9.1.2.3`: add a schema-metadata assertion that the exposed `$id` embeds the exact EI type identifier. ✅ Closed 2026-07-14.
+    - `9.2.1.2.2`: add negative tests rejecting unsupported `scope` members (`groupId`, `sliceId`, `qosId`, `cellId`). ✅ Closed 2026-07-14.
+    - `9.2.1.3.1`: add upper-bound and extra-field negative coverage for compound job definitions. ✅ Closed 2026-07-14.
+    - `9.2.1.3.2`: add invalid-enum, empty-array, and alias-conflict tests for constraints handling. ✅ Closed 2026-07-14.
+    - `9.2.1.3.4`: extend discriminator coverage for all remaining geo-location and velocity subtype payloads beyond the current point, polygon, and circle checks. ✅ Closed 2026-07-14.
   - **Artifacts:**
     - `ORAN/docs/test-policy/ts_103988_section9_test_policy_report.md`
     - `ORAN/docs/coverage/ts_103988_section9_clause_coverage_matrix.md`

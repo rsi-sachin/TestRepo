@@ -37,7 +37,7 @@ def _feature_plan_path() -> Path:
 def _normalize_status_for_board(status: str) -> str:
     """Convert plan statuses into requested board perspective."""
     normalized = status.strip().lower()
-    if normalized == "incomplete":
+    if normalized in {"in progress", "in-progress", "inprogress", "incomplete"}:
         return "In Progress"
     if normalized == "complete":
         return "Complete"

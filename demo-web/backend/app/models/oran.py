@@ -310,6 +310,10 @@ class UeGeoAndVelEIConstraints(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def normalize_legacy_velocity_field(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "supportedVelocityTypes" in data and "supportedVelocityDescs" in data:
+            raise ValueError(
+                "Use only supportedVelocityTypes; supportedVelocityDescs cannot be combined with the canonical field"
+            )
         if isinstance(data, dict) and "supportedVelocityTypes" not in data and "supportedVelocityDescs" in data:
             payload = dict(data)
             payload["supportedVelocityTypes"] = payload.pop("supportedVelocityDescs")
@@ -320,6 +324,8 @@ class UeGeoAndVelEIConstraints(BaseModel):
     def validate_supported_shapes(self) -> "UeGeoAndVelEIConstraints":
         if not self.supportedGadShapes:
             raise ValueError("supportedGadShapes must contain at least one value")
+        if "supportedVelocityTypes" in self.model_fields_set and not self.supportedVelocityTypes:
+            raise ValueError("supportedVelocityTypes must contain at least one value when provided")
         return self
 
 

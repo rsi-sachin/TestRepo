@@ -73,9 +73,10 @@ class A1EnrichmentInformationService:
                     "required": ["eiTypeId", "jobDefinition", "jobResultUri"],
                 },
                 eiJobDefinitionSchema={
-                    "$id": "https://schemas.o-ran.org/jsonschemas/a1td/oran_uegeoandvel_3.0.1",
+                    "$id": "https://schemas.o-ran.org/jsonschemas/a1td/ORAN_UEGeoandVel_3.0.1",
                     "title": "UeGeoAndVelEiJobDefinition",
                     "required": ["scope", "ueGeoandVelEIDescription"],
+                    "x-commonSchemaRef": "TS_103_988_common_1.0.0",
                 },
                 ei_status_schema={
                     "type": "object",
