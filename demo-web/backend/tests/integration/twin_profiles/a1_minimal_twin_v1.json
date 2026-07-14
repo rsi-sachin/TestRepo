@@ -1,0 +1,176 @@
+{
+  "profile_id": "a1_minimal_twin_v1",
+  "profile_version": "1.0.0",
+  "description": "Minimal digital twin profile for Phase A Non-RT RIC + A1 conformance testing. Includes production Non-RT RIC, A1 peer simulator, and info-source simulator with deterministic modes.",
+  "created_at": "2026-07-14T00:00:00Z",
+  "created_by": "Integrator Platform Phase A",
+  "purpose": "Phase A baseline: deterministic end-to-end testing with repeatable evidence capture",
+  "conformance_scope": [
+    "TS 103 989 section 4.2.1 (A1-P conformance)",
+    "TS 103 989 section 4.2.2 (A1-EI conformance)",
+    "TS 103 989 section 7 (A1-P and A1-EI interoperability)",
+    "TS 103 987 section 6 and Annex A (A1 API contract)",
+    "TS 103 988 sections 5-9 (A1 data model and EI clause coverage)"
+  ],
+  "seed": 42,
+  "seed_comment": "Deterministic reproducibility: use seed 42 for all test runs in Phase A",
+  "components": [
+    {
+      "component_id": "non_rt_ric_dut",
+      "role": "Entity Under Test (EUT)",
+      "operation_mode": "production",
+      "interface": "A1-P (policy), A1-EI (enrichment information)",
+      "description": "Non-RT RIC + A1 producer implementation under test",
+      "expected_behavior": "Conforms to TS 103 989 §4.2.1, §4.2.2, TS 103 987 §6, TS 103 988 §5-9",
+      "config": {}
+    },
+    {
+      "component_id": "a1_peer_simulator",
+      "role": "Test Peer (A1 Policy Consumer / A1-EI Consumer)",
+      "operation_mode": "simulated",
+      "interface": "A1-P (policy CRUD), A1-EI (EI job CRUD)",
+      "description": "Deterministic simulator for A1 consumer-side interactions. Accepts policy and EI job operations, generates lifecycle transitions, sends callbacks.",
+      "module_path": "demo-web/backend/app/modules/simulators/a1_peer",
+      "class": "A1PeerSimulator",
+      "config": {
+        "mode": "deterministic",
+        "latency_ms": 0.0,
+        "latency_jitter_ms": 0.0,
+        "fault_injection_rate": 0.0,
+        "failure_modes": [],
+        "seed": 42
+      },
+      "capabilities": {
+        "policy_operations": ["CREATE", "READ", "UPDATE", "DELETE", "LIST"],
+        "ei_job_operations": ["CREATE", "READ", "UPDATE", "DELETE", "LIST"],
+        "policy_status_lifecycle": ["ACCEPTED", "ACTIVE", "INACTIVE", "ERROR"],
+        "ei_job_status_lifecycle": ["ACCEPTED", "STARTED", "COMPLETED", "FAILED", "CANCELLED"],
+        "callbacks": true,
+        "notifications": true
+      },
+      "validation_rules": {
+        "policy_type_id_required": true,
+        "policy_id_required": true,
+        "notification_destination_optional": true,
+        "enforce_enum_transitions": true
+      }
+    },
+    {
+      "component_id": "info_sources_simulator",
+      "role": "Info Source Provider (A1-EI)",
+      "operation_mode": "simulated",
+      "interface": "A1-EI (EI job result delivery, status notifications)",
+      "description": "Simulates external information sources that provide enrichment data for Non-RT RIC. Generates deterministic EI job results and status notifications.",
+      "module_path": "demo-web/backend/app/modules/simulators/info_sources",
+      "class": "InfoSourceSimulator",
+      "config": {
+        "mode": "deterministic",
+        "latency_ms": 0.0,
+        "result_generation_strategy": "synthetic",
+        "seed": 42
+      },
+      "capabilities": {
+        "generate_ei_results": true,
+        "send_status_notifications": true,
+        "supported_ei_types": ["ORAN_UEGeoandVel_3.0.1"],
+        "result_data_formats": ["JSON"]
+      }
+    }
+  ],
+  "component_activation_rules": [
+    {
+      "test_family": "conformance_a1p",
+      "required_components": ["non_rt_ric_dut", "a1_peer_simulator"],
+      "optional_components": [],
+      "description": "A1-P conformance tests require Non-RT RIC and A1 peer consumer simulator"
+    },
+    {
+      "test_family": "conformance_a1ei",
+      "required_components": ["non_rt_ric_dut", "a1_peer_simulator", "info_sources_simulator"],
+      "optional_components": [],
+      "description": "A1-EI conformance tests require Non-RT RIC, peer consumer, and info-source simulators"
+    },
+    {
+      "test_family": "interoperability",
+      "required_components": ["non_rt_ric_dut", "a1_peer_simulator", "info_sources_simulator"],
+      "optional_components": [],
+      "description": "Interoperability tests require full ecosystem"
+    },
+    {
+      "test_family": "api_contract",
+      "required_components": ["non_rt_ric_dut", "a1_peer_simulator"],
+      "optional_components": [],
+      "description": "API contract tests require Non-RT RIC and peer simulator for payload validation"
+    }
+  ],
+  "data_seed_manifest": {
+    "description": "Data initialization for deterministic test runs",
+    "seed_value": 42,
+    "policy_type_catalog": {
+      "source": "demo-web/backend/app/services/a1_policy_service.py",
+      "loaded_from": "_TYPE_DEFINITION_CATALOG",
+      "policy_types": ["QoSTarget", "QoETarget", "TrafficSteeringPreference", "SliceSubnet", "RRMPolicyRatio", "ContentDistributionStrategy", "NearRTRICPlacement", "CellReselectionPreference"]
+    },
+    "ei_type_catalog": {
+      "source": "demo-web/backend/app/services/a1_enrichment_service.py",
+      "loaded_from": "supported EI types",
+      "ei_types": ["ORAN_UEGeoandVel_3.0.1"]
+    },
+    "simulator_initial_state": {
+      "a1_peer_simulator": {
+        "policies": {},
+        "ei_jobs": {},
+        "policy_callbacks": {},
+        "ei_callbacks": {},
+        "operation_count": 0,
+        "error_count": 0
+      },
+      "info_sources_simulator": {
+        "pending_results": [],
+        "notification_queue": []
+      }
+    }
+  },
+  "test_execution_environment": {
+    "python_version": "3.13.13",
+    "python_venv": "c:\\TestRepo\\.venv",
+    "test_framework": "pytest",
+    "test_runner_config": {
+      "markers": ["conformance", "interoperability", "api_contract"],
+      "timeout_seconds": 60,
+      "capture_mode": "json_report",
+      "evidence_capture": {
+        "junit_xml": true,
+        "protocol_messages": true,
+        "state_snapshots": true,
+        "execution_matrix": true
+      }
+    }
+  },
+  "validation_checklist": [
+    "[ ] Non-RT RIC is running and A1 endpoints are accessible",
+    "[ ] A1 peer simulator module loads without errors",
+    "[ ] Info sources simulator module loads without errors",
+    "[ ] Policy type catalog contains expected 8 types",
+    "[ ] EI type catalog contains ORAN_UEGeoandVel_3.0.1",
+    "[ ] Simulator state is reset (no stale policies or EI jobs)",
+    "[ ] Seed 42 is set for all deterministic components",
+    "[ ] Artifact directories exist and are writable",
+    "[ ] pytest can discover and collect test suites"
+  ],
+  "artifact_output_paths": {
+    "junit_xml": "ORAN/docs/coverage/evidence/phase_a_<timestamp>/pytest_junit.xml",
+    "protocol_messages": "ORAN/docs/coverage/evidence/phase_a_<timestamp>/protocol_message_evidence.json",
+    "execution_matrix": "ORAN/docs/coverage/evidence/phase_a_<timestamp>/execution_matrix.json",
+    "state_snapshots": "ORAN/docs/coverage/evidence/phase_a_<timestamp>/component_state_snapshots/",
+    "test_log": "ORAN/docs/coverage/evidence/phase_a_<timestamp>/test_run.log"
+  },
+  "exit_criteria": {
+    "phase_a_gate_open": "All selected conformance suites executed with published verdict summary",
+    "no_unresolved_failures": "Every failing test either has a fix + passing rerun or approved deferred action",
+    "simulator_bom_published": "Minimal simulator BOM documented and validated with successful full rerun",
+    "repeatability_verified": "At least one successful repeat run from same twin profile + selectors"
+  },
+  "phase_a_status": "ACTIVE",
+  "phase_a_status_timestamp": "2026-07-14T14:30:00Z"
+}
