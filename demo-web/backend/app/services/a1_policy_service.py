@@ -313,13 +313,13 @@ class A1PolicyService:
         if was_created:
             self._policy_status[key] = PolicyStatusObject(
                 policy_id=policy_id,
-                enforcement_status="ACCEPTED",
+                enforcement_status=EnforcementStatusType.ACCEPTED,
                 enforcement_reason="Policy accepted for evaluation by A1-P Producer",
             )
         else:
             self._policy_status[key] = PolicyStatusObject(
                 policy_id=policy_id,
-                enforcement_status="ACCEPTED",
+                enforcement_status=EnforcementStatusType.ACCEPTED,
                 enforcement_reason="Policy updated and accepted for re-evaluation by A1-P Producer",
             )
         return deepcopy(self._policies[key]), was_created

@@ -12,6 +12,10 @@ from pydantic import BaseModel, Field, AnyHttpUrl
 
 class EnforcementStatusType(str, Enum):
     """Policy enforcement status type (TS 103 988 6.2.2.2)"""
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+    ENFORCED = "ENFORCED"
+    NOT_ENFORCED = "NOT_ENFORCED"
     ACTIVE = "active"
     INACTIVE = "inactive"
     PENDING = "pending"
