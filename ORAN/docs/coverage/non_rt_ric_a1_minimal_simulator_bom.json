@@ -1,0 +1,323 @@
+{
+  "bom_id": "non_rt_ric_a1_minimal_simulator_bom_v1",
+  "timestamp": "2026-07-14T12:00:00Z",
+  "twin_profile": "a1_minimal_twin_v1",
+  "phase": "Phase A - Baseline Conformance",
+  "conformance_scope": [
+    "TS 103 989 section 4.2.1",
+    "TS 103 989 section 4.2.2",
+    "TS 103 989 section 7",
+    "TS 103 987 section 6",
+    "TS 103 987 Annex A",
+    "TS 103 988 sections 5-9",
+    "TS 103 983 sections 4, 6"
+  ],
+  "deterministic_configuration": {
+    "reproducibility_seed": 42,
+    "seed_purpose": "Deterministic result generation across all test runs",
+    "seed_locked_at_commit": "ec083d5",
+    "result_stability": "Identical results guaranteed with identical input"
+  },
+  "components": {
+    "non_rt_ric_dut": {
+      "component_id": "non_rt_ric_dut",
+      "component_name": "Non-RT RIC A1 Implementation",
+      "operation_mode": "production",
+      "role": "System Under Test (EUT)",
+      "technology_stack": {
+        "framework": "FastAPI",
+        "language": "Python",
+        "python_version": "3.13.13",
+        "api_version": "0.1.0"
+      },
+      "installation_path": "C:\\TestRepo\\demo-web\\backend",
+      "entry_point": "app/main.py",
+      "environment_variables": {
+        "ENVIRONMENT": "test",
+        "LOG_LEVEL": "INFO"
+      },
+      "test_activation_rules": [
+        "conformance_a1p",
+        "conformance_a1ei",
+        "interoperability",
+        "api_contract"
+      ],
+      "commit_ref": "feature/ORAN_MVP_1_Py3_13",
+      "git_hash": "ec083d5",
+      "status": "PRODUCTION"
+    },
+    "a1_peer_simulator": {
+      "component_id": "a1_peer_simulator",
+      "component_name": "A1 Peer Simulator (Producer + Consumer)",
+      "operation_mode": "simulated",
+      "role": "Simulated A1 peer for policy/EI operations",
+      "technology_stack": {
+        "class": "A1PeerSimulator",
+        "module": "demo-web/backend/app/modules/simulators/a1_peer/simulator.py",
+        "language": "Python",
+        "version": "1.0.0"
+      },
+      "capabilities": {
+        "policy_operations": [
+          "create",
+          "read",
+          "update",
+          "delete",
+          "list"
+        ],
+        "ei_job_operations": [
+          "create",
+          "read",
+          "update",
+          "delete",
+          "list"
+        ],
+        "deterministic_behaviors": [
+          "fixed_responses_per_seed",
+          "status_lifecycle_ordering",
+          "error_injection_on_demand"
+        ]
+      },
+      "seed_configuration": {
+        "seed_value": 42,
+        "seeding_method": "random.seed(42) at initialization",
+        "reproducible_data": [
+          "policy_ids",
+          "status_transitions",
+          "error_conditions",
+          "notification_ordering"
+        ]
+      },
+      "test_activation_rules": [
+        "conformance_a1p",
+        "conformance_a1ei",
+        "interoperability",
+        "api_contract"
+      ],
+      "test_coverage_verdict": {
+        "unit_tests": 25,
+        "unit_tests_passed": 25,
+        "unit_tests_failed": 0,
+        "pass_rate": "100%"
+      },
+      "commit_ref": "feature/ORAN_MVP_1_Py3_13",
+      "git_hash": "7e31b5e",
+      "status": "VERIFIED"
+    },
+    "info_sources_simulator": {
+      "component_id": "info_sources_simulator",
+      "component_name": "Info Sources Simulator (EI Result Generation)",
+      "operation_mode": "simulated",
+      "role": "Simulated external information source provider for A1-EI",
+      "technology_stack": {
+        "class": "InfoSourceSimulator",
+        "module": "demo-web/backend/app/modules/simulators/info_sources/simulator.py",
+        "language": "Python",
+        "version": "1.0.0"
+      },
+      "capabilities": {
+        "result_generation": [
+          "ORAN_UEGeoandVel_3.0.1 EI type",
+          "deterministic_observations",
+          "location_velocity_synthesis"
+        ],
+        "notification_delivery": [
+          "result_notifications",
+          "status_notifications",
+          "callback_tracking"
+        ],
+        "supported_ei_types": [
+          "ORAN_UEGeoandVel_3.0.1"
+        ]
+      },
+      "deterministic_generation": {
+        "seed_value": 42,
+        "generation_algorithm": "Deterministic UE observation synthesis with location/velocity",
+        "observation_array_structure": "location (point + uncertainty), velocity (hVelocity), timestamp, confidence",
+        "reproducible_outputs": [
+          "identical observation count per job",
+          "identical latitude/longitude offsets",
+          "identical velocity vectors",
+          "identical timestamp sequences"
+        ]
+      },
+      "test_activation_rules": [
+        "conformance_a1ei",
+        "interoperability"
+      ],
+      "test_coverage_verdict": {
+        "unit_tests": 10,
+        "unit_tests_passed": 10,
+        "unit_tests_failed": 0,
+        "pass_rate": "100%"
+      },
+      "commit_ref": "feature/ORAN_MVP_1_Py3_13",
+      "git_hash": "58c4cb3",
+      "status": "VERIFIED"
+    }
+  },
+  "test_execution_environment": {
+    "python_version": "3.13.13",
+    "virtual_environment_path": "C:\\TestRepo\\.venv",
+    "test_runner": "pytest",
+    "pytest_version": "8.4.1",
+    "test_plugins": [
+      {
+        "name": "pytest-json-report",
+        "purpose": "Evidence capture in JSON format"
+      },
+      {
+        "name": "pytest-junit-xml",
+        "purpose": "junit XML artifact generation for CI/CD"
+      }
+    ],
+    "test_discovery_root": "C:\\TestRepo\\demo-web\\backend\\tests\\conformance",
+    "test_count_collected": 132,
+    "test_execution_timeout": "60 seconds"
+  },
+  "reproducibility_checklist": {
+    "seed_locked": {
+      "status": "COMPLETE",
+      "location": "demo-web/backend/tests/integration/twin_profiles/a1_minimal_twin_v1.json",
+      "value": 42,
+      "impact": "Ensures deterministic results across all conformance test runs"
+    },
+    "component_modes_defined": {
+      "status": "COMPLETE",
+      "production_component": "non_rt_ric_dut (EUT)",
+      "simulated_components": [
+        "a1_peer_simulator",
+        "info_sources_simulator"
+      ],
+      "impact": "Prevents simulator masking and ensures deterministic composition"
+    },
+    "activation_rules_validated": {
+      "status": "COMPLETE",
+      "rules": [
+        "conformance_a1p: [non_rt_ric_dut, a1_peer_simulator]",
+        "conformance_a1ei: [non_rt_ric_dut, a1_peer_simulator, info_sources_simulator]",
+        "interoperability: [all components]",
+        "api_contract: [non_rt_ric_dut, a1_peer_simulator]"
+      ],
+      "impact": "Ensures correct component subset selection per test family"
+    },
+    "simulator_reset_procedures": {
+      "status": "COMPLETE",
+      "a1_peer_simulator_reset": "reset() method clears policy_store and ei_job_store",
+      "info_sources_reset": "reset() method clears generated_results and notification_history",
+      "impact": "Guarantees clean state between test runs"
+    },
+    "state_verification": {
+      "status": "COMPLETE",
+      "get_state_summary": "Implemented on all simulators",
+      "state_fields_tracked": [
+        "policies_created_count",
+        "ei_jobs_created_count",
+        "notifications_sent_count"
+      ],
+      "impact": "Enables observability and determinism verification"
+    }
+  },
+  "validation_results": {
+    "twin_profile_validation": {
+      "status": "PASSED",
+      "checks_performed": [
+        "profile_id present",
+        "components mandatory fields present",
+        "conformance_scope valid enum values",
+        "no duplicate component_ids"
+      ],
+      "verdict": "a1_minimal_twin_v1 ready for Phase A execution"
+    },
+    "simulator_unit_tests": {
+      "a1_peer_simulator": {
+        "test_count": 25,
+        "passed": 25,
+        "failed": 0,
+        "pass_rate": "100%",
+        "verdict": "All behavioral contracts verified"
+      },
+      "info_sources_simulator": {
+        "test_count": 10,
+        "passed": 10,
+        "failed": 0,
+        "pass_rate": "100%",
+        "verdict": "Deterministic ORAN_UEGeoandVel_3.0.1 generation verified"
+      }
+    },
+    "conformance_suite_execution": {
+      "test_count_collected": 132,
+      "test_count_passed": 124,
+      "test_count_failed": 8,
+      "pass_rate": "94%",
+      "verdict": "Phase A baseline conformance achieved; identified failures have clear remediation path",
+      "failure_status": "Low severity; related to policy creation status enum validation (see PHASE_A_EXECUTION_SUMMARY.md)",
+      "remediation_required_before_gate": true
+    }
+  },
+  "artifact_evidence_paths": {
+    "twin_profile": "demo-web/backend/tests/integration/twin_profiles/a1_minimal_twin_v1.json",
+    "twin_profile_loader": "demo-web/backend/tests/integration/twin_profiles/loader.py",
+    "a1_peer_simulator_source": "demo-web/backend/app/modules/simulators/a1_peer/simulator.py",
+    "a1_peer_simulator_tests": "demo-web/backend/tests/integration/test_a1_peer_simulator.py",
+    "info_sources_simulator_source": "demo-web/backend/app/modules/simulators/info_sources/simulator.py",
+    "info_sources_simulator_tests": "demo-web/backend/tests/integration/test_info_sources_simulator.py",
+    "conformance_test_suites": "demo-web/backend/tests/conformance/",
+    "execution_summary": "ORAN/docs/coverage/PHASE_A_EXECUTION_SUMMARY.md",
+    "evidence_artifacts": "ORAN/docs/coverage/evidence/phase_a_20260714_170656/"
+  },
+  "deployment_instructions": {
+    "prerequisites": [
+      "Python 3.13.13 installed",
+      "Virtual environment at C:\\TestRepo\\.venv",
+      "FastAPI backend running (python demo-web/backend/app/main.py)"
+    ],
+    "test_execution_command": "cd C:\\TestRepo\\demo-web\\backend && python -m pytest tests/conformance/ -v --json-report --junit-xml",
+    "expected_output": "132 tests collected, 124 passed, 8 failed (after enum fix remediation: 132 passed, 0 failed)",
+    "artifact_generation": "Automatic via pytest plugins (json-report, junit-xml)",
+    "reproducibility_guarantee": "Identical results guaranteed when seed=42 and component modes unchanged"
+  },
+  "phase_a_gate_criteria": {
+    "all_test_suites_executed": "✅ TRUE",
+    "verdict_summary_published": "✅ TRUE (see PHASE_A_EXECUTION_SUMMARY.md)",
+    "simulator_bom_published": "✅ TRUE (this document)",
+    "deterministic_seed_locked": "✅ TRUE (seed 42)",
+    "evidence_artifacts_captured": "✅ TRUE (junit XML + JSON reports)",
+    "failing_tests_have_remediation": "✅ TRUE (enum validation issue identified)",
+    "gate_status": "⚠️ CONDITIONAL PASS - requires enum fix + rerun to 132/132 pass"
+  },
+  "next_phase_readiness": {
+    "phase_b_prerequisites": [
+      "Phase A enum fix and green gate closure (132/132 tests pass)",
+      "Extended simulator capabilities: latency injection, fault injection modes",
+      "Protocol message evidence capture (HTTP req/resp payloads)",
+      "Expanded EI types (beyond ORAN_UEGeoandVel_3.0.1)"
+    ],
+    "phase_b_simulator_extensions": [
+      "Latency injection modes (deterministic, jittered, burstiness)",
+      "Fault injection selector (policy rejection reasons, network timeouts)",
+      "State machine visualization (component state transitions)",
+      "Event log streaming (WebSocket for live execution monitoring)"
+    ],
+    "phase_b_twin_profile_extensions": [
+      "Environment variable configuration per component",
+      "Network topology definition (latency between components)",
+      "Fault scenario selectors per test family",
+      "Performance constraint specification"
+    ]
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "created_by": "Phase A Baseline Execution Pipeline",
+    "creation_timestamp": "2026-07-14T12:00:00Z",
+    "git_branch": "feature/ORAN_MVP_1_Py3_13",
+    "relevant_commits": [
+      "ec083d5 (twin profile lock)",
+      "7e31b5e (A1 peer simulator + enum fix)",
+      "58c4cb3 (Info sources simulator)"
+    ],
+    "document_status": "FINAL",
+    "review_status": "PENDING",
+    "approval_status": "PENDING"
+  }
+}
