@@ -1,8 +1,8 @@
 # Demo-Web ORAN Integration - TODO List
 
 **Project:** Extend demo-web with O-RAN A1 test generation capabilities  
-**Last Updated:** 2026-07-13  
-**Status:** Phase 1 Complete (TS 103 988 Section 6 A1-P Data Model), TS 103 989 section 4.4/Section 7 interoperability complete, TS 103 983 section 6 complete, Phase 2-4 pending
+**Last Updated:** 2026-07-14  
+**Status:** Phase 1 Complete; Phase A (Integrator Platform Test Setup Baseline) IN PROGRESS — regression fixed, simulator skeleton created; Phase B-C pending
 
 ## Task Update: TS 103 988 Section 6 A1-P Type Definitions Implementation
 
@@ -282,12 +282,35 @@ Objective:
 - This is a three-phase rollout: test setup baseline, MCP orchestration skeleton, then full agentic loop.
 
 Phase A — Test Setup Baseline (do this first):
+- [x] Fix policy-status enum regression — Extended `EnforcementStatusType` with ENFORCED/NOT_ENFORCED values (commit 7e31b5e, 2026-07-14).
+  - **Verification:** 49 tests passed, 0 failed; test_a1_enrichment_service.py suite green.
+  - **Impact:** TS 103 989 §4.2.1/§4.2.2 conformance gate now unblocked; TS 103 988 Section 9 follow-up tests pass.
+- [x] Implement A1 peer behavior simulator (`demo-web/backend/app/modules/simulators/a1_peer/`) for policy/EI lifecycle interactions (commit 7e31b5e, 2026-07-14).
+  - **Deliverables:**
+    - `demo-web/backend/app/modules/simulators/a1_peer/__init__.py` — Module documentation.
+    - `demo-web/backend/app/modules/simulators/a1_peer/models.py` — Request/response schemas, status enums, configuration models.
+    - `demo-web/backend/app/modules/simulators/a1_peer/simulator.py` — A1PeerSimulator core with CRUD handlers for policies and EI jobs.
+  - **Features:** Policy/EI job CRUD (CREATE/READ/UPDATE/DELETE/LIST), callback registration, in-memory state management, deterministic responses.
+  - **Phase B follow-up:** Extend with configurable latency/fault-injection modes.
 - [ ] Lock and document minimal twin profile `a1_minimal_twin_v1` (component composition, config, data seed).
-- [ ] Implement A1 peer behavior simulator (`demo-web/backend/app/modules/simulators/a1_peer/`) for policy/EI lifecycle interactions.
+  - Create `demo-web/backend/tests/integration/twin_profiles/a1_minimal_twin_v1.json` with component list and activation rules.
+  - Include config bundle for A1 peer simulator (mode: deterministic, latency: 0ms).
+  - Validate profile loads and is selectable in test harness.
 - [ ] Verify Info Sources simulator behavioral flows are sufficient for Phase A suites; extend if gaps exist.
+  - Run Phase A test suites with existing info-source simulator.
+  - Identify missing behaviors (if any) and patch simulator or create companion mock.
 - [ ] Run full Non-RT RIC + A1 conformance suite set manually with twin profile active.
+  - Execute conformance suite: TS 103 989 §4.2.1, §4.2.2, §7 (A1-P and A1-EI).
+  - Execute conformance suite: TS 103 987 §6 and Annex A (API contract).
+  - Execute conformance suite: TS 103 988 §5-9 clause coverage (targeted).
+  - Record pass/fail verdict per test family.
 - [ ] Confirm end-to-end artifact capture (junit XML, evidence bundle, matrix verdicts).
+  - Ensure test runner generates junit XML with test timings and failure messages.
+  - Ensure evidence collector captures protocol messages, payloads, and sequencing.
+  - Ensure execution matrix JSON is generated with verdicts and traceability links.
 - [ ] Publish `non_rt_ric_a1_minimal_simulator_bom.json`.
+  - Document simulator versions, component modes (production vs simulated), configuration snapshot.
+  - Include dependency list and validation checklist for repeatability.
 
 Phase B — MCP Orchestration Skeleton:
 - [ ] Implement orchestrator state machine and run registry in `integrator_orchestrator_service.py`.
