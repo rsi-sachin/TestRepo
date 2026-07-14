@@ -1,6 +1,6 @@
 # ORAN Feature Plan
 
-Last updated: 2026-07-14 (aligned with TS 103 988 Section 9 follow-up gap closure and status-board normalization fix)
+Last updated: 2026-07-14 (aligned with TS 103 988 Section 9 follow-up gap closure and TS 103 989 section 4.2.1/4.2.2 gate remediation tracking)
 Primary objective: Deliver a conformance-first ORAN implementation for System Integrators with module-separated code ownership, module-level traceability, and auditable conformance coverage.
 
 This is the main guiding document for planning and execution.
@@ -90,7 +90,7 @@ A module can move to Complete only when all three conditions pass:
 
 | Module | Status | Conformance Coverage | Evidence Anchor |
 |---|---|---|---|
-| Non-RT RIC + A1 Interface | In Progress | TS 103 989 section 4.2.1/4.2.2 conformance passing; TS 103 989 section 7 interoperability passing; TS 103 987 section 6 API-definition alignment verified; TS 103 987 Annex A strict EI payload/resource alignment verified; TS 103 983 section 4 principle-level conformance suite passing | ORAN-FTM-001, ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004, ORAN-FTM-013, ORAN-FTM-014, ORAN-FTM-015 |
+| Non-RT RIC + A1 Interface | In Progress | TS 103 989 section 4.2.1/4.2.2 conformance gate currently blocked by policy-status enum regression (`70 passed, 6 failed` on 2026-07-14); TS 103 989 section 7 interoperability passing; TS 103 987 section 6 API-definition alignment verified; TS 103 987 Annex A strict EI payload/resource alignment verified; TS 103 983 section 4 principle-level conformance suite passing | ORAN-FTM-001, ORAN-FTM-002, ORAN-FTM-003, ORAN-FTM-004, ORAN-FTM-013, ORAN-FTM-014, ORAN-FTM-015 |
 | O1 Interface | In Progress | TS 103 983 section 4.1.2 topology/contract checks passing at validator and stub-contract level (integration-path tests pending) | ORAN-FTM-015 |
 | E2 Interface | In Progress | TS 103 983 section 4.1.2 topology/contract checks passing at validator and stub-contract level (integration-path tests pending) | ORAN-FTM-015 |
 | Near-RT RIC Simulator | TBD | Not started | Trace row pending in ORAN/docs/feature_traceability_map.md |
@@ -104,6 +104,7 @@ A module can move to Complete only when all three conditions pass:
 - TS 103 988 Section 9 follow-up gap set closed for the implemented alignment slice (major-version compatibility assertions, schema metadata linkage, compound scope negatives, constraints alias-conflict/enum coverage, and expanded discriminator coverage).
 - Focused EI validation after closure updates: 66 passed, 0 failed (unit + interface suites).
 - ORAN/TODO section-9 queued follow-up bullets marked closed (2026-07-14) with corresponding code and test coverage updates.
+- TS 103 989 section 4.2.1/4.2.2 gate re-validation run (2026-07-14): 70 passed, 6 failed; remediation task is active for policy-status enum alignment in A1 policy service paths.
 - TS 103 987 Section 6 API-definition alignment completed for A1 policy/EI/API router scope.
 - Interface regression: 20 passed, 0 failed.
 - Combined interface + conformance verification: 107 passed, 0 failed.

@@ -242,6 +242,24 @@ Exit Criteria:
 **Status:** Pending  
 **Priority:** High
 
+- [ ] **Close TS 103 989 §4.2.1/§4.2.2 A1 release gate remediation**
+  - **Status:** In Progress (started 2026-07-14)
+  - **Objective:** Restore full pass status for the §4.2.1/§4.2.2 conformance gate and publish updated evidence.
+  - **Latest verification snapshot (2026-07-14):** `70 passed, 6 failed` from the focused gate suite run.
+  - **Current failures:**
+    - `tests/conformance/test_non_rt_ric_dut_readiness.py::test_non_rt_ric_dut_a1_p_consumer_can_initiate_policy_procedures`
+    - `tests/conformance/test_simulator_capabilities.py::test_simulator_a1_p_producer_returns_201_on_policy_creation`
+    - `tests/conformance/test_simulator_capabilities.py::test_simulator_a1_p_producer_returns_200_on_policy_update`
+    - `tests/conformance/test_execution_evidence.py::test_policy_status_carries_enforcement_status_after_creation`
+    - `tests/conformance/test_execution_evidence.py::test_policy_status_carries_enforcement_reason_as_verdict_detail`
+    - `tests/conformance/test_execution_evidence.py::test_policy_creation_response_includes_location_header`
+  - **Root-cause track:**
+    - `A1PolicyService.create_or_replace_policy()` initializes `PolicyStatusObject` with enum-incompatible values (`ACCEPTED` and free-text reason), causing status-model validation exceptions and propagated 400 responses in conformance paths.
+  - **Next actions:**
+    - Align policy status initialization with `EnforcementStatusType`/`EnforcementReasonType` enum values.
+    - Re-run the three failing conformance files, then re-run the full §4.2.1/§4.2.2 gate bundle.
+    - Update coverage/evidence artifacts and reflect gate status once the suite is green.
+
 - [ ] Create an RCA Skill that can learn failure identification, correlation, root-cause analysis, and test-orchestration handoff.
   - Identify failures from logs.
   - Correlate failures with historical similar failures.
